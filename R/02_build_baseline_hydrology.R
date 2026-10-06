@@ -11573,3 +11573,512 @@ stopifnot(
 )
 
 cat("\n02D.7D HARD QA: PASS\n")
+
+
+# ============================================================
+# 02D.7E - LAND SEED SPILL-LEVEL PARTITION
+#
+# Tavoite:
+# - jaa 02D.7B LAND_ONLY spill-ryhmien seed-solut
+#   suhteessa ryhmän spill-tasoon:
+#     LOWER / LEVEL / ABOVE
+# - erottele ryhmät:
+#     LOWER_ONLY
+#     LOWER_AND_LEVEL
+#     LEVEL_ONLY
+#     ABOVE_INVALID
+# - tunnista LEVEL-ryhmät, jotka tarvitsevat seuraavaksi
+#   eksplisiittisen flat-escape-jäljityksen
+#
+# Tämä on pelkkä diagnostiikka.
+# EI outlet-valintaa.
+# EI pointer-muutoksia.
+# EI final D8:aa.
+# EI flow accumulationia.
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 173. JOIN SPILL LEVEL TO LAND SEEDS
+# ------------------------------------------------------------
+
+spill_level_lookup_02d7e <- unique(
+    target_evidence[
+        target_evidence$spill_group_id %in%
+            land_only_groups_02d7b$spill_group_id,
+        c(
+            "spill_group_id",
+            "lake_objectid",
+            "spill_level_m"
+        ),
+        drop = FALSE
+    ]
+)
+
+stopifnot(
+    nrow(spill_level_lookup_02d7e) ==
+        nrow(land_only_groups_02d7b),
+
+    !anyDuplicated(
+        spill_level_lookup_02d7e$spill_group_id
+    )
+)
+
+
+land_seed_level_02d7e <- merge(
+    land_seed_inventory,
+    spill_level_lookup_02d7e,
+    by = c(
+        "spill_group_id",
+        "lake_objectid"
+    ),
+    all.x = TRUE,
+    sort = FALSE
+)
+
+land_seed_level_02d7e <- land_seed_level_02d7e[
+    order(
+        land_seed_level_02d7e$lake_objectid,
+        land_seed_level_02d7e$spill_group_id,
+        land_seed_level_02d7e$seed_cell
+    ),
+    ,
+    drop = FALSE
+]
+
+row.names(
+    land_seed_level_02d7e
+) <- NULL
+
+stopifnot(
+    nrow(land_seed_level_02d7e) ==
+        nrow(land_seed_inventory),
+
+    all(
+        is.finite(
+            land_seed_level_02d7e$spill_level_m
+        )
+    )
+)
+
+
+# ------------------------------------------------------------
+# 174. CLASSIFY EACH SEED AGAINST SPILL LEVEL
+# ------------------------------------------------------------
+
+land_seed_level_02d7e$seed_minus_spill_m <-
+    land_seed_level_02d7e$seed_storage_z_m -
+    land_seed_level_02d7e$spill_level_m
+
+land_seed_level_02d7e$level_relation <-
+    "ABOVE"
+
+land_seed_level_02d7e$level_relation[
+    land_seed_level_02d7e$seed_storage_z_m <
+        land_seed_level_02d7e$spill_level_m -
+        escape_tol_m
+] <- "LOWER"
+
+land_seed_level_02d7e$level_relation[
+    abs(
+        land_seed_level_02d7e$seed_storage_z_m -
+            land_seed_level_02d7e$spill_level_m
+    ) <=
+        escape_tol_m
+] <- "LEVEL"
+
+
+# ------------------------------------------------------------
+# 175. GROUP SUMMARY
+# ------------------------------------------------------------
+
+land_level_group_ids_02d7e <- sort(
+    unique(
+        land_seed_level_02d7e$spill_group_id
+    )
+)
+
+land_level_group_list_02d7e <- vector(
+    "list",
+    length(land_level_group_ids_02d7e)
+)
+
+for (i in seq_along(land_level_group_ids_02d7e)) {
+
+    gid <- land_level_group_ids_02d7e[i]
+
+    gx <- land_seed_level_02d7e[
+        land_seed_level_02d7e$spill_group_id == gid,
+        ,
+        drop = FALSE
+    ]
+
+    stopifnot(
+        nrow(gx) > 0,
+        length(
+            unique(
+                gx$lake_objectid
+            )
+        ) == 1,
+        length(
+            unique(
+                gx$spill_level_m
+            )
+        ) == 1
+    )
+
+    n_lower <- sum(
+        gx$level_relation ==
+            "LOWER"
+    )
+
+    n_level <- sum(
+        gx$level_relation ==
+            "LEVEL"
+    )
+
+    n_above <- sum(
+        gx$level_relation ==
+            "ABOVE"
+    )
+
+    group_class <- "UNCLASSIFIED"
+
+    if (n_above > 0) {
+
+        group_class <-
+            "ABOVE_INVALID"
+
+    } else if (
+        n_lower > 0 &&
+        n_level > 0
+    ) {
+
+        group_class <-
+            "LOWER_AND_LEVEL"
+
+    } else if (
+        n_lower > 0 &&
+        n_level == 0
+    ) {
+
+        group_class <-
+            "LOWER_ONLY"
+
+    } else if (
+        n_lower == 0 &&
+        n_level > 0
+    ) {
+
+        group_class <-
+            "LEVEL_ONLY"
+    }
+
+    land_level_group_list_02d7e[[i]] <- data.frame(
+
+        spill_group_id =
+            gid,
+
+        lake_objectid =
+            gx$lake_objectid[1],
+
+        spill_level_m =
+            gx$spill_level_m[1],
+
+        n_seed_cells =
+            nrow(gx),
+
+        n_lower =
+            n_lower,
+
+        n_level =
+            n_level,
+
+        n_above =
+            n_above,
+
+        min_seed_minus_spill_m =
+            min(
+                gx$seed_minus_spill_m,
+                na.rm = TRUE
+            ),
+
+        max_seed_minus_spill_m =
+            max(
+                gx$seed_minus_spill_m,
+                na.rm = TRUE
+            ),
+
+        group_class =
+            group_class,
+
+        needs_flat_trace =
+            group_class %in%
+                c(
+                    "LEVEL_ONLY",
+                    "LOWER_AND_LEVEL"
+                ),
+
+        stringsAsFactors = FALSE
+    )
+}
+
+land_level_group_summary_02d7e <- do.call(
+    rbind,
+    land_level_group_list_02d7e
+)
+
+row.names(
+    land_level_group_summary_02d7e
+) <- NULL
+
+
+# ------------------------------------------------------------
+# 176. LAKE SUMMARY
+# ------------------------------------------------------------
+
+land_level_lake_ids_02d7e <- sort(
+    unique(
+        land_level_group_summary_02d7e$lake_objectid
+    )
+)
+
+land_level_lake_list_02d7e <- vector(
+    "list",
+    length(land_level_lake_ids_02d7e)
+)
+
+for (i in seq_along(land_level_lake_ids_02d7e)) {
+
+    lid <- land_level_lake_ids_02d7e[i]
+
+    gx <- land_level_group_summary_02d7e[
+        land_level_group_summary_02d7e$lake_objectid == lid,
+        ,
+        drop = FALSE
+    ]
+
+    land_level_lake_list_02d7e[[i]] <- data.frame(
+
+        lake_objectid =
+            lid,
+
+        n_land_only_groups =
+            nrow(gx),
+
+        n_lower_only_groups =
+            sum(
+                gx$group_class ==
+                    "LOWER_ONLY"
+            ),
+
+        n_lower_and_level_groups =
+            sum(
+                gx$group_class ==
+                    "LOWER_AND_LEVEL"
+            ),
+
+        n_level_only_groups =
+            sum(
+                gx$group_class ==
+                    "LEVEL_ONLY"
+            ),
+
+        n_above_invalid_groups =
+            sum(
+                gx$group_class ==
+                    "ABOVE_INVALID"
+            ),
+
+        n_groups_needing_flat_trace =
+            sum(
+                gx$needs_flat_trace
+            ),
+
+        stringsAsFactors = FALSE
+    )
+}
+
+land_level_lake_summary_02d7e <- do.call(
+    rbind,
+    land_level_lake_list_02d7e
+)
+
+row.names(
+    land_level_lake_summary_02d7e
+) <- NULL
+
+
+# ------------------------------------------------------------
+# 177. SAVE
+# ------------------------------------------------------------
+
+f_02d7e_seed_level <- file.path(
+    DIR_02,
+    "02D7E_nonraised_land_seed_level_partition.csv"
+)
+
+f_02d7e_group_summary <- file.path(
+    DIR_02,
+    "02D7E_nonraised_land_group_level_summary.csv"
+)
+
+f_02d7e_lake_summary <- file.path(
+    DIR_02,
+    "02D7E_nonraised_land_lake_level_summary.csv"
+)
+
+write.csv(
+    land_seed_level_02d7e,
+    f_02d7e_seed_level,
+    row.names = FALSE
+)
+
+write.csv(
+    land_level_group_summary_02d7e,
+    f_02d7e_group_summary,
+    row.names = FALSE
+)
+
+write.csv(
+    land_level_lake_summary_02d7e,
+    f_02d7e_lake_summary,
+    row.names = FALSE
+)
+
+
+# ------------------------------------------------------------
+# 178. PRINT
+# ------------------------------------------------------------
+
+cat("\n")
+cat("=== 02D.7E LAND SEED SPILL-LEVEL PARTITION ===\n")
+
+cat(sprintf(
+    "LAND_ONLY spill groups       : %d\n",
+    nrow(
+        land_level_group_summary_02d7e
+    )
+))
+
+cat(sprintf(
+    "Seed rows                    : %d\n",
+    nrow(
+        land_seed_level_02d7e
+    )
+))
+
+cat("\n--- SEED LEVEL RELATION ---\n")
+
+print(
+    table(
+        land_seed_level_02d7e$level_relation,
+        useNA = "ifany"
+    )
+)
+
+cat("\n--- GROUP CLASS ---\n")
+
+print(
+    table(
+        land_level_group_summary_02d7e$group_class,
+        useNA = "ifany"
+    )
+)
+
+cat(sprintf(
+    "\nGroups needing flat trace    : %d\n",
+    sum(
+        land_level_group_summary_02d7e$
+            needs_flat_trace
+    )
+))
+
+cat(sprintf(
+    "Lakes needing flat trace     : %d\n",
+    length(
+        unique(
+            land_level_group_summary_02d7e$
+                lake_objectid[
+                    land_level_group_summary_02d7e$
+                        needs_flat_trace
+                ]
+        )
+    )
+))
+
+cat(sprintf(
+    "ABOVE seed rows              : %d\n",
+    sum(
+        land_seed_level_02d7e$level_relation ==
+            "ABOVE"
+    )
+))
+
+cat("================================================\n")
+
+
+# ------------------------------------------------------------
+# 179. HARD QA
+# ------------------------------------------------------------
+
+stopifnot(
+    nrow(
+        land_level_group_summary_02d7e
+    ) ==
+        265,
+
+    nrow(
+        land_seed_level_02d7e
+    ) ==
+        1967,
+
+    sum(
+        land_seed_level_02d7e$level_relation ==
+            "LOWER"
+    ) ==
+        1003,
+
+    sum(
+        land_seed_level_02d7e$level_relation ==
+            "LEVEL"
+    ) ==
+        964,
+
+    sum(
+        land_seed_level_02d7e$level_relation ==
+            "ABOVE"
+    ) ==
+        0,
+
+    sum(
+        land_level_group_summary_02d7e$group_class ==
+            "LOWER_ONLY"
+    ) ==
+        50,
+
+    sum(
+        land_level_group_summary_02d7e$group_class ==
+            "LOWER_AND_LEVEL"
+    ) ==
+        7,
+
+    sum(
+        land_level_group_summary_02d7e$group_class ==
+            "LEVEL_ONLY"
+    ) ==
+        208,
+
+    sum(
+        land_level_group_summary_02d7e$group_class ==
+            "ABOVE_INVALID"
+    ) ==
+        0,
+
+    !any(
+        land_level_group_summary_02d7e$group_class ==
+            "UNCLASSIFIED"
+    )
+)
+
+cat("\n02D.7E HARD QA: PASS\n")
