@@ -1,0 +1,12 @@
+R.version.string: R version 4.5.0 (2025-04-11)
+terra package version: 1.8.29
+whitebox R package version: 2.4.3
+Original WhiteboxTools executable path: /workspace/hydro-env/whitebox-tools/WhiteboxTools_linux_amd64/WBT/whitebox_tools
+WhiteboxTools version output:
+WhiteboxTools v2.4.0 (c) Dr. John Lindsay 2017-2023
+
+WhiteboxTools is an advanced geospatial data analysis platform developed at
+the University of Guelph's Geomorphometry and Hydrogeomatics Research 
+Group (GHRG). See www.whiteboxgeo.com for more details.
+Copied WhiteboxTools SHA-256: 96bb47a9d1f0fe8a3cb46df524242c990eab9bc2ae1930e540e09328331172e4
+Copied WhiteboxTools byte size: 20845880
