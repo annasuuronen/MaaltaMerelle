@@ -49,17 +49,26 @@ row.names(links_02d7h) <- NULL
 
 stopifnot(nrow(links_02d7h)>0)
 
-# Every linked component must be a known raised component with gate evidence.
+# A linked raised component need not belong to the 02D.5A spill-raised
+# target set. Only target components have validated gate/02D.6 evidence;
+# other raised components remain explicit review links rather than being
+# assigned unsupported escape evidence.
 m_dep <- match(links_02d7h$depression_component_id,
                dep_escape_summary$depression_component_id)
-stopifnot(all(!is.na(m_dep)))
+links_02d7h$is_spill_raised_target <- !is.na(m_dep)
 
-links_02d7h$groups_direct_lower <-
-  dep_escape_summary$groups_direct_lower[m_dep]
-links_02d7h$groups_direct_water <-
-  dep_escape_summary$groups_direct_water[m_dep]
-links_02d7h$all_groups_level_land_only <-
-  dep_escape_summary$all_groups_level_land_only[m_dep]
+links_02d7h$groups_direct_lower <- 0L
+links_02d7h$groups_direct_water <- 0L
+links_02d7h$all_groups_level_land_only <- FALSE
+known_dep_02d7h <- which(links_02d7h$is_spill_raised_target)
+if (length(known_dep_02d7h)) {
+  links_02d7h$groups_direct_lower[known_dep_02d7h] <-
+    dep_escape_summary$groups_direct_lower[m_dep[known_dep_02d7h]]
+  links_02d7h$groups_direct_water[known_dep_02d7h] <-
+    dep_escape_summary$groups_direct_water[m_dep[known_dep_02d7h]]
+  links_02d7h$all_groups_level_land_only[known_dep_02d7h] <-
+    dep_escape_summary$all_groups_level_land_only[m_dep[known_dep_02d7h]]
+}
 
 # For all-level raised components, attach the already validated 02D.6
 # terminal evidence. Components with a direct lower/water gate do not
@@ -95,9 +104,11 @@ links_02d7h$has_known_external_escape <- (
 )
 links_02d7h$links_onward_to_depression <-
   links_02d7h$n_flat_other_depression_edges > 0
+links_02d7h$needs_non_target_review <- !links_02d7h$is_spill_raised_target
 links_02d7h$needs_link_chain_review <- (
   !links_02d7h$has_known_external_escape &
-  links_02d7h$links_onward_to_depression
+  (links_02d7h$links_onward_to_depression |
+     links_02d7h$needs_non_target_review)
 )
 
 group_ids_02d7h <- sort(unique(links_02d7h$spill_group_id))
@@ -126,6 +137,7 @@ cat("\n=== 02D.7H NON-RAISED -> RAISED DEPRESSION LINKS ===\n")
 cat("Linked LAND groups             :",nrow(group_links_02d7h),"\n")
 cat("Unique raised components       :",length(unique(links_02d7h$depression_component_id)),"\n")
 cat("Links with external escape     :",sum(links_02d7h$has_known_external_escape),"\n")
+cat("Non-target raised links        :",sum(links_02d7h$needs_non_target_review),"\n")
 cat("Links needing chain review     :",sum(links_02d7h$needs_link_chain_review),"\n")
 cat("Raised flat untraced LEVEL     :",sum(links_02d7h$n_flat_untraced_level_land_edges),"\n")
 
