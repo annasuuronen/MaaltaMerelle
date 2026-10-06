@@ -30,8 +30,8 @@ run_checks <- function() {
   e <- load_config()
   stopifnot(e$PROJECT_ROOT == root, e$HYDRO_MODE == "LOCAL_TEST",
             e$PIPELINE_ROOT == root,
-            e$SOURCE_TEST_ROOT == file.path(root, "data", "hydro_test", "TEST_SULKU_11"),
-            e$STRUCTURES_GPKG == file.path(root, "data", "hydrology_structures", "processed",
+            e$SOURCE_TEST_ROOT == file.path(root, "data", "TEST_SULKU_11"),
+            e$STRUCTURES_GPKG == file.path(root, "data", "TEST_SULKU_11",
                                          "HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg"),
             e$RUN_ROOT == file.path(root, "runs", "TEST_SULKU_11"),
             all(dir.exists(c(e$DIR_01, e$DIR_02, e$DIR_03, e$DIR_04, e$DIR_05, e$DIR_06))),

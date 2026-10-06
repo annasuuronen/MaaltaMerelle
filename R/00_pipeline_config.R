@@ -118,13 +118,18 @@ hydro_path <- function(variable, default) {
 if (HYDRO_MODE == "LOCAL_TEST") {
   PIPELINE_ROOT <- hydro_path("HYDRO_PIPELINE_ROOT", PROJECT_ROOT)
   SOURCE_TEST_ROOT <- hydro_path(
-    "HYDRO_SOURCE_TEST_ROOT", file.path("data", "hydro_test", TEST_ID)
+    "HYDRO_SOURCE_TEST_ROOT", file.path("data", TEST_ID)
   )
   STRUCTURES_ROOT <- hydro_path(
-    "HYDRO_STRUCTURES_ROOT", file.path("data", "hydrology_structures")
+    "HYDRO_STRUCTURES_ROOT", SOURCE_TEST_ROOT
   )
   STRUCTURES_GPKG <- file.path(
-    STRUCTURES_ROOT, "processed",
+    # Preserve the existing processed/ layout for explicit structures overrides.
+    if (nzchar(Sys.getenv("HYDRO_STRUCTURES_ROOT", unset = ""))) {
+      file.path(STRUCTURES_ROOT, "processed")
+    } else {
+      SOURCE_TEST_ROOT
+    },
     "HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg"
   )
 }
