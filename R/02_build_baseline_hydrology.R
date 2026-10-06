@@ -8988,3 +8988,914 @@ stopifnot(
 )
 
 cat("\n02D.7A HARD QA: PASS\n")
+
+
+# ============================================================
+# 02D.7B - NON-RAISED LAND SEED INVENTORY
+#
+# Tavoite:
+# - inventoi 02D.7A:n LAND-tracea tarvitsevien järvien
+#   LAND_ONLY spill-ryhmien ulkopuoliset LAND-vastaanottajat
+# - tarkista diagnostic D8 pointer näissä seed-soluissa
+# - erottele:
+#     VALID_D8 / ZERO / NA / INVALID
+# - katso vain ENSIMMÄINEN D8-askel ilman reitityspäätöstä
+# - liitä pointer=0-solut olemassa olevaan 02C-komponentti-QA:han
+#
+# Tämä on pelkkä diagnostiikka.
+# EI outlet-valintaa.
+# EI pointer-muutoksia.
+# EI flow accumulationia.
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 146. TARGET LAND_ONLY SPILL GROUPS
+# ------------------------------------------------------------
+
+land_trace_ids <- sort(
+    unique(
+        land_trace_lakes$lake_objectid
+    )
+)
+
+land_only_groups_02d7b <- target_evidence[
+    target_evidence$lake_objectid %in%
+        land_trace_ids &
+        target_evidence$evidence_class ==
+            "LAND_ONLY",
+    c(
+        "spill_group_id",
+        "lake_objectid"
+    ),
+    drop = FALSE
+]
+
+land_only_groups_02d7b <- unique(
+    land_only_groups_02d7b
+)
+
+stopifnot(
+    length(land_trace_ids) == 58,
+    nrow(land_only_groups_02d7b) > 0,
+    !anyDuplicated(
+        land_only_groups_02d7b$spill_group_id
+    )
+)
+
+lakes_with_land_groups_02d7b <- sort(
+    unique(
+        land_only_groups_02d7b$lake_objectid
+    )
+)
+
+stopifnot(
+    identical(
+        lakes_with_land_groups_02d7b,
+        land_trace_ids
+    )
+)
+
+
+# ------------------------------------------------------------
+# 147. LAND RECEIVER SEEDS
+# ------------------------------------------------------------
+
+land_edges_02d7b <- low_shore_edges[
+    low_shore_edges$spill_group_id %in%
+        land_only_groups_02d7b$spill_group_id &
+        low_shore_edges$receiver_type ==
+            "LAND",
+    ,
+    drop = FALSE
+]
+
+stopifnot(
+    nrow(land_edges_02d7b) > 0
+)
+
+land_seed_inventory <- unique(
+    land_edges_02d7b[
+        ,
+        c(
+            "spill_group_id",
+            "lake_objectid",
+            "receiver_cell"
+        ),
+        drop = FALSE
+    ]
+)
+
+names(
+    land_seed_inventory
+)[
+    names(land_seed_inventory) ==
+        "receiver_cell"
+] <- "seed_cell"
+
+land_seed_inventory <- land_seed_inventory[
+    order(
+        land_seed_inventory$lake_objectid,
+        land_seed_inventory$spill_group_id,
+        land_seed_inventory$seed_cell
+    ),
+    ,
+    drop = FALSE
+]
+
+row.names(
+    land_seed_inventory
+) <- NULL
+
+stopifnot(
+    nrow(land_seed_inventory) > 0,
+    all(
+        land_seed_inventory$seed_cell >= 1 &
+            land_seed_inventory$seed_cell <=
+                ncell(ptr_land_water)
+    )
+)
+
+
+# ------------------------------------------------------------
+# 148. SEED ELEVATION / EDGE / POINTER
+# ------------------------------------------------------------
+
+land_seed_inventory$seed_storage_z_m <-
+    cell_values(
+        surface_storage,
+        land_seed_inventory$seed_cell
+    )
+
+land_seed_inventory$seed_land_water_z_m <-
+    cell_values(
+        surface_land_water,
+        land_seed_inventory$seed_cell
+    )
+
+land_seed_inventory$touches_raster_edge <-
+    is_edge_cell(
+        ptr_land_water,
+        land_seed_inventory$seed_cell
+    )
+
+seed_pointer <- cell_values(
+    ptr_land_water,
+    land_seed_inventory$seed_cell
+)
+
+land_seed_inventory$d8_code <-
+    seed_pointer
+
+land_seed_inventory$pointer_status <-
+    "INVALID"
+
+land_seed_inventory$pointer_status[
+    !is.finite(seed_pointer)
+] <- "NA"
+
+land_seed_inventory$pointer_status[
+    is.finite(seed_pointer) &
+        seed_pointer == 0
+] <- "ZERO"
+
+land_seed_inventory$pointer_status[
+    is.finite(seed_pointer) &
+        seed_pointer %in%
+            valid_pointer_codes
+] <- "VALID_D8"
+
+
+# ------------------------------------------------------------
+# 149. MAP ZERO POINTER SEEDS TO 02C COMPONENTS
+# ------------------------------------------------------------
+
+land_seed_inventory$zero_component_id <-
+    NA_integer_
+
+land_seed_inventory$zero_component_status <-
+    NA_character_
+
+land_seed_inventory$zero_target_lake_objectid <-
+    NA_integer_
+
+is_zero_seed <- (
+    land_seed_inventory$pointer_status ==
+        "ZERO"
+)
+
+if (any(is_zero_seed)) {
+
+    zero_match <- match(
+        land_seed_inventory$seed_cell[
+            is_zero_seed
+        ],
+        zero_table$cell
+    )
+
+    stopifnot(
+        all(
+            !is.na(
+                zero_match
+            )
+        )
+    )
+
+    zero_component_id <- zero_table$component_id[
+        zero_match
+    ]
+
+    land_seed_inventory$zero_component_id[
+        is_zero_seed
+    ] <- as.integer(
+        zero_component_id
+    )
+
+    comp_match <- match(
+        zero_component_id,
+        component_summary$component_id
+    )
+
+    stopifnot(
+        all(
+            !is.na(
+                comp_match
+            )
+        )
+    )
+
+    land_seed_inventory$zero_component_status[
+        is_zero_seed
+    ] <- component_summary$connector_status[
+        comp_match
+    ]
+
+    land_seed_inventory$zero_target_lake_objectid[
+        is_zero_seed
+    ] <- as.integer(
+        component_summary$target_lake_objectid[
+            comp_match
+        ]
+    )
+}
+
+
+# ------------------------------------------------------------
+# 150. FIRST D8 STEP FROM VALID LAND SEEDS
+# ------------------------------------------------------------
+
+n_seed_02d7b <- nrow(
+    land_seed_inventory
+)
+
+land_seed_inventory$next_cell <-
+    NA_integer_
+
+land_seed_inventory$next_type <-
+    NA_character_
+
+land_seed_inventory$next_water_class <-
+    NA_integer_
+
+land_seed_inventory$next_lake_objectid <-
+    NA_integer_
+
+is_valid_seed <- (
+    land_seed_inventory$pointer_status ==
+        "VALID_D8"
+)
+
+if (any(is_valid_seed)) {
+
+    idx <- which(
+        is_valid_seed
+    )
+
+    src <- land_seed_inventory$seed_cell[
+        idx
+    ]
+
+    p <- as.integer(
+        land_seed_inventory$d8_code[
+            idx
+        ]
+    )
+
+    rc <- rowColFromCell(
+        ptr_land_water,
+        src
+    )
+
+    rr <- rc[, 1] +
+        unname(
+            dr[
+                as.character(p)
+            ]
+        )
+
+    cc <- rc[, 2] +
+        unname(
+            dc[
+                as.character(p)
+            ]
+        )
+
+    inside <- (
+        rr >= 1 &
+            rr <= nrow(ptr_land_water) &
+            cc >= 1 &
+            cc <= ncol(ptr_land_water)
+    )
+
+    land_seed_inventory$next_type[
+        idx[!inside]
+    ] <- "DOMAIN_EXIT"
+
+    if (any(inside)) {
+
+        next_cells <- cellFromRowCol(
+            ptr_land_water,
+            rr[inside],
+            cc[inside]
+        )
+
+        inside_idx <- idx[
+            inside
+        ]
+
+        land_seed_inventory$next_cell[
+            inside_idx
+        ] <- as.integer(
+            next_cells
+        )
+
+        next_water <- cell_values(
+            water_class,
+            next_cells
+        )
+
+        next_lake <- cell_values(
+            lake_id,
+            next_cells
+        )
+
+        land_seed_inventory$next_water_class[
+            inside_idx
+        ] <- as.integer(
+            next_water
+        )
+
+        is_land_next <- !is.finite(
+            next_water
+        )
+
+        land_seed_inventory$next_type[
+            inside_idx[
+                is_land_next
+            ]
+        ] <- "LAND"
+
+        is_lake_next <- (
+            is.finite(next_water) &
+                next_water == 1
+        )
+
+        if (any(is_lake_next)) {
+
+            lake_idx <- inside_idx[
+                is_lake_next
+            ]
+
+            lake_values <- as.integer(
+                next_lake[
+                    is_lake_next
+                ]
+            )
+
+            stopifnot(
+                all(
+                    is.finite(
+                        lake_values
+                    )
+                )
+            )
+
+            land_seed_inventory$next_lake_objectid[
+                lake_idx
+            ] <- lake_values
+
+            is_origin <- (
+                lake_values ==
+                    land_seed_inventory$lake_objectid[
+                        lake_idx
+                    ]
+            )
+
+            land_seed_inventory$next_type[
+                lake_idx[
+                    is_origin
+                ]
+            ] <- "ORIGIN_LAKE"
+
+            land_seed_inventory$next_type[
+                lake_idx[
+                    !is_origin
+                ]
+            ] <- "OTHER_LAKE"
+        }
+
+        land_seed_inventory$next_type[
+            inside_idx[
+                is.finite(next_water) &
+                    next_water == 2
+            ]
+        ] <- "RIVER_AREA"
+
+        land_seed_inventory$next_type[
+            inside_idx[
+                is.finite(next_water) &
+                    next_water == 3
+            ]
+        ] <- "RIVER_LINE"
+
+        unexpected_water <- (
+            is.finite(next_water) &
+                !next_water %in%
+                    c(
+                        1,
+                        2,
+                        3
+                    )
+        )
+
+        land_seed_inventory$next_type[
+            inside_idx[
+                unexpected_water
+            ]
+        ] <- "UNKNOWN_WATER_CLASS"
+    }
+}
+
+land_seed_inventory$next_type[
+    land_seed_inventory$pointer_status ==
+        "ZERO"
+] <- "ZERO_POINTER"
+
+land_seed_inventory$next_type[
+    land_seed_inventory$pointer_status ==
+        "NA"
+] <- "POINTER_NA"
+
+land_seed_inventory$next_type[
+    land_seed_inventory$pointer_status ==
+        "INVALID"
+] <- "POINTER_INVALID"
+
+stopifnot(
+    all(
+        !is.na(
+            land_seed_inventory$next_type
+        )
+    )
+)
+
+
+# ------------------------------------------------------------
+# 151. GROUP SUMMARY
+# ------------------------------------------------------------
+
+land_group_ids_02d7b <- sort(
+    unique(
+        land_seed_inventory$spill_group_id
+    )
+)
+
+land_group_summary_list <- vector(
+    "list",
+    length(land_group_ids_02d7b)
+)
+
+for (i in seq_along(land_group_ids_02d7b)) {
+
+    gid <- land_group_ids_02d7b[i]
+
+    gx <- land_seed_inventory[
+        land_seed_inventory$spill_group_id == gid,
+        ,
+        drop = FALSE
+    ]
+
+    stopifnot(
+        nrow(gx) > 0,
+        length(
+            unique(
+                gx$lake_objectid
+            )
+        ) == 1
+    )
+
+    land_group_summary_list[[i]] <- data.frame(
+
+        spill_group_id =
+            gid,
+
+        lake_objectid =
+            gx$lake_objectid[1],
+
+        n_seed_cells =
+            nrow(gx),
+
+        n_valid_d8 =
+            sum(
+                gx$pointer_status ==
+                    "VALID_D8"
+            ),
+
+        n_zero =
+            sum(
+                gx$pointer_status ==
+                    "ZERO"
+            ),
+
+        n_pointer_na =
+            sum(
+                gx$pointer_status ==
+                    "NA"
+            ),
+
+        n_pointer_invalid =
+            sum(
+                gx$pointer_status ==
+                    "INVALID"
+            ),
+
+        n_next_land =
+            sum(
+                gx$next_type ==
+                    "LAND"
+            ),
+
+        n_next_origin_lake =
+            sum(
+                gx$next_type ==
+                    "ORIGIN_LAKE"
+            ),
+
+        n_next_other_lake =
+            sum(
+                gx$next_type ==
+                    "OTHER_LAKE"
+            ),
+
+        n_next_river_area =
+            sum(
+                gx$next_type ==
+                    "RIVER_AREA"
+            ),
+
+        n_next_river_line =
+            sum(
+                gx$next_type ==
+                    "RIVER_LINE"
+            ),
+
+        n_domain_exit =
+            sum(
+                gx$next_type ==
+                    "DOMAIN_EXIT"
+            ),
+
+        n_zero_safe =
+            sum(
+                gx$pointer_status ==
+                    "ZERO" &
+                    gx$zero_component_status ==
+                        "SAFE_LAKE_CONNECTOR",
+                na.rm = TRUE
+            ),
+
+        n_zero_edge =
+            sum(
+                gx$pointer_status ==
+                    "ZERO" &
+                    gx$zero_component_status ==
+                        "EDGE_CASE",
+                na.rm = TRUE
+            ),
+
+        n_zero_review =
+            sum(
+                gx$pointer_status ==
+                    "ZERO" &
+                    gx$zero_component_status ==
+                        "INTERIOR_REVIEW",
+                na.rm = TRUE
+            ),
+
+        stringsAsFactors = FALSE
+    )
+}
+
+land_group_summary_02d7b <- do.call(
+    rbind,
+    land_group_summary_list
+)
+
+row.names(
+    land_group_summary_02d7b
+) <- NULL
+
+
+# ------------------------------------------------------------
+# 152. LAKE SUMMARY
+# ------------------------------------------------------------
+
+land_lake_summary_list <- vector(
+    "list",
+    length(land_trace_ids)
+)
+
+for (i in seq_along(land_trace_ids)) {
+
+    lid <- land_trace_ids[i]
+
+    gx <- land_seed_inventory[
+        land_seed_inventory$lake_objectid == lid,
+        ,
+        drop = FALSE
+    ]
+
+    stopifnot(
+        nrow(gx) > 0
+    )
+
+    land_lake_summary_list[[i]] <- data.frame(
+
+        lake_objectid =
+            lid,
+
+        n_land_only_groups =
+            length(
+                unique(
+                    gx$spill_group_id
+                )
+            ),
+
+        n_seed_cells =
+            nrow(gx),
+
+        n_valid_d8 =
+            sum(
+                gx$pointer_status ==
+                    "VALID_D8"
+            ),
+
+        n_zero =
+            sum(
+                gx$pointer_status ==
+                    "ZERO"
+            ),
+
+        n_pointer_na =
+            sum(
+                gx$pointer_status ==
+                    "NA"
+            ),
+
+        n_pointer_invalid =
+            sum(
+                gx$pointer_status ==
+                    "INVALID"
+            ),
+
+        n_next_land =
+            sum(
+                gx$next_type ==
+                    "LAND"
+            ),
+
+        n_next_origin_lake =
+            sum(
+                gx$next_type ==
+                    "ORIGIN_LAKE"
+            ),
+
+        n_next_other_lake =
+            sum(
+                gx$next_type ==
+                    "OTHER_LAKE"
+            ),
+
+        n_next_river =
+            sum(
+                gx$next_type %in%
+                    c(
+                        "RIVER_AREA",
+                        "RIVER_LINE"
+                    )
+            ),
+
+        n_domain_exit =
+            sum(
+                gx$next_type ==
+                    "DOMAIN_EXIT"
+            ),
+
+        stringsAsFactors = FALSE
+    )
+}
+
+land_lake_summary_02d7b <- do.call(
+    rbind,
+    land_lake_summary_list
+)
+
+row.names(
+    land_lake_summary_02d7b
+) <- NULL
+
+
+# ------------------------------------------------------------
+# 153. SAVE
+# ------------------------------------------------------------
+
+f_02d7b_seed_inventory <- file.path(
+    DIR_02,
+    "02D7B_nonraised_land_seed_inventory.csv"
+)
+
+f_02d7b_group_summary <- file.path(
+    DIR_02,
+    "02D7B_nonraised_land_group_summary.csv"
+)
+
+f_02d7b_lake_summary <- file.path(
+    DIR_02,
+    "02D7B_nonraised_land_lake_summary.csv"
+)
+
+write.csv(
+    land_seed_inventory,
+    f_02d7b_seed_inventory,
+    row.names = FALSE
+)
+
+write.csv(
+    land_group_summary_02d7b,
+    f_02d7b_group_summary,
+    row.names = FALSE
+)
+
+write.csv(
+    land_lake_summary_02d7b,
+    f_02d7b_lake_summary,
+    row.names = FALSE
+)
+
+
+# ------------------------------------------------------------
+# 154. PRINT
+# ------------------------------------------------------------
+
+cat("\n")
+cat("=== 02D.7B NON-RAISED LAND SEED INVENTORY ===\n")
+
+cat(sprintf(
+    "LAND-trace lakes             : %d\n",
+    length(land_trace_ids)
+))
+
+cat(sprintf(
+    "LAND_ONLY spill groups       : %d\n",
+    nrow(land_only_groups_02d7b)
+))
+
+cat(sprintf(
+    "Unique group/seed rows       : %d\n",
+    n_seed_02d7b
+))
+
+cat("\n--- POINTER STATUS ---\n")
+print(
+    table(
+        land_seed_inventory$pointer_status,
+        useNA = "ifany"
+    )
+)
+
+cat("\n--- FIRST D8 STEP ---\n")
+print(
+    table(
+        land_seed_inventory$next_type,
+        useNA = "ifany"
+    )
+)
+
+cat("\n--- ZERO POINTER COMPONENT STATUS ---\n")
+
+if (any(is_zero_seed)) {
+
+    print(
+        table(
+            land_seed_inventory$zero_component_status[
+                is_zero_seed
+            ],
+            useNA = "ifany"
+        )
+    )
+
+} else {
+
+    cat("NONE\n")
+}
+
+cat(sprintf(
+    "\nLakes with at least one ZERO seed : %d\n",
+    length(
+        unique(
+            land_seed_inventory$lake_objectid[
+                land_seed_inventory$pointer_status ==
+                    "ZERO"
+            ]
+        )
+    )
+))
+
+cat(sprintf(
+    "Lakes with at least one next-LAND: %d\n",
+    length(
+        unique(
+            land_seed_inventory$lake_objectid[
+                land_seed_inventory$next_type ==
+                    "LAND"
+            ]
+        )
+    )
+))
+
+cat(sprintf(
+    "Lakes with origin-lake return    : %d\n",
+    length(
+        unique(
+            land_seed_inventory$lake_objectid[
+                land_seed_inventory$next_type ==
+                    "ORIGIN_LAKE"
+            ]
+        )
+    )
+))
+
+cat(sprintf(
+    "Lakes with domain-exit seed      : %d\n",
+    length(
+        unique(
+            land_seed_inventory$lake_objectid[
+                land_seed_inventory$next_type ==
+                    "DOMAIN_EXIT"
+            ]
+        )
+    )
+))
+
+cat("===============================================\n")
+
+
+# ------------------------------------------------------------
+# 155. HARD QA
+# ------------------------------------------------------------
+
+stopifnot(
+    length(land_trace_ids) == 58,
+
+    identical(
+        sort(
+            unique(
+                land_seed_inventory$lake_objectid
+            )
+        ),
+        land_trace_ids
+    ),
+
+    sum(
+        land_seed_inventory$pointer_status %in%
+            c(
+                "VALID_D8",
+                "ZERO",
+                "NA",
+                "INVALID"
+            )
+    ) ==
+        nrow(
+            land_seed_inventory
+        ),
+
+    !any(
+        land_seed_inventory$pointer_status ==
+            "ZERO" &
+            is.na(
+                land_seed_inventory$zero_component_id
+            )
+    )
+)
+
+cat("\n02D.7B HARD QA: PASS\n")
