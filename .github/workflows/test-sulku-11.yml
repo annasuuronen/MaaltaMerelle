@@ -92,6 +92,19 @@ jobs:
           set -euo pipefail
           Rscript -e 'cat(R.version.string, "\n"); cat("terra ", as.character(packageVersion("terra")), "\n", sep=""); cat("whitebox ", as.character(packageVersion("whitebox")), "\n", sep=""); stopifnot(file.exists(Sys.getenv("R_WHITEBOX_EXE_PATH"))); stopifnot(whitebox::wbt_init(check_version = FALSE))'
 
+      - name: Cache validated heavy hydrology rasters
+        uses: actions/cache@v4
+        with:
+          path: |
+            runs/TEST_SULKU_11/01_inputs/ranta10_lake_elevation_m.tif
+            runs/TEST_SULKU_11/02_baseline/land_dem_raw_FLT8S.tif
+            runs/TEST_SULKU_11/02_baseline/land_dem_filled_FLT8S.tif
+            runs/TEST_SULKU_11/02_baseline/routing_surface_land_water_FLT8S.tif
+            runs/TEST_SULKU_11/02_baseline/routing_surface_water_storage_FLT8S.tif
+            runs/TEST_SULKU_11/02_baseline/d8_pointer_land_water_FLT8S.tif
+            runs/TEST_SULKU_11/02_baseline/02D_raised_depression_components.tif
+          key: test-sulku-11-heavy-v1-r45-terra1829-wbt240
+
       - name: Run portability tests
         shell: bash
         run: |
@@ -122,7 +135,7 @@ jobs:
             echo '## Key diagnostic lines'
             echo '~~~'
             if test -f hydro02.log; then
-              grep -E                 '02D\.6 HARD QA|02D\.7A HARD QA|02D\.7B HARD QA|Untraced LEVEL-land edges|All lakes|Spill-raised lakes|Non-raised lakes|LAND-trace lakes|LAND_ONLY spill groups|Unique group/seed rows|Lakes with at least one ZERO seed|Lakes with at least one next-LAND|Lakes with origin-lake return|Lakes with domain-exit seed'                 hydro02.log || true
+              grep -E                 '02D\.6 HARD QA|02D\.7A HARD QA|02D\.7B HARD QA|02D\.7C HARD QA|02D\.7D HARD QA|Untraced LEVEL-land edges|All lakes|Spill-raised lakes|Non-raised lakes|LAND-trace lakes|LAND_ONLY spill groups|Unique group/seed rows|Lakes with at least one ZERO seed|Lakes with at least one next-LAND|Lakes with origin-lake return|Lakes with domain-exit seed'                 hydro02.log || true
             fi
             echo '~~~'
           } > TEST_SULKU_11_QA_SUMMARY.md

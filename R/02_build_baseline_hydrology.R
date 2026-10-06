@@ -10754,3 +10754,822 @@ stopifnot(
 )
 
 cat("\n02D.7C HARD QA: PASS\n")
+
+
+# ============================================================
+# 02D.7D - ZERO TERMINAL EVIDENCE
+#
+# Tavoite:
+# - tarkenna 02D.7C:ssa INTERIOR_REVIEW- tai muuten
+#   luokittelemattomaan zero-pointer-terminaaliin päätyneet polut
+# - inventoi koko 02C zero-komponentin viereiset RANTA10-vesisolut
+# - tunnista yksikäsitteinen alin viereinen vesikohde
+# - pidä rasterireunan luokittelemattomat zero-solut erillisinä
+#
+# Tämä tuottaa vain evidenssiä.
+# EI outlet-valintaa.
+# EI pointer-muutoksia.
+# EI final D8:aa.
+# EI flow accumulationia.
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 166. PARAMETERS
+# ------------------------------------------------------------
+
+zero_water_tol_m_02d7d <- 1e-6
+
+
+# ------------------------------------------------------------
+# 167. INTERIOR-REVIEW ZERO COMPONENTS REACHED BY LAND TRACE
+# ------------------------------------------------------------
+
+review_zero_rows_02d7d <- trace_seed_results_02d7c[
+    trace_seed_results_02d7c$terminal_class ==
+        "ZERO_INTERIOR_REVIEW",
+    ,
+    drop = FALSE
+]
+
+review_component_ids_02d7d <- sort(
+    unique(
+        review_zero_rows_02d7d$terminal_zero_component_id[
+            is.finite(
+                review_zero_rows_02d7d$terminal_zero_component_id
+            )
+        ]
+    )
+)
+
+review_component_evidence_list_02d7d <- vector(
+    "list",
+    length(review_component_ids_02d7d)
+)
+
+review_water_neighbors_list_02d7d <- vector(
+    "list",
+    length(review_component_ids_02d7d)
+)
+
+
+for (i in seq_along(review_component_ids_02d7d)) {
+
+    cid <- review_component_ids_02d7d[i]
+
+    cx <- component_summary[
+        component_summary$component_id == cid,
+        ,
+        drop = FALSE
+    ]
+
+    stopifnot(
+        nrow(cx) == 1,
+        cx$connector_status ==
+            "INTERIOR_REVIEW"
+    )
+
+    wn <- water_neighbor_table[
+        water_neighbor_table$component_id == cid,
+        ,
+        drop = FALSE
+    ]
+
+    stopifnot(
+        nrow(wn) > 0
+    )
+
+    wn_unique <- unique(
+        wn[
+            ,
+            c(
+                "water_cell",
+                "water_class",
+                "lake_objectid",
+                "water_z_m"
+            ),
+            drop = FALSE
+        ]
+    )
+
+    wn_unique <- wn_unique[
+        order(
+            wn_unique$water_z_m,
+            wn_unique$water_class,
+            wn_unique$water_cell
+        ),
+        ,
+        drop = FALSE
+    ]
+
+    min_water_z <- min(
+        wn_unique$water_z_m,
+        na.rm = TRUE
+    )
+
+    wn_unique$is_min_water <- (
+        is.finite(
+            wn_unique$water_z_m
+        ) &
+        abs(
+            wn_unique$water_z_m -
+                min_water_z
+        ) <=
+            zero_water_tol_m_02d7d
+    )
+
+    wn_unique$target_key <- NA_character_
+
+    wn_unique$target_key[
+        wn_unique$water_class == 1 &
+        is.finite(
+            wn_unique$lake_objectid
+        )
+    ] <- paste0(
+        "LAKE:",
+        as.integer(
+            wn_unique$lake_objectid[
+                wn_unique$water_class == 1 &
+                is.finite(
+                    wn_unique$lake_objectid
+                )
+            ]
+        )
+    )
+
+    wn_unique$target_key[
+        wn_unique$water_class == 2
+    ] <- "RIVER_AREA"
+
+    wn_unique$target_key[
+        wn_unique$water_class == 3
+    ] <- "RIVER_LINE"
+
+    min_targets <- sort(
+        unique(
+            wn_unique$target_key[
+                wn_unique$is_min_water &
+                !is.na(
+                    wn_unique$target_key
+                )
+            ]
+        )
+    )
+
+    min_lake_ids <- sort(
+        unique(
+            as.integer(
+                wn_unique$lake_objectid[
+                    wn_unique$is_min_water &
+                    wn_unique$water_class == 1 &
+                    is.finite(
+                        wn_unique$lake_objectid
+                    )
+                ]
+            )
+        )
+    )
+
+    n_min_river_area <- sum(
+        wn_unique$is_min_water &
+        wn_unique$water_class == 2
+    )
+
+    n_min_river_line <- sum(
+        wn_unique$is_min_water &
+        wn_unique$water_class == 3
+    )
+
+    evidence_class <- "AMBIGUOUS_MIN_WATER"
+    evidence_target_lake <- NA_integer_
+
+    if (
+        length(min_targets) == 1 &&
+        length(min_lake_ids) == 1 &&
+        n_min_river_area == 0 &&
+        n_min_river_line == 0
+    ) {
+
+        evidence_class <-
+            "UNIQUE_MIN_LAKE"
+
+        evidence_target_lake <-
+            min_lake_ids[1]
+
+    } else if (
+        length(min_targets) == 1 &&
+        length(min_lake_ids) == 0 &&
+        n_min_river_area > 0 &&
+        n_min_river_line == 0
+    ) {
+
+        evidence_class <-
+            "UNIQUE_MIN_RIVER_AREA"
+
+    } else if (
+        length(min_targets) == 1 &&
+        length(min_lake_ids) == 0 &&
+        n_min_river_area == 0 &&
+        n_min_river_line > 0
+    ) {
+
+        evidence_class <-
+            "UNIQUE_MIN_RIVER_LINE"
+    }
+
+    origin_lakes <- sort(
+        unique(
+            review_zero_rows_02d7d$lake_objectid[
+                review_zero_rows_02d7d$
+                    terminal_zero_component_id ==
+                    cid
+            ]
+        )
+    )
+
+    review_component_evidence_list_02d7d[[i]] <-
+        data.frame(
+
+            component_id =
+                cid,
+
+            n_zero_cells =
+                cx$n_zero_cells,
+
+            water_signature =
+                cx$water_signature,
+
+            adjacent_lake_objectids =
+                cx$lake_objectids,
+
+            terminal_min_z_m =
+                cx$terminal_min_z_m,
+
+            min_adjacent_water_z_m =
+                min_water_z,
+
+            n_unique_water_neighbor_cells =
+                nrow(wn_unique),
+
+            n_min_target_keys =
+                length(min_targets),
+
+            min_target_keys =
+                if (
+                    length(min_targets) == 0
+                ) {
+                    ""
+                } else {
+                    paste(
+                        min_targets,
+                        collapse = ";"
+                    )
+                },
+
+            n_min_lake_objectids =
+                length(min_lake_ids),
+
+            min_lake_objectids =
+                if (
+                    length(min_lake_ids) == 0
+                ) {
+                    ""
+                } else {
+                    paste(
+                        min_lake_ids,
+                        collapse = ";"
+                    )
+                },
+
+            n_min_river_area =
+                n_min_river_area,
+
+            n_min_river_line =
+                n_min_river_line,
+
+            trace_origin_lake_objectids =
+                if (
+                    length(origin_lakes) == 0
+                ) {
+                    ""
+                } else {
+                    paste(
+                        origin_lakes,
+                        collapse = ";"
+                    )
+                },
+
+            evidence_class =
+                evidence_class,
+
+            evidence_target_lake_objectid =
+                evidence_target_lake,
+
+            stringsAsFactors = FALSE
+        )
+
+    wn_unique$component_id <- cid
+
+    review_water_neighbors_list_02d7d[[i]] <-
+        wn_unique[
+            ,
+            c(
+                "component_id",
+                "water_cell",
+                "water_class",
+                "lake_objectid",
+                "water_z_m",
+                "is_min_water",
+                "target_key"
+            ),
+            drop = FALSE
+        ]
+}
+
+
+if (length(review_component_evidence_list_02d7d) > 0) {
+
+    review_component_evidence_02d7d <- do.call(
+        rbind,
+        review_component_evidence_list_02d7d
+    )
+
+    review_water_neighbors_02d7d <- do.call(
+        rbind,
+        review_water_neighbors_list_02d7d
+    )
+
+} else {
+
+    review_component_evidence_02d7d <- data.frame(
+        component_id = integer(0),
+        n_zero_cells = integer(0),
+        water_signature = character(0),
+        adjacent_lake_objectids = character(0),
+        terminal_min_z_m = numeric(0),
+        min_adjacent_water_z_m = numeric(0),
+        n_unique_water_neighbor_cells = integer(0),
+        n_min_target_keys = integer(0),
+        min_target_keys = character(0),
+        n_min_lake_objectids = integer(0),
+        min_lake_objectids = character(0),
+        n_min_river_area = integer(0),
+        n_min_river_line = integer(0),
+        trace_origin_lake_objectids = character(0),
+        evidence_class = character(0),
+        evidence_target_lake_objectid = integer(0),
+        stringsAsFactors = FALSE
+    )
+
+    review_water_neighbors_02d7d <- data.frame()
+}
+
+
+# ------------------------------------------------------------
+# 168. UNMAPPED ZERO TERMINALS
+# ------------------------------------------------------------
+
+unmapped_zero_rows_02d7d <- trace_seed_results_02d7c[
+    trace_seed_results_02d7c$terminal_class ==
+        "ZERO_UNCLASSIFIED",
+    ,
+    drop = FALSE
+]
+
+if (nrow(unmapped_zero_rows_02d7d) > 0) {
+
+    unmapped_zero_summary_02d7d <- unique(
+        unmapped_zero_rows_02d7d[
+            ,
+            c(
+                "terminal_cell"
+            ),
+            drop = FALSE
+        ]
+    )
+
+    names(
+        unmapped_zero_summary_02d7d
+    )[1] <- "zero_cell"
+
+    unmapped_zero_summary_02d7d$touches_raster_edge <-
+        is_edge_cell(
+            ptr_land_water,
+            unmapped_zero_summary_02d7d$zero_cell
+        )
+
+    unmapped_zero_summary_02d7d$evidence_class <-
+        ifelse(
+            unmapped_zero_summary_02d7d$touches_raster_edge,
+            "RASTER_EDGE_CENSORED",
+            "UNMAPPED_INTERIOR_ZERO"
+        )
+
+} else {
+
+    unmapped_zero_summary_02d7d <- data.frame(
+        zero_cell = integer(0),
+        touches_raster_edge = logical(0),
+        evidence_class = character(0),
+        stringsAsFactors = FALSE
+    )
+}
+
+
+# ------------------------------------------------------------
+# 169. APPLY EVIDENCE TO TRACE ROWS
+# ------------------------------------------------------------
+
+trace_zero_evidence_02d7d <-
+    trace_seed_results_02d7c
+
+trace_zero_evidence_02d7d$
+    refined_terminal_class <-
+    trace_zero_evidence_02d7d$
+        terminal_class
+
+trace_zero_evidence_02d7d$
+    refined_target_lake_objectid <-
+    NA_integer_
+
+
+is_review_terminal_02d7d <- (
+    trace_zero_evidence_02d7d$terminal_class ==
+        "ZERO_INTERIOR_REVIEW"
+)
+
+if (any(is_review_terminal_02d7d)) {
+
+    evidence_match <- match(
+        trace_zero_evidence_02d7d$
+            terminal_zero_component_id[
+                is_review_terminal_02d7d
+            ],
+        review_component_evidence_02d7d$
+            component_id
+    )
+
+    stopifnot(
+        all(
+            !is.na(
+                evidence_match
+            )
+        )
+    )
+
+    ev_class <- review_component_evidence_02d7d$
+        evidence_class[
+            evidence_match
+        ]
+
+    ev_lake <- review_component_evidence_02d7d$
+        evidence_target_lake_objectid[
+            evidence_match
+        ]
+
+    review_rows <- which(
+        is_review_terminal_02d7d
+    )
+
+    unique_min_lake <- (
+        ev_class ==
+            "UNIQUE_MIN_LAKE" &
+        is.finite(
+            ev_lake
+        )
+    )
+
+    if (any(unique_min_lake)) {
+
+        rr <- review_rows[
+            unique_min_lake
+        ]
+
+        target_lake <- as.integer(
+            ev_lake[
+                unique_min_lake
+            ]
+        )
+
+        trace_zero_evidence_02d7d$
+            refined_target_lake_objectid[
+                rr
+            ] <- target_lake
+
+        same_origin <- (
+            target_lake ==
+                trace_zero_evidence_02d7d$
+                    lake_objectid[
+                        rr
+                    ]
+        )
+
+        trace_zero_evidence_02d7d$
+            refined_terminal_class[
+                rr[
+                    same_origin
+                ]
+            ] <-
+            "ZERO_REVIEW_MIN_LAKE_ORIGIN"
+
+        trace_zero_evidence_02d7d$
+            refined_terminal_class[
+                rr[
+                    !same_origin
+                ]
+            ] <-
+            "ZERO_REVIEW_MIN_LAKE_OTHER"
+    }
+
+    river_area_rows <- review_rows[
+        ev_class ==
+            "UNIQUE_MIN_RIVER_AREA"
+    ]
+
+    if (length(river_area_rows) > 0) {
+
+        trace_zero_evidence_02d7d$
+            refined_terminal_class[
+                river_area_rows
+            ] <-
+            "ZERO_REVIEW_MIN_RIVER_AREA"
+    }
+
+    river_line_rows <- review_rows[
+        ev_class ==
+            "UNIQUE_MIN_RIVER_LINE"
+    ]
+
+    if (length(river_line_rows) > 0) {
+
+        trace_zero_evidence_02d7d$
+            refined_terminal_class[
+                river_line_rows
+            ] <-
+            "ZERO_REVIEW_MIN_RIVER_LINE"
+    }
+
+    ambiguous_rows <- review_rows[
+        ev_class ==
+            "AMBIGUOUS_MIN_WATER"
+    ]
+
+    if (length(ambiguous_rows) > 0) {
+
+        trace_zero_evidence_02d7d$
+            refined_terminal_class[
+                ambiguous_rows
+            ] <-
+            "ZERO_REVIEW_AMBIGUOUS"
+    }
+}
+
+
+is_unmapped_terminal_02d7d <- (
+    trace_zero_evidence_02d7d$terminal_class ==
+        "ZERO_UNCLASSIFIED"
+)
+
+if (any(is_unmapped_terminal_02d7d)) {
+
+    unmapped_match <- match(
+        trace_zero_evidence_02d7d$terminal_cell[
+            is_unmapped_terminal_02d7d
+        ],
+        unmapped_zero_summary_02d7d$zero_cell
+    )
+
+    stopifnot(
+        all(
+            !is.na(
+                unmapped_match
+            )
+        )
+    )
+
+    unmapped_class <- unmapped_zero_summary_02d7d$
+        evidence_class[
+            unmapped_match
+        ]
+
+    rr <- which(
+        is_unmapped_terminal_02d7d
+    )
+
+    trace_zero_evidence_02d7d$
+        refined_terminal_class[
+            rr[
+                unmapped_class ==
+                    "RASTER_EDGE_CENSORED"
+            ]
+        ] <-
+        "ZERO_UNMAPPED_EDGE"
+
+    trace_zero_evidence_02d7d$
+        refined_terminal_class[
+            rr[
+                unmapped_class ==
+                    "UNMAPPED_INTERIOR_ZERO"
+            ]
+        ] <-
+        "ZERO_UNMAPPED_INTERIOR"
+}
+
+
+# ------------------------------------------------------------
+# 170. SAVE
+# ------------------------------------------------------------
+
+f_02d7d_component_evidence <- file.path(
+    DIR_02,
+    "02D7D_review_zero_component_evidence.csv"
+)
+
+f_02d7d_water_neighbors <- file.path(
+    DIR_02,
+    "02D7D_review_zero_water_neighbors.csv"
+)
+
+f_02d7d_unmapped_zero <- file.path(
+    DIR_02,
+    "02D7D_unmapped_zero_terminal_summary.csv"
+)
+
+f_02d7d_trace_evidence <- file.path(
+    DIR_02,
+    "02D7D_trace_zero_evidence.csv"
+)
+
+write.csv(
+    review_component_evidence_02d7d,
+    f_02d7d_component_evidence,
+    row.names = FALSE
+)
+
+write.csv(
+    review_water_neighbors_02d7d,
+    f_02d7d_water_neighbors,
+    row.names = FALSE
+)
+
+write.csv(
+    unmapped_zero_summary_02d7d,
+    f_02d7d_unmapped_zero,
+    row.names = FALSE
+)
+
+write.csv(
+    trace_zero_evidence_02d7d,
+    f_02d7d_trace_evidence,
+    row.names = FALSE
+)
+
+
+# ------------------------------------------------------------
+# 171. PRINT
+# ------------------------------------------------------------
+
+cat("\n")
+cat("=== 02D.7D ZERO TERMINAL EVIDENCE ===\n")
+
+cat(sprintf(
+    "Interior-review components reached : %d\n",
+    nrow(
+        review_component_evidence_02d7d
+    )
+))
+
+if (
+    nrow(
+        review_component_evidence_02d7d
+    ) > 0
+) {
+
+    cat("\n--- COMPONENT EVIDENCE ---\n")
+
+    print(
+        review_component_evidence_02d7d[
+            ,
+            c(
+                "component_id",
+                "water_signature",
+                "adjacent_lake_objectids",
+                "min_adjacent_water_z_m",
+                "min_target_keys",
+                "trace_origin_lake_objectids",
+                "evidence_class",
+                "evidence_target_lake_objectid"
+            )
+        ],
+        row.names = FALSE
+    )
+}
+
+cat(sprintf(
+    "\nUnmapped zero terminal cells      : %d\n",
+    nrow(
+        unmapped_zero_summary_02d7d
+    )
+))
+
+cat(sprintf(
+    "Unmapped zero cells on edge      : %d\n",
+    sum(
+        unmapped_zero_summary_02d7d$
+            evidence_class ==
+            "RASTER_EDGE_CENSORED"
+    )
+))
+
+cat(sprintf(
+    "Unmapped interior zero cells     : %d\n",
+    sum(
+        unmapped_zero_summary_02d7d$
+            evidence_class ==
+            "UNMAPPED_INTERIOR_ZERO"
+    )
+))
+
+cat("\n--- REFINED TERMINAL CLASS ---\n")
+
+print(
+    table(
+        trace_zero_evidence_02d7d$
+            refined_terminal_class,
+        useNA = "ifany"
+    )
+)
+
+remaining_interior_zero_ambiguity_02d7d <- (
+    trace_zero_evidence_02d7d$
+        refined_terminal_class %in%
+        c(
+            "ZERO_REVIEW_AMBIGUOUS",
+            "ZERO_UNMAPPED_INTERIOR"
+        )
+)
+
+cat(sprintf(
+    "\nSeed rows with interior zero ambiguity : %d\n",
+    sum(
+        remaining_interior_zero_ambiguity_02d7d
+    )
+))
+
+cat(sprintf(
+    "Lakes with interior zero ambiguity     : %d\n",
+    length(
+        unique(
+            trace_zero_evidence_02d7d$
+                lake_objectid[
+                    remaining_interior_zero_ambiguity_02d7d
+                ]
+        )
+    )
+))
+
+cat(sprintf(
+    "Seed rows censored by raster edge      : %d\n",
+    sum(
+        trace_zero_evidence_02d7d$
+            refined_terminal_class ==
+            "ZERO_UNMAPPED_EDGE"
+    )
+))
+
+cat("===========================================\n")
+
+
+# ------------------------------------------------------------
+# 172. HARD QA
+# ------------------------------------------------------------
+
+stopifnot(
+    nrow(
+        trace_zero_evidence_02d7d
+    ) ==
+        nrow(
+            trace_seed_results_02d7c
+        ),
+
+    all(
+        !is.na(
+            trace_zero_evidence_02d7d$
+                refined_terminal_class
+        )
+    ),
+
+    length(
+        review_component_ids_02d7d
+    ) ==
+        nrow(
+            review_component_evidence_02d7d
+        ),
+
+    !anyDuplicated(
+        review_component_evidence_02d7d$
+            component_id
+    )
+)
+
+cat("\n02D.7D HARD QA: PASS\n")
