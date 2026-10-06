@@ -1,13 +1,3 @@
-Building land_dem_raw...
-          used (Mb) gc trigger  (Mb) max used  (Mb)
-Ncells 1157640 61.9    2244687 119.9  2244687 119.9
-Vcells 1459572 11.2    8388608  64.0  2289232  17.5
-Running land FillDepressions...
-Building land + lake routing surface...
-          used (Mb) gc trigger  (Mb) max used  (Mb)
-Ncells 1163142 62.2    2244687 119.9  2244687 119.9
-Vcells 1500340 11.5    8388608  64.0  2289232  17.5
-Running WATER_STORAGE FillDepressions...
 === 02A LAND + STORAGE ===
 DEM cells          : 36000000
 Lake cells         : 667921
@@ -22,12 +12,9 @@ storage       pass=N/A    NA-diff=NA  max-diff=NA  changed=NA
 02A RESULT         : CHECK DIFFERENCES
 QA file            : 02A_storage_regression_QA.csv
 ===========================
-
-02B: building land-water D8 pointer...
-[1] TRUE
           used (Mb) gc trigger   (Mb)  max used   (Mb)
-Ncells 1181617 63.2    2244687  119.9   2244687  119.9
-Vcells 3048327 23.3  158666446 1210.6 198187075 1512.1
+Ncells 1173797 62.7    2244687  119.9   2244687  119.9
+Vcells 3003800 23.0  158623315 1210.2 198142147 1511.8
 
 === 02B LAND -> FIRST WATER ===
 True land adjacent to water : 163582
@@ -192,11 +179,6 @@ Lakes with only LAND_ONLY groups : 94
          92.88
          81.13
 =========================================
-
-02D.4: building raised depression components...
-           used  (Mb) gc trigger   (Mb)  max used   (Mb)
-Ncells  1236653  66.1    2244687  119.9   2244687  119.9
-Vcells 24472414 186.8  163802450 1249.8 204549174 1560.6
 
 === 02D.4 RAISED DEPRESSION COMPONENTS ===
 Lakes total                    : 108
@@ -405,7 +387,7 @@ Depressions entirely LEVEL    : 43 / 45
 ========================================
 
 02D.6 target LEVEL_LAND_ONLY depressions: 43
-02D.6 depression 1 / 43 | ID 102D.6 depression 2 / 43 | ID 202D.6 depression 3 / 43 | ID 302D.6 depression 4 / 43 | ID 502D.6 depression 5 / 43 | ID 702D.6 depression 6 / 43 | ID 802D.6 depression 7 / 43 | ID 902D.6 depression 8 / 43 | ID 21|---------|---------|---------|---------|=========================================                                          |---------|---------|---------|---------|=========================================                                          |---------|---------|---------|---------|=========================================                                          02D.6 depression 9 / 43 | ID 2702D.6 depression 10 / 43 | ID 2802D.6 depression 11 / 43 | ID 3402D.6 depression 12 / 43 | ID 4002D.6 depression 13 / 43 | ID 4202D.6 depression 14 / 43 | ID 4402D.6 depression 15 / 43 | ID 5702D.6 depression 16 / 43 | ID 5802D.6 depression 17 / 43 | ID 5902D.6 depression 18 / 43 | ID 6802D.6 depression 19 / 43 | ID 7502D.6 depression 20 / 43 | ID 7602D.6 depression 21 / 43 | ID 8202D.6 depression 22 / 43 | ID 14502D.6 depression 23 / 43 | ID 21302D.6 depression 24 / 43 | ID 22102D.6 depression 25 / 43 | ID 22302D.6 depression 26 / 43 | ID 22602D.6 depression 27 / 43 | ID 22702D.6 depression 28 / 43 | ID 22902D.6 depression 29 / 43 | ID 23002D.6 depression 30 / 43 | ID 24902D.6 depression 31 / 43 | ID 25202D.6 depression 32 / 43 | ID 25702D.6 depression 33 / 43 | ID 28202D.6 depression 34 / 43 | ID 28702D.6 depression 35 / 43 | ID 33202D.6 depression 36 / 43 | ID 33602D.6 depression 37 / 43 | ID 33802D.6 depression 38 / 43 | ID 38602D.6 depression 39 / 43 | ID 40302D.6 depression 40 / 43 | ID 42202D.6 depression 41 / 43 | ID 45002D.6 depression 42 / 43 | ID 45302D.6 depression 43 / 43 | ID 458
+02D.6 depression 1 / 43 | ID 102D.6 depression 2 / 43 | ID 202D.6 depression 3 / 43 | ID 302D.6 depression 4 / 43 | ID 502D.6 depression 5 / 43 | ID 702D.6 depression 6 / 43 | ID 802D.6 depression 7 / 43 | ID 902D.6 depression 8 / 43 | ID 2102D.6 depression 9 / 43 | ID 2702D.6 depression 10 / 43 | ID 2802D.6 depression 11 / 43 | ID 3402D.6 depression 12 / 43 | ID 4002D.6 depression 13 / 43 | ID 4202D.6 depression 14 / 43 | ID 4402D.6 depression 15 / 43 | ID 5702D.6 depression 16 / 43 | ID 5802D.6 depression 17 / 43 | ID 5902D.6 depression 18 / 43 | ID 6802D.6 depression 19 / 43 | ID 7502D.6 depression 20 / 43 | ID 7602D.6 depression 21 / 43 | ID 8202D.6 depression 22 / 43 | ID 14502D.6 depression 23 / 43 | ID 21302D.6 depression 24 / 43 | ID 22102D.6 depression 25 / 43 | ID 22302D.6 depression 26 / 43 | ID 22602D.6 depression 27 / 43 | ID 22702D.6 depression 28 / 43 | ID 22902D.6 depression 29 / 43 | ID 23002D.6 depression 30 / 43 | ID 24902D.6 depression 31 / 43 | ID 25202D.6 depression 32 / 43 | ID 25702D.6 depression 33 / 43 | ID 28202D.6 depression 34 / 43 | ID 28702D.6 depression 35 / 43 | ID 33202D.6 depression 36 / 43 | ID 33602D.6 depression 37 / 43 | ID 33802D.6 depression 38 / 43 | ID 38602D.6 depression 39 / 43 | ID 40302D.6 depression 40 / 43 | ID 42202D.6 depression 41 / 43 | ID 45002D.6 depression 42 / 43 | ID 45302D.6 depression 43 / 43 | ID 458
 
 === 02D.6 LEVEL-FLAT ESCAPE TRACE ===
 Target depressions              : 43
@@ -693,3 +675,24 @@ Seed rows censored by raster edge      : 1
 ===========================================
 
 02D.7D HARD QA: PASS
+
+=== 02D.7E LAND SEED SPILL-LEVEL PARTITION ===
+LAND_ONLY spill groups       : 265
+Seed rows                    : 1967
+
+--- SEED LEVEL RELATION ---
+
+LEVEL LOWER 
+  964  1003 
+
+--- GROUP CLASS ---
+
+     LEVEL_ONLY LOWER_AND_LEVEL      LOWER_ONLY 
+            208               7              50 
+
+Groups needing flat trace    : 215
+Lakes needing flat trace     : 15
+ABOVE seed rows              : 0
+================================================
+
+02D.7E HARD QA: PASS
