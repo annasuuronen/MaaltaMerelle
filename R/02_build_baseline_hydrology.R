@@ -8534,3 +8534,457 @@ stopifnot(
 )
 
 cat("\n02D.6 HARD QA: PASS\n")
+
+
+# ============================================================
+# 02D.7A - NON-RAISED LAKE COVERAGE
+#
+# Tavoite:
+# - varmista että kaikki ei-spill-raised järvet ovat mukana
+# - luokittele olemassa olevan 02D.3 evidence-aineiston perusteella
+#   suora vesikontakti / LAND_ONLY / EDGE_CASE
+# - tunnista järvet, jotka tarvitsevat seuraavassa vaiheessa
+#   LAND-tracen
+# - pidä 111137 partial-raise-erikoistapaus näkyvissä
+#
+# EI outlet-valintaa.
+# EI D8-muutoksia.
+# EI flow accumulationia.
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 138. LAKE SETS
+# ------------------------------------------------------------
+
+all_lakes_02d7 <- sort(
+    unique(
+        lake_depression_summary$lake_objectid
+    )
+)
+
+raised_ids <- sort(
+    unique(
+        lake_depression_summary$lake_objectid[
+            lake_depression_summary$spill_raised
+        ]
+    )
+)
+
+nonraised_ids <- setdiff(
+    all_lakes_02d7,
+    raised_ids
+)
+
+stopifnot(
+    length(all_lakes_02d7) == 108,
+    length(raised_ids) == 49,
+    length(nonraised_ids) == 59
+)
+
+
+# ------------------------------------------------------------
+# 139. BASE TABLE
+# ------------------------------------------------------------
+
+nonraised_base <- lake_depression_summary[
+    lake_depression_summary$lake_objectid %in%
+        nonraised_ids,
+    c(
+        "lake_objectid",
+        "depression_status"
+    ),
+    drop = FALSE
+]
+
+nonraised_base <- nonraised_base[
+    order(
+        nonraised_base$lake_objectid
+    ),
+    ,
+    drop = FALSE
+]
+
+stopifnot(
+    nrow(nonraised_base) == 59,
+    !anyDuplicated(
+        nonraised_base$lake_objectid
+    )
+)
+
+
+# ------------------------------------------------------------
+# 140. SUMMARISE LOW-SPILL EVIDENCE BY LAKE
+# ------------------------------------------------------------
+
+nonraised_evidence_list <- vector(
+    "list",
+    length(nonraised_ids)
+)
+
+for (i in seq_along(nonraised_ids)) {
+
+    lid <- nonraised_ids[i]
+
+    gx <- target_evidence[
+        target_evidence$lake_objectid == lid,
+        ,
+        drop = FALSE
+    ]
+
+    stopifnot(
+        nrow(gx) > 0
+    )
+
+    nonraised_evidence_list[[i]] <- data.frame(
+
+        lake_objectid =
+            lid,
+
+        n_low_groups =
+            nrow(gx),
+
+        n_lower_lake_groups =
+            sum(
+                gx$evidence_class ==
+                    "LOWER_OTHER_LAKE"
+            ),
+
+        n_river_groups =
+            sum(
+                gx$evidence_class ==
+                    "RIVER_CONTACT"
+            ),
+
+        n_multi_water_groups =
+            sum(
+                gx$evidence_class ==
+                    "MULTI_WATER_CONTACT"
+            ),
+
+        n_land_only_groups =
+            sum(
+                gx$evidence_class ==
+                    "LAND_ONLY"
+            ),
+
+        n_edge_groups =
+            sum(
+                gx$evidence_class ==
+                    "EDGE_CASE"
+            ),
+
+        stringsAsFactors = FALSE
+    )
+}
+
+nonraised_evidence <- do.call(
+    rbind,
+    nonraised_evidence_list
+)
+
+row.names(
+    nonraised_evidence
+) <- NULL
+
+
+# ------------------------------------------------------------
+# 141. JOIN + CLASSIFY
+# ------------------------------------------------------------
+
+nonraised_summary <- merge(
+    nonraised_base,
+    nonraised_evidence,
+    by = "lake_objectid",
+    all.x = TRUE,
+    sort = TRUE
+)
+
+stopifnot(
+    nrow(nonraised_summary) == 59,
+    !anyDuplicated(
+        nonraised_summary$lake_objectid
+    ),
+    all(
+        is.finite(
+            nonraised_summary$n_low_groups
+        )
+    )
+)
+
+nonraised_summary$has_direct_water <- (
+    nonraised_summary$n_lower_lake_groups +
+        nonraised_summary$n_river_groups +
+        nonraised_summary$n_multi_water_groups
+) > 0
+
+nonraised_summary$needs_land_trace <- (
+    nonraised_summary$n_land_only_groups > 0 |
+        nonraised_summary$n_edge_groups > 0
+)
+
+nonraised_summary$lake_class <-
+    "UNCLASSIFIED"
+
+nonraised_summary$lake_class[
+    nonraised_summary$has_direct_water &
+        nonraised_summary$n_land_only_groups == 0 &
+        nonraised_summary$n_edge_groups == 0
+] <- "DIRECT_WATER_ONLY"
+
+nonraised_summary$lake_class[
+    nonraised_summary$has_direct_water &
+        nonraised_summary$n_land_only_groups > 0
+] <- "DIRECT_WATER_AND_LAND"
+
+nonraised_summary$lake_class[
+    !nonraised_summary$has_direct_water &
+        nonraised_summary$n_land_only_groups > 0 &
+        nonraised_summary$n_edge_groups > 0
+] <- "LAND_AND_EDGE"
+
+nonraised_summary$lake_class[
+    !nonraised_summary$has_direct_water &
+        nonraised_summary$n_land_only_groups > 0 &
+        nonraised_summary$n_edge_groups == 0
+] <- "LAND_ONLY"
+
+nonraised_summary$lake_class[
+    !nonraised_summary$has_direct_water &
+        nonraised_summary$n_land_only_groups == 0 &
+        nonraised_summary$n_edge_groups > 0
+] <- "EDGE_ONLY"
+
+
+# ------------------------------------------------------------
+# 142. REVIEW SETS
+# ------------------------------------------------------------
+
+land_trace_lakes <- nonraised_summary[
+    nonraised_summary$needs_land_trace,
+    ,
+    drop = FALSE
+]
+
+partial_raise <- nonraised_summary[
+    nonraised_summary$depression_status ==
+        "PARTIAL_RAISE_NO_SPILL_RAISE",
+    ,
+    drop = FALSE
+]
+
+
+# ------------------------------------------------------------
+# 143. SAVE
+# ------------------------------------------------------------
+
+f_02d7_nonraised <- file.path(
+    DIR_02,
+    "02D7_nonraised_lake_coverage.csv"
+)
+
+f_02d7_land_trace <- file.path(
+    DIR_02,
+    "02D7_nonraised_land_trace_lakes.csv"
+)
+
+f_02d7_partial_raise <- file.path(
+    DIR_02,
+    "02D7_nonraised_partial_raise_cases.csv"
+)
+
+write.csv(
+    nonraised_summary,
+    f_02d7_nonraised,
+    row.names = FALSE
+)
+
+write.csv(
+    land_trace_lakes,
+    f_02d7_land_trace,
+    row.names = FALSE
+)
+
+write.csv(
+    partial_raise,
+    f_02d7_partial_raise,
+    row.names = FALSE
+)
+
+
+# ------------------------------------------------------------
+# 144. PRINT
+# ------------------------------------------------------------
+
+cat("\n")
+cat("=== 02D.7A NON-RAISED LAKE COVERAGE ===\n")
+
+cat(sprintf(
+    "All lakes                  : %d\n",
+    length(all_lakes_02d7)
+))
+
+cat(sprintf(
+    "Spill-raised lakes         : %d\n",
+    length(raised_ids)
+))
+
+cat(sprintf(
+    "Non-raised lakes           : %d\n",
+    length(nonraised_ids)
+))
+
+cat(sprintf(
+    "Direct-water only          : %d\n",
+    sum(
+        nonraised_summary$lake_class ==
+            "DIRECT_WATER_ONLY"
+    )
+))
+
+cat(sprintf(
+    "Direct-water + LAND        : %d\n",
+    sum(
+        nonraised_summary$lake_class ==
+            "DIRECT_WATER_AND_LAND"
+    )
+))
+
+cat(sprintf(
+    "LAND_ONLY                  : %d\n",
+    sum(
+        nonraised_summary$lake_class ==
+            "LAND_ONLY"
+    )
+))
+
+cat(sprintf(
+    "LAND + EDGE                : %d\n",
+    sum(
+        nonraised_summary$lake_class ==
+            "LAND_AND_EDGE"
+    )
+))
+
+cat(sprintf(
+    "EDGE_ONLY                  : %d\n",
+    sum(
+        nonraised_summary$lake_class ==
+            "EDGE_ONLY"
+    )
+))
+
+cat(sprintf(
+    "UNCLASSIFIED               : %d\n",
+    sum(
+        nonraised_summary$lake_class ==
+            "UNCLASSIFIED"
+    )
+))
+
+cat(sprintf(
+    "Lakes requiring LAND trace : %d\n",
+    nrow(
+        land_trace_lakes
+    )
+))
+
+cat(sprintf(
+    "Partial-raise special cases: %d\n",
+    nrow(
+        partial_raise
+    )
+))
+
+cat("\n--- LAKE CLASS ---\n")
+
+print(
+    table(
+        nonraised_summary$lake_class,
+        useNA = "ifany"
+    )
+)
+
+cat("\n--- PARTIAL-RAISE CASES ---\n")
+
+if (nrow(partial_raise) == 0) {
+
+    cat("NONE\n")
+
+} else {
+
+    print(
+        partial_raise,
+        row.names = FALSE
+    )
+}
+
+cat("\n--- NON-RAISED LAKES REQUIRING LAND TRACE ---\n")
+
+print(
+    land_trace_lakes[
+        ,
+        c(
+            "lake_objectid",
+            "depression_status",
+            "n_low_groups",
+            "n_lower_lake_groups",
+            "n_river_groups",
+            "n_land_only_groups",
+            "n_edge_groups",
+            "lake_class"
+        )
+    ],
+    row.names = FALSE
+)
+
+cat("==========================================\n")
+
+
+# ------------------------------------------------------------
+# 145. HARD QA
+# ------------------------------------------------------------
+
+stopifnot(
+    sum(
+        nonraised_summary$lake_class ==
+            "DIRECT_WATER_ONLY"
+    ) == 1,
+
+    sum(
+        nonraised_summary$lake_class ==
+            "DIRECT_WATER_AND_LAND"
+    ) == 8,
+
+    sum(
+        nonraised_summary$lake_class ==
+            "LAND_ONLY"
+    ) == 48,
+
+    sum(
+        nonraised_summary$lake_class ==
+            "LAND_AND_EDGE"
+    ) == 2,
+
+    sum(
+        nonraised_summary$lake_class ==
+            "EDGE_ONLY"
+    ) == 0,
+
+    sum(
+        nonraised_summary$lake_class ==
+            "UNCLASSIFIED"
+    ) == 0,
+
+    nrow(
+        land_trace_lakes
+    ) == 58,
+
+    nrow(
+        partial_raise
+    ) == 1,
+
+    partial_raise$lake_objectid == 111137
+)
+
+cat("\n02D.7A HARD QA: PASS\n")
