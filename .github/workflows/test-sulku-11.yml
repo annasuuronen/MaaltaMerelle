@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   hydrology-qa:
@@ -32,6 +32,12 @@ jobs:
         with:
           ref: ci-testdata-test-sulku-11
           path: _ci-fixtures
+
+      - name: Checkout QA results branch
+        uses: actions/checkout@v4
+        with:
+          ref: ci-results-test-sulku-11
+          path: _ci-results
 
       - name: Reconstruct and verify TEST_SULKU_11 inputs
         shell: bash
@@ -131,3 +137,38 @@ jobs:
             hydro02.log
             runs/TEST_SULKU_11/01_inputs/*.csv
             runs/TEST_SULKU_11/02_baseline/*.csv
+
+      - name: Publish text QA results
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          result_root="_ci-results/latest"
+          rm -rf "$result_root"
+          mkdir -p "$result_root/01_inputs" "$result_root/02_baseline"
+
+          cp TEST_SULKU_11_QA_SUMMARY.md "$result_root/" || true
+          cp hydro01.log "$result_root/" || true
+          cp hydro02.log "$result_root/" || true
+          cp runs/TEST_SULKU_11/01_inputs/*.csv "$result_root/01_inputs/" 2>/dev/null || true
+          cp runs/TEST_SULKU_11/02_baseline/*.csv "$result_root/02_baseline/" 2>/dev/null || true
+
+          cat > "$result_root/RUN_METADATA.txt" <<EOF
+          source_branch=develop-02d7-nonraised-diagnostics
+          source_commit=${GITHUB_SHA}
+          workflow_run_id=${GITHUB_RUN_ID}
+          workflow_run_attempt=${GITHUB_RUN_ATTEMPT}
+          EOF
+
+          cd _ci-results
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add latest
+
+          if git diff --cached --quiet; then
+            echo "No QA result changes to publish."
+          else
+            git commit -m "Update TEST_SULKU_11 QA results for ${GITHUB_SHA}"
+            git push origin HEAD:ci-results-test-sulku-11
+          fi
