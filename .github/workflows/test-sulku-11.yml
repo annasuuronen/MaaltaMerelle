@@ -1,0 +1,133 @@
+name: TEST_SULKU_11 hydrology QA
+
+on:
+  push:
+    branches:
+      - develop-02d7-nonraised-diagnostics
+    paths:
+      - "R/**"
+      - "tests/**"
+      - ".github/workflows/test-sulku-11.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hydrology-qa:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+
+    env:
+      HYDRO_MODE: LOCAL_TEST
+      HYDRO_PROJECT_ROOT: ${{ github.workspace }}
+      R_WHITEBOX_EXE_PATH: ${{ github.workspace }}/_ci-fixtures/ci/whitebox/whitebox_tools
+
+    steps:
+      - name: Checkout code under test
+        uses: actions/checkout@v4
+
+      - name: Checkout persistent TEST_SULKU_11 fixtures
+        uses: actions/checkout@v4
+        with:
+          ref: ci-testdata-test-sulku-11
+          path: _ci-fixtures
+
+      - name: Reconstruct and verify TEST_SULKU_11 inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fixture_dir="_ci-fixtures/ci/TEST_SULKU_11"
+          target_dir="data/TEST_SULKU_11"
+          mkdir -p "$target_dir"
+
+          test -f "$fixture_dir/dem_12km_rumpukorjattu.tif.part01"
+          test -f "$fixture_dir/dem_12km_rumpukorjattu.tif.part02"
+          test -f "$fixture_dir/dem_12km_rumpukorjattu.tif.part03"
+
+          cat             "$fixture_dir/dem_12km_rumpukorjattu.tif.part01"             "$fixture_dir/dem_12km_rumpukorjattu.tif.part02"             "$fixture_dir/dem_12km_rumpukorjattu.tif.part03"             > "$target_dir/dem_12km_rumpukorjattu.tif"
+
+          for f in             RANTA10_TEST_SULKU_11.gpkg             ranta10_lake_id.tif             ranta10_river_area_mask.tif             ranta10_river_line_mask.tif             ranta10_water_class.tif             ranta10_water_mask.tif             HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg
+          do
+            cp "$fixture_dir/$f" "$target_dir/$f"
+          done
+
+          actual_size="$(stat -c%s "$target_dir/dem_12km_rumpukorjattu.tif")"
+          test "$actual_size" = "76508853"
+
+          echo "bc67829650e894e0a17f45d3c9bd112b9ef1e9d359449554be30f9e9d0804e2e  $target_dir/dem_12km_rumpukorjattu.tif" | sha256sum -c -
+
+          test -x "$R_WHITEBOX_EXE_PATH" || chmod +x "$R_WHITEBOX_EXE_PATH"
+          test -x "$R_WHITEBOX_EXE_PATH"
+
+      - name: Show pinned WhiteboxTools fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$R_WHITEBOX_EXE_PATH" --version || "$R_WHITEBOX_EXE_PATH" -v || true
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::terra
+            any::whitebox
+
+      - name: Check R and WhiteboxTools
+        shell: bash
+        run: |
+          set -euo pipefail
+          Rscript -e 'cat(R.version.string, "\n"); cat("terra ", as.character(packageVersion("terra")), "\n", sep=""); cat("whitebox ", as.character(packageVersion("whitebox")), "\n", sep=""); stopifnot(file.exists(Sys.getenv("R_WHITEBOX_EXE_PATH"))); stopifnot(whitebox::wbt_init(check_version = FALSE))'
+
+      - name: Run portability tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          Rscript tests/portability.R
+
+      - name: Run input preparation
+        shell: bash
+        run: |
+          set -euo pipefail
+          Rscript R/01_prepare_hydrology_inputs.R 2>&1 | tee hydro01.log
+
+      - name: Run baseline hydrology diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          Rscript R/02_build_baseline_hydrology.R 2>&1 | tee hydro02.log
+
+      - name: Extract key QA lines
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "# TEST_SULKU_11 automated QA"
+            echo
+            echo "Commit: ${GITHUB_SHA}"
+            echo
+            echo '## Key diagnostic lines'
+            echo '~~~'
+            if test -f hydro02.log; then
+              grep -E                 '02D\.6 HARD QA|02D\.7A HARD QA|02D\.7B HARD QA|Untraced LEVEL-land edges|All lakes|Spill-raised lakes|Non-raised lakes|LAND-trace lakes|LAND_ONLY spill groups|Unique group/seed rows|Lakes with at least one ZERO seed|Lakes with at least one next-LAND|Lakes with origin-lake return|Lakes with domain-exit seed'                 hydro02.log || true
+            fi
+            echo '~~~'
+          } > TEST_SULKU_11_QA_SUMMARY.md
+
+      - name: Upload QA artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TEST_SULKU_11-QA-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            TEST_SULKU_11_QA_SUMMARY.md
+            hydro01.log
+            hydro02.log
+            runs/TEST_SULKU_11/01_inputs/*.csv
+            runs/TEST_SULKU_11/02_baseline/*.csv
