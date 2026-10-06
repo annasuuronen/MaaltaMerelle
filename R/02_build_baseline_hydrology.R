@@ -9899,3 +9899,858 @@ stopifnot(
 )
 
 cat("\n02D.7B HARD QA: PASS\n")
+
+
+# ============================================================
+# 02D.7C - NON-RAISED LAND D8 TRACE
+#
+# Tavoite:
+# - seuraa jokainen 02D.7B LAND seed diagnostisella
+#   land+water D8-pointerilla terminaaliin asti
+# - erottele terminaalit:
+#     RANTA10 water
+#     02C zero-pointer component
+#     domain exit
+#     pointer NA / invalid
+#     cycle / max-steps guard
+# - luokittele järvikontakti suhteessa alkuperäiseen järveen
+#
+# Tämä on pelkkä diagnostiikka.
+# EI outlet-valintaa.
+# EI pointer-muutoksia.
+# EI final D8:aa.
+# EI flow accumulationia.
+# ============================================================
+
+
+# ------------------------------------------------------------
+# 156. TRACE PARAMETERS
+# ------------------------------------------------------------
+
+max_trace_steps_02d7c <- 100000L
+
+
+# ------------------------------------------------------------
+# 157. UNIQUE START CELLS
+# ------------------------------------------------------------
+
+trace_start_cells_02d7c <- sort(
+    unique(
+        land_seed_inventory$seed_cell
+    )
+)
+
+stopifnot(
+    length(trace_start_cells_02d7c) > 0
+)
+
+
+# ------------------------------------------------------------
+# 158. TRACE ONE LAND SEED
+# ------------------------------------------------------------
+
+trace_one_land_seed_02d7c <- function(
+    start_cell
+) {
+
+    current_cell <- as.integer(
+        start_cell
+    )
+
+    path <- integer(0)
+
+    terminal_status <- NA_character_
+    terminal_cell <- NA_integer_
+    terminal_water_class <- NA_integer_
+    terminal_lake_objectid <- NA_integer_
+    terminal_zero_component_id <- NA_integer_
+    terminal_zero_component_status <- NA_character_
+    terminal_zero_target_lake_objectid <- NA_integer_
+    cycle_length <- 0L
+
+    for (step in 0:max_trace_steps_02d7c) {
+
+        if (
+            !is.finite(current_cell) ||
+            current_cell < 1L ||
+            current_cell > ncell(ptr_land_water)
+        ) {
+
+            terminal_status <- "DOMAIN_EXIT"
+            break
+        }
+
+        cycle_at <- match(
+            current_cell,
+            path
+        )
+
+        if (!is.na(cycle_at)) {
+
+            terminal_status <- "CYCLE"
+            terminal_cell <- current_cell
+            cycle_length <- as.integer(
+                length(path) -
+                    cycle_at +
+                    1L
+            )
+            break
+        }
+
+        path <- c(
+            path,
+            current_cell
+        )
+
+        current_water <- cell_values(
+            water_class,
+            current_cell
+        )
+
+        if (is.finite(current_water)) {
+
+            terminal_status <- "WATER"
+            terminal_cell <- current_cell
+            terminal_water_class <- as.integer(
+                current_water
+            )
+
+            if (
+                terminal_water_class == 1L
+            ) {
+
+                current_lake <- cell_values(
+                    lake_id,
+                    current_cell
+                )
+
+                stopifnot(
+                    is.finite(
+                        current_lake
+                    )
+                )
+
+                terminal_lake_objectid <- as.integer(
+                    current_lake
+                )
+            }
+
+            break
+        }
+
+        current_pointer <- cell_values(
+            ptr_land_water,
+            current_cell
+        )
+
+        if (!is.finite(current_pointer)) {
+
+            terminal_status <- "POINTER_NA"
+            terminal_cell <- current_cell
+            break
+        }
+
+        current_pointer <- as.integer(
+            current_pointer
+        )
+
+        if (current_pointer == 0L) {
+
+            terminal_status <- "ZERO_POINTER"
+            terminal_cell <- current_cell
+
+            zero_match <- match(
+                current_cell,
+                zero_table$cell
+            )
+
+            if (!is.na(zero_match)) {
+
+                terminal_zero_component_id <-
+                    as.integer(
+                        zero_table$component_id[
+                            zero_match
+                        ]
+                    )
+
+                comp_match <- match(
+                    terminal_zero_component_id,
+                    component_summary$component_id
+                )
+
+                if (!is.na(comp_match)) {
+
+                    terminal_zero_component_status <-
+                        component_summary$connector_status[
+                            comp_match
+                        ]
+
+                    terminal_zero_target_lake_objectid <-
+                        as.integer(
+                            component_summary$target_lake_objectid[
+                                comp_match
+                            ]
+                        )
+                }
+            }
+
+            break
+        }
+
+        if (
+            !current_pointer %in%
+                valid_pointer_codes
+        ) {
+
+            terminal_status <- "POINTER_INVALID"
+            terminal_cell <- current_cell
+            break
+        }
+
+        rc <- rowColFromCell(
+            ptr_land_water,
+            current_cell
+        )
+
+        next_row <- rc[1, 1] +
+            unname(
+                dr[
+                    as.character(
+                        current_pointer
+                    )
+                ]
+            )
+
+        next_col <- rc[1, 2] +
+            unname(
+                dc[
+                    as.character(
+                        current_pointer
+                    )
+                ]
+            )
+
+        if (
+            next_row < 1L ||
+            next_row > nrow(ptr_land_water) ||
+            next_col < 1L ||
+            next_col > ncol(ptr_land_water)
+        ) {
+
+            terminal_status <- "DOMAIN_EXIT"
+            terminal_cell <- current_cell
+            break
+        }
+
+        current_cell <- as.integer(
+            cellFromRowCol(
+                ptr_land_water,
+                next_row,
+                next_col
+            )
+        )
+
+        if (
+            step ==
+                max_trace_steps_02d7c
+        ) {
+
+            terminal_status <- "MAX_STEPS"
+            terminal_cell <- current_cell
+            break
+        }
+    }
+
+    if (is.na(terminal_status)) {
+
+        terminal_status <- "MAX_STEPS"
+        terminal_cell <- current_cell
+    }
+
+    path_touch_edge <- if (
+        length(path) > 0
+    ) {
+        any(
+            is_edge_cell(
+                ptr_land_water,
+                path
+            )
+        )
+    } else {
+        FALSE
+    }
+
+    data.frame(
+        seed_cell =
+            as.integer(start_cell),
+
+        terminal_status =
+            terminal_status,
+
+        terminal_cell =
+            as.integer(terminal_cell),
+
+        terminal_water_class =
+            as.integer(terminal_water_class),
+
+        terminal_lake_objectid =
+            as.integer(terminal_lake_objectid),
+
+        terminal_zero_component_id =
+            as.integer(
+                terminal_zero_component_id
+            ),
+
+        terminal_zero_component_status =
+            terminal_zero_component_status,
+
+        terminal_zero_target_lake_objectid =
+            as.integer(
+                terminal_zero_target_lake_objectid
+            ),
+
+        d8_steps =
+            max(
+                0L,
+                length(path) - 1L
+            ),
+
+        n_path_cells =
+            length(path),
+
+        cycle_length =
+            cycle_length,
+
+        touches_raster_edge =
+            path_touch_edge,
+
+        stringsAsFactors = FALSE
+    )
+}
+
+
+# ------------------------------------------------------------
+# 159. TRACE ALL UNIQUE SEEDS
+# ------------------------------------------------------------
+
+trace_result_list_02d7c <- vector(
+    "list",
+    length(trace_start_cells_02d7c)
+)
+
+for (i in seq_along(trace_start_cells_02d7c)) {
+
+    if (
+        i == 1L ||
+        i %% 100L == 0L ||
+        i == length(trace_start_cells_02d7c)
+    ) {
+
+        cat(sprintf(
+            "\r02D.7C trace %d / %d",
+            i,
+            length(trace_start_cells_02d7c)
+        ))
+    }
+
+    trace_result_list_02d7c[[i]] <-
+        trace_one_land_seed_02d7c(
+            trace_start_cells_02d7c[i]
+        )
+}
+
+cat("\n")
+
+unique_trace_results_02d7c <- do.call(
+    rbind,
+    trace_result_list_02d7c
+)
+
+row.names(
+    unique_trace_results_02d7c
+) <- NULL
+
+stopifnot(
+    nrow(unique_trace_results_02d7c) ==
+        length(trace_start_cells_02d7c),
+
+    !anyDuplicated(
+        unique_trace_results_02d7c$seed_cell
+    ),
+
+    all(
+        !is.na(
+            unique_trace_results_02d7c$terminal_status
+        )
+    )
+)
+
+
+# ------------------------------------------------------------
+# 160. JOIN TRACE RESULTS BACK TO GROUP/LAKE SEEDS
+# ------------------------------------------------------------
+
+trace_seed_results_02d7c <- merge(
+    land_seed_inventory,
+    unique_trace_results_02d7c,
+    by = "seed_cell",
+    all.x = TRUE,
+    sort = FALSE
+)
+
+trace_seed_results_02d7c <- trace_seed_results_02d7c[
+    order(
+        trace_seed_results_02d7c$lake_objectid,
+        trace_seed_results_02d7c$spill_group_id,
+        trace_seed_results_02d7c$seed_cell
+    ),
+    ,
+    drop = FALSE
+]
+
+row.names(
+    trace_seed_results_02d7c
+) <- NULL
+
+stopifnot(
+    nrow(trace_seed_results_02d7c) ==
+        nrow(land_seed_inventory),
+
+    all(
+        !is.na(
+            trace_seed_results_02d7c$terminal_status
+        )
+    )
+)
+
+
+# ------------------------------------------------------------
+# 161. ORIGIN-RELATIVE TERMINAL CLASS
+# ------------------------------------------------------------
+
+trace_seed_results_02d7c$terminal_class <-
+    trace_seed_results_02d7c$terminal_status
+
+
+water_terminal <- (
+    trace_seed_results_02d7c$terminal_status ==
+        "WATER"
+)
+
+trace_seed_results_02d7c$terminal_class[
+    water_terminal &
+        trace_seed_results_02d7c$terminal_water_class ==
+            2L
+] <- "RIVER_AREA"
+
+trace_seed_results_02d7c$terminal_class[
+    water_terminal &
+        trace_seed_results_02d7c$terminal_water_class ==
+            3L
+] <- "RIVER_LINE"
+
+water_lake_terminal <- (
+    water_terminal &
+        trace_seed_results_02d7c$terminal_water_class ==
+            1L
+)
+
+trace_seed_results_02d7c$terminal_class[
+    water_lake_terminal &
+        trace_seed_results_02d7c$terminal_lake_objectid ==
+            trace_seed_results_02d7c$lake_objectid
+] <- "ORIGIN_LAKE"
+
+trace_seed_results_02d7c$terminal_class[
+    water_lake_terminal &
+        trace_seed_results_02d7c$terminal_lake_objectid !=
+            trace_seed_results_02d7c$lake_objectid
+] <- "OTHER_LAKE"
+
+
+zero_terminal <- (
+    trace_seed_results_02d7c$terminal_status ==
+        "ZERO_POINTER"
+)
+
+trace_seed_results_02d7c$terminal_class[
+    zero_terminal &
+        trace_seed_results_02d7c$terminal_zero_component_status ==
+            "SAFE_LAKE_CONNECTOR" &
+        trace_seed_results_02d7c$terminal_zero_target_lake_objectid ==
+            trace_seed_results_02d7c$lake_objectid
+] <- "ZERO_SAFE_ORIGIN_LAKE"
+
+trace_seed_results_02d7c$terminal_class[
+    zero_terminal &
+        trace_seed_results_02d7c$terminal_zero_component_status ==
+            "SAFE_LAKE_CONNECTOR" &
+        is.finite(
+            trace_seed_results_02d7c$terminal_zero_target_lake_objectid
+        ) &
+        trace_seed_results_02d7c$terminal_zero_target_lake_objectid !=
+            trace_seed_results_02d7c$lake_objectid
+] <- "ZERO_SAFE_OTHER_LAKE"
+
+trace_seed_results_02d7c$terminal_class[
+    zero_terminal &
+        trace_seed_results_02d7c$terminal_zero_component_status ==
+            "INTERIOR_REVIEW"
+] <- "ZERO_INTERIOR_REVIEW"
+
+trace_seed_results_02d7c$terminal_class[
+    zero_terminal &
+        trace_seed_results_02d7c$terminal_zero_component_status ==
+            "EDGE_CASE"
+] <- "ZERO_EDGE_CASE"
+
+trace_seed_results_02d7c$terminal_class[
+    zero_terminal &
+        (
+            is.na(
+                trace_seed_results_02d7c$terminal_zero_component_status
+            ) |
+            !trace_seed_results_02d7c$terminal_zero_component_status %in%
+                c(
+                    "SAFE_LAKE_CONNECTOR",
+                    "INTERIOR_REVIEW",
+                    "EDGE_CASE"
+                )
+        )
+] <- "ZERO_UNCLASSIFIED"
+
+
+# ------------------------------------------------------------
+# 162. LAKE SUMMARY
+# ------------------------------------------------------------
+
+trace_lake_ids_02d7c <- sort(
+    unique(
+        trace_seed_results_02d7c$lake_objectid
+    )
+)
+
+lake_trace_summary_list_02d7c <- vector(
+    "list",
+    length(trace_lake_ids_02d7c)
+)
+
+for (i in seq_along(trace_lake_ids_02d7c)) {
+
+    lid <- trace_lake_ids_02d7c[i]
+
+    gx <- trace_seed_results_02d7c[
+        trace_seed_results_02d7c$lake_objectid == lid,
+        ,
+        drop = FALSE
+    ]
+
+    classes <- gx$terminal_class
+
+    lake_trace_summary_list_02d7c[[i]] <- data.frame(
+
+        lake_objectid =
+            lid,
+
+        n_seed_rows =
+            nrow(gx),
+
+        n_unique_seed_cells =
+            length(
+                unique(
+                    gx$seed_cell
+                )
+            ),
+
+        max_d8_steps =
+            max(
+                gx$d8_steps,
+                na.rm = TRUE
+            ),
+
+        n_origin_lake =
+            sum(
+                classes ==
+                    "ORIGIN_LAKE"
+            ),
+
+        n_other_lake =
+            sum(
+                classes ==
+                    "OTHER_LAKE"
+            ),
+
+        n_river_area =
+            sum(
+                classes ==
+                    "RIVER_AREA"
+            ),
+
+        n_river_line =
+            sum(
+                classes ==
+                    "RIVER_LINE"
+            ),
+
+        n_zero_safe_origin =
+            sum(
+                classes ==
+                    "ZERO_SAFE_ORIGIN_LAKE"
+            ),
+
+        n_zero_safe_other =
+            sum(
+                classes ==
+                    "ZERO_SAFE_OTHER_LAKE"
+            ),
+
+        n_zero_review =
+            sum(
+                classes ==
+                    "ZERO_INTERIOR_REVIEW"
+            ),
+
+        n_zero_edge =
+            sum(
+                classes ==
+                    "ZERO_EDGE_CASE"
+            ),
+
+        n_zero_unclassified =
+            sum(
+                classes ==
+                    "ZERO_UNCLASSIFIED"
+            ),
+
+        n_pointer_na =
+            sum(
+                classes ==
+                    "POINTER_NA"
+            ),
+
+        n_pointer_invalid =
+            sum(
+                classes ==
+                    "POINTER_INVALID"
+            ),
+
+        n_domain_exit =
+            sum(
+                classes ==
+                    "DOMAIN_EXIT"
+            ),
+
+        n_cycle =
+            sum(
+                classes ==
+                    "CYCLE"
+            ),
+
+        n_max_steps =
+            sum(
+                classes ==
+                    "MAX_STEPS"
+            ),
+
+        touches_raster_edge =
+            any(
+                gx$touches_raster_edge
+            ),
+
+        stringsAsFactors = FALSE
+    )
+}
+
+lake_trace_summary_02d7c <- do.call(
+    rbind,
+    lake_trace_summary_list_02d7c
+)
+
+row.names(
+    lake_trace_summary_02d7c
+) <- NULL
+
+
+# ------------------------------------------------------------
+# 163. SAVE
+# ------------------------------------------------------------
+
+f_02d7c_unique_trace <- file.path(
+    DIR_02,
+    "02D7C_nonraised_unique_seed_trace.csv"
+)
+
+f_02d7c_seed_results <- file.path(
+    DIR_02,
+    "02D7C_nonraised_land_trace_seed_results.csv"
+)
+
+f_02d7c_lake_summary <- file.path(
+    DIR_02,
+    "02D7C_nonraised_land_trace_lake_summary.csv"
+)
+
+write.csv(
+    unique_trace_results_02d7c,
+    f_02d7c_unique_trace,
+    row.names = FALSE
+)
+
+write.csv(
+    trace_seed_results_02d7c,
+    f_02d7c_seed_results,
+    row.names = FALSE
+)
+
+write.csv(
+    lake_trace_summary_02d7c,
+    f_02d7c_lake_summary,
+    row.names = FALSE
+)
+
+
+# ------------------------------------------------------------
+# 164. PRINT
+# ------------------------------------------------------------
+
+cat("\n")
+cat("=== 02D.7C NON-RAISED LAND D8 TRACE ===\n")
+
+cat(sprintf(
+    "Unique start cells            : %d\n",
+    nrow(
+        unique_trace_results_02d7c
+    )
+))
+
+cat(sprintf(
+    "Group/seed rows               : %d\n",
+    nrow(
+        trace_seed_results_02d7c
+    )
+))
+
+cat(sprintf(
+    "Lakes                         : %d\n",
+    nrow(
+        lake_trace_summary_02d7c
+    )
+))
+
+cat(sprintf(
+    "Maximum D8 steps              : %d\n",
+    max(
+        unique_trace_results_02d7c$d8_steps,
+        na.rm = TRUE
+    )
+))
+
+cat("\n--- RAW TERMINAL STATUS, UNIQUE SEEDS ---\n")
+
+print(
+    table(
+        unique_trace_results_02d7c$terminal_status,
+        useNA = "ifany"
+    )
+)
+
+cat("\n--- ORIGIN-RELATIVE TERMINAL CLASS, GROUP/SEED ROWS ---\n")
+
+print(
+    table(
+        trace_seed_results_02d7c$terminal_class,
+        useNA = "ifany"
+    )
+)
+
+cat(sprintf(
+    "\nLakes with ORIGIN_LAKE terminal       : %d\n",
+    sum(
+        (
+            lake_trace_summary_02d7c$n_origin_lake +
+                lake_trace_summary_02d7c$n_zero_safe_origin
+        ) > 0
+    )
+))
+
+cat(sprintf(
+    "Lakes with OTHER_LAKE terminal        : %d\n",
+    sum(
+        (
+            lake_trace_summary_02d7c$n_other_lake +
+                lake_trace_summary_02d7c$n_zero_safe_other
+        ) > 0
+    )
+))
+
+cat(sprintf(
+    "Lakes with river terminal             : %d\n",
+    sum(
+        (
+            lake_trace_summary_02d7c$n_river_area +
+                lake_trace_summary_02d7c$n_river_line
+        ) > 0
+    )
+))
+
+cat(sprintf(
+    "Lakes with zero-pointer review        : %d\n",
+    sum(
+        (
+            lake_trace_summary_02d7c$n_zero_review +
+                lake_trace_summary_02d7c$n_zero_edge +
+                lake_trace_summary_02d7c$n_zero_unclassified
+        ) > 0
+    )
+))
+
+cat(sprintf(
+    "Lakes with pointer/domain/cycle issue : %d\n",
+    sum(
+        (
+            lake_trace_summary_02d7c$n_pointer_na +
+                lake_trace_summary_02d7c$n_pointer_invalid +
+                lake_trace_summary_02d7c$n_domain_exit +
+                lake_trace_summary_02d7c$n_cycle +
+                lake_trace_summary_02d7c$n_max_steps
+        ) > 0
+    )
+))
+
+cat("=============================================\n")
+
+
+# ------------------------------------------------------------
+# 165. HARD QA
+# ------------------------------------------------------------
+
+stopifnot(
+    nrow(trace_seed_results_02d7c) ==
+        nrow(land_seed_inventory),
+
+    identical(
+        sort(
+            unique(
+                trace_seed_results_02d7c$lake_objectid
+            )
+        ),
+        land_trace_ids
+    ),
+
+    !any(
+        is.na(
+            trace_seed_results_02d7c$terminal_class
+        )
+    ),
+
+    sum(
+        table(
+            trace_seed_results_02d7c$terminal_class
+        )
+    ) ==
+        nrow(
+            trace_seed_results_02d7c
+        )
+)
+
+cat("\n02D.7C HARD QA: PASS\n")
