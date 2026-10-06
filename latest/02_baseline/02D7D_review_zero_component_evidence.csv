@@ -1,0 +1,4 @@
+"component_id","n_zero_cells","water_signature","adjacent_lake_objectids","terminal_min_z_m","min_adjacent_water_z_m","n_unique_water_neighbor_cells","n_min_target_keys","min_target_keys","n_min_lake_objectids","min_lake_objectids","n_min_river_area","n_min_river_line","trace_origin_lake_objectids","evidence_class","evidence_target_lake_objectid"
+13,15,"LAKE_ONLY","110803;110832",110.515998840332,110.529998779297,40,1,"LAKE:110803",1,"110803",0,0,"110803","UNIQUE_MIN_LAKE",110803
+203,1,"MIXED","111055",97.4192504882812,97.4199981689453,4,1,"LAKE:111055",1,"111055",0,0,"111055","UNIQUE_MIN_LAKE",111055
+353,1,"MIXED","111137",81.0804061889648,81.129997253418,5,1,"LAKE:111137",1,"111137",0,0,"111137","UNIQUE_MIN_LAKE",111137

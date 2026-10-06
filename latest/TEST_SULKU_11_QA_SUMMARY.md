@@ -1,6 +1,6 @@
 # TEST_SULKU_11 automated QA
 
-Commit: 530ef05b0904481da804cc1d521d1e36c083c955
+Commit: 7025c339f69665d159d0d824890455feff8e3a08
 
 ## Key diagnostic lines
 ~~~
@@ -20,4 +20,6 @@ Lakes with at least one next-LAND: 53
 Lakes with origin-lake return    : 0
 Lakes with domain-exit seed      : 0
 02D.7B HARD QA: PASS
+02D.7C HARD QA: PASS
+02D.7D HARD QA: PASS
 ~~~
