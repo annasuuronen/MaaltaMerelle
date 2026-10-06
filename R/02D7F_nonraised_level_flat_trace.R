@@ -30,8 +30,32 @@ for (ii in seq_len(nrow(keys_02d7f))) {
   seed_z <- cell_values(surface_storage,seeds)
   seed_w <- cell_values(water_class,seeds)
   seed_d <- cell_values(depression_components,seeds)
-  stopifnot(all(is.finite(seed_z)),all(abs(seed_z-lev)<=tol_02d7f),
-            all(!is.finite(seed_w)),all(!is.finite(seed_d)))
+  stopifnot(
+    all(is.finite(seed_z)),
+    all(abs(seed_z-lev)<=tol_02d7f),
+    all(!is.finite(seed_w))
+  )
+
+  # LEVEL LAND seeds that belong to any raised depression are
+  # explicit depression links, not ordinary outside-flat cells.
+  # This mirrors the already validated 02D.6 treatment of gate
+  # receivers and prevents tracing through raised depressions.
+  seed_other_dep <- is.finite(seed_d)
+  n_direct_other_dep_seeds <- sum(seed_other_dep)
+  seeds <- seeds[!seed_other_dep]
+
+  if (!length(seeds)) {
+    group_out_02d7f[[ii]] <- data.frame(
+      spill_group_id=gid,lake_objectid=lid,spill_level_m=lev,
+      n_level_seeds=0L,n_flat_cells=0L,n_back_to_origin_edges_filtered=0L,
+      n_lower_escape_edges=0L,n_level_water_edges=0L,
+      n_other_depression_edges=n_direct_other_dep_seeds,
+      n_untraced_level_land_edges=0L,touches_raster_edge=FALSE,
+      used_margin_m=NA_real_,status="OTHER_DEPRESSION",
+      stringsAsFactors=FALSE
+    )
+    next
+  }
 
   sxy <- xyFromCell(surface_storage,seeds)
   xmin0<-min(sxy[,1]); xmax0<-max(sxy[,1]); ymin0<-min(sxy[,2]); ymax0<-max(sxy[,2])
@@ -98,8 +122,8 @@ for (ii in seq_len(nrow(keys_02d7f))) {
       stringsAsFactors=FALSE)
     edge_out_02d7f[[length(edge_out_02d7f)+1L]]<-et
     nl<-sum(et$is_lower_escape,na.rm=TRUE); nw<-sum(et$is_level_water,na.rm=TRUE)
-    nd<-sum(et$is_other_depression,na.rm=TRUE); nu<-sum(et$is_untraced_level_land,na.rm=TRUE)
-  } else { nl<-nw<-nd<-nu<-0L }
+    nd<-n_direct_other_dep_seeds + sum(et$is_other_depression,na.rm=TRUE); nu<-sum(et$is_untraced_level_land,na.rm=TRUE)
+  } else { nl<-nw<-nu<-0L; nd<-n_direct_other_dep_seeds }
 
   status<-if(nu>0)"TRACE_INCOMPLETE" else if(nl>0)"LOWER_ESCAPE" else if(nw>0)"LEVEL_WATER_ESCAPE" else if(nd>0)"OTHER_DEPRESSION" else if(reaches_edge || any(is_edge_cell(surface_storage,plateau)))"CENSORED_BY_RASTER_EDGE" else "NO_ESCAPE"
   group_out_02d7f[[ii]]<-data.frame(spill_group_id=gid,lake_objectid=lid,spill_level_m=lev,
