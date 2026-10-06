@@ -710,3 +710,11 @@ Back-to-origin edges filtered : 62
 ===================================================
 
 02D.7F HARD QA: PASS
+
+=== 02D.7G CANDIDATE EVIDENCE CONSOLIDATION ===
+Groups: 418  LAND_ONLY: 394 
+LAND groups with lower external evidence: 43 
+LAND groups with level lower/water evidence: 3 
+LAND groups with depression links: 210 
+LEVEL untraced: 0 
+02D.7G HARD QA: PASS
