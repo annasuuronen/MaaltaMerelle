@@ -23,8 +23,32 @@
 # 0. CONFIG
 # ------------------------------------------------------------
 
-config_file <-
-  "D:/pienvedet/hydrology_pipeline_v2/R/00_pipeline_config.R"
+# Resolve paths from the script location, not the caller's working directory.
+PROJECT_ROOT <- local({
+  override <- Sys.getenv("HYDRO_PROJECT_ROOT", unset = "")
+  if (nzchar(override)) {
+    root <- normalizePath(override, winslash = "/", mustWork = TRUE)
+  } else {
+    source_files <- Filter(nzchar, lapply(sys.frames(), function(frame) {
+      if (is.null(frame$ofile)) "" else as.character(frame$ofile)
+    }))
+    script_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+    script_file <- if (length(source_files)) {
+      tail(source_files, 1L)[[1L]]
+    } else if (length(script_arg)) {
+      sub("^--file=", "", script_arg[1L])
+    } else {
+      stop("Cannot locate the script. Use Rscript, source(), or HYDRO_PROJECT_ROOT.")
+    }
+    root <- dirname(dirname(normalizePath(script_file, winslash = "/", mustWork = TRUE)))
+  }
+  if (!file.exists(file.path(root, "R", "00_pipeline_config.R"))) {
+    stop("HYDRO_PROJECT_ROOT / script location does not identify the pipeline repository.")
+  }
+  root
+})
+
+config_file <- file.path(PROJECT_ROOT, "R", "00_pipeline_config.R")
 
 stopifnot(
   file.exists(config_file)
