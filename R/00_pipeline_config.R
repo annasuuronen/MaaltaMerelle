@@ -19,7 +19,32 @@
 # 1. AJOTILA
 # ------------------------------------------------------------
 
-HYDRO_MODE <- "LOCAL_TEST"
+# Resolve paths from the script location, not the caller's working directory.
+PROJECT_ROOT <- local({
+  override <- Sys.getenv("HYDRO_PROJECT_ROOT", unset = "")
+  if (nzchar(override)) {
+    root <- normalizePath(override, winslash = "/", mustWork = TRUE)
+  } else {
+    source_files <- Filter(nzchar, lapply(sys.frames(), function(frame) {
+      if (is.null(frame$ofile)) "" else as.character(frame$ofile)
+    }))
+    script_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+    script_file <- if (length(source_files)) {
+      tail(source_files, 1L)[[1L]]
+    } else if (length(script_arg)) {
+      sub("^--file=", "", script_arg[1L])
+    } else {
+      stop("Cannot locate the script. Use Rscript, source(), or HYDRO_PROJECT_ROOT.")
+    }
+    root <- dirname(dirname(normalizePath(script_file, winslash = "/", mustWork = TRUE)))
+  }
+  if (!file.exists(file.path(root, "R", "00_pipeline_config.R"))) {
+    stop("HYDRO_PROJECT_ROOT / script location does not identify the pipeline repository.")
+  }
+  root
+})
+
+HYDRO_MODE <- Sys.getenv("HYDRO_MODE", unset = "LOCAL_TEST")
 
 allowed_modes <- c(
   "LOCAL_TEST",
@@ -81,37 +106,26 @@ TEST_NROW <- 6000L
 # 4. PAIKALLINEN TESTI
 # ------------------------------------------------------------
 
+# Relative overrides are resolved against PROJECT_ROOT in all modes.
+hydro_path <- function(variable, default) {
+  path <- Sys.getenv(variable, unset = default)
+  if (!nzchar(path)) stop(paste(variable, "must not be empty."))
+  absolute <- grepl("^([A-Za-z]:[/\\\\]|[/\\\\])", path)
+  if (!absolute) path <- file.path(PROJECT_ROOT, path)
+  normalizePath(path, winslash = "/", mustWork = FALSE)
+}
+
 if (HYDRO_MODE == "LOCAL_TEST") {
-
-  PIPELINE_ROOT <-
-    "D:/pienvedet/hydrology_pipeline_v2"
-
-  SOURCE_TEST_ROOT <-
-    "D:/pienvedet/hydro_test/TEST_SULKU_11"
-
-  STRUCTURES_ROOT <-
-    "D:/pienvedet/hydrology_structures"
-
-  RUN_ROOT <- file.path(
-    PIPELINE_ROOT,
-    "runs",
-    TEST_ID
+  PIPELINE_ROOT <- hydro_path("HYDRO_PIPELINE_ROOT", PROJECT_ROOT)
+  SOURCE_TEST_ROOT <- hydro_path(
+    "HYDRO_SOURCE_TEST_ROOT", file.path("data", "hydro_test", TEST_ID)
   )
-
-  DEM_FILE <- file.path(
-    SOURCE_TEST_ROOT,
-    "dem_12km_rumpukorjattu.tif"
+  STRUCTURES_ROOT <- hydro_path(
+    "HYDRO_STRUCTURES_ROOT", file.path("data", "hydrology_structures")
   )
-
-  RANTA10_GPKG <- file.path(
-    SOURCE_TEST_ROOT,
-    "RANTA10_TEST_SULKU_11.gpkg"
-  )
-
   STRUCTURES_GPKG <- file.path(
-  STRUCTURES_ROOT,
-  "processed",
-  "HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg"
+    STRUCTURES_ROOT, "processed",
+    "HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg"
   )
 }
 
@@ -119,40 +133,30 @@ if (HYDRO_MODE == "LOCAL_TEST") {
 # ------------------------------------------------------------
 # 5. CSC TEST
 #
-# Tätä käytetään vasta kun LOCAL_TEST on valmis.
+# Existing CSC layout remains the default; all roots can be overridden.
 # ------------------------------------------------------------
 
 if (HYDRO_MODE == "CSC_TEST") {
-
-  PIPELINE_ROOT <-
-    "/scratch/project_2004707/pienvedet/hydrology_pipeline_v2"
-
-  SOURCE_TEST_ROOT <-
-    "/scratch/project_2004707/pienvedet/hydro_test/TEST_SULKU_11"
-
-  STRUCTURES_ROOT <-
-    "/scratch/project_2004707/pienvedet/hydrology_structures"
-
-  RUN_ROOT <- file.path(
-    PIPELINE_ROOT,
-    "runs",
-    TEST_ID
+  CSC_ROOT <- hydro_path("HYDRO_CSC_ROOT", "/scratch/project_2004707/pienvedet")
+  PIPELINE_ROOT <- hydro_path(
+    "HYDRO_PIPELINE_ROOT", file.path(CSC_ROOT, "hydrology_pipeline_v2")
   )
-
-  DEM_FILE <- file.path(
-    SOURCE_TEST_ROOT,
-    "dem_12km_rumpukorjattu.tif"
+  SOURCE_TEST_ROOT <- hydro_path(
+    "HYDRO_SOURCE_TEST_ROOT", file.path(CSC_ROOT, "hydro_test", TEST_ID)
   )
-
-  RANTA10_GPKG <- file.path(
-    SOURCE_TEST_ROOT,
-    "RANTA10_TEST_SULKU_11.gpkg"
+  STRUCTURES_ROOT <- hydro_path(
+    "HYDRO_STRUCTURES_ROOT", file.path(CSC_ROOT, "hydrology_structures")
   )
-
   STRUCTURES_GPKG <- file.path(
     STRUCTURES_ROOT,
     "HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg"
   )
+}
+
+if (HYDRO_MODE %in% c("LOCAL_TEST", "CSC_TEST")) {
+  RUN_ROOT <- hydro_path("HYDRO_RUN_ROOT", file.path(PIPELINE_ROOT, "runs", TEST_ID))
+  DEM_FILE <- file.path(SOURCE_TEST_ROOT, "dem_12km_rumpukorjattu.tif")
+  RANTA10_GPKG <- file.path(SOURCE_TEST_ROOT, "RANTA10_TEST_SULKU_11.gpkg")
 }
 
 
