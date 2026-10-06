@@ -1,0 +1,2 @@
+"lake_objectid","lake_z_m","min_storage_raise_m","max_storage_raise_m","lowest_spill_level_m","spill_raise_m","n_low_groups","n_low_edges","n_land_edges","n_river_area_edges","n_river_line_edges","n_other_lake_edges"
+111137,81.129997253418,0,0.206001281738281,81.129997253418,0,96,1470,13056,0,2,127

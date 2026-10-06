@@ -1,0 +1,656 @@
+Building land_dem_raw...
+          used (Mb) gc trigger  (Mb) max used  (Mb)
+Ncells 1157640 61.9    2244687 119.9  2244687 119.9
+Vcells 1459572 11.2    8388608  64.0  2289232  17.5
+Running land FillDepressions...
+Building land + lake routing surface...
+          used (Mb) gc trigger  (Mb) max used  (Mb)
+Ncells 1163142 62.2    2244687 119.9  2244687 119.9
+Vcells 1500340 11.5    8388608  64.0  2289232  17.5
+Running WATER_STORAGE FillDepressions...
+=== 02A LAND + STORAGE ===
+DEM cells          : 36000000
+Lake cells         : 667921
+Land cells         : 35332079
+
+Regression:
+land_raw      pass=N/A    NA-diff=NA  max-diff=NA  changed=NA
+land_fill     pass=N/A    NA-diff=NA  max-diff=NA  changed=NA
+land_water    pass=N/A    NA-diff=NA  max-diff=NA  changed=NA
+storage       pass=N/A    NA-diff=NA  max-diff=NA  changed=NA
+
+02A RESULT         : CHECK DIFFERENCES
+QA file            : 02A_storage_regression_QA.csv
+===========================
+
+02B: building land-water D8 pointer...
+[1] TRUE
+          used (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells 1181617 63.2    2244687  119.9   2244687  119.9
+Vcells 3048327 23.3  158666446 1210.6 198187075 1512.1
+
+=== 02B LAND -> FIRST WATER ===
+True land adjacent to water : 163582
+Valid D8 pointers           : 162820
+Direct first-water entries  : 118883
+  -> LAKE                   : 22685
+  -> RIVER_AREA             : 20665
+  -> RIVER_LINE             : 75533
+Target lakes / all lakes    : 101 / 108
+Adjacent pointer zero       : 762
+Adjacent pointer NA         : 0
+Adjacent pointer invalid    : 0
+Entry CSV                   : 02B_land_to_first_water_entries.csv
+=================================
+
+=== 02C ZERO POINTER COMPONENT QA ===
+Zero land cells            : 762
+Connected components       : 598
+LAKE_ONLY                  : 590
+RIVER_AREA_ONLY            : 0
+RIVER_LINE_ONLY            : 5
+MIXED                      : 3
+Components with >1 lake ID : 1
+Components touching edge   : 9
+Component size min/med/q95/max: 1 / 1 / 3 / 15
+Component QA               : 02C_zero_pointer_component_QA.csv
+======================================
+
+=== 02C SHORE TARGET CLASSIFICATION ===
+Components total       : 598
+SAFE_LAKE_CONNECTOR    : 585
+EDGE_CASE              : 9
+INTERIOR_REVIEW        : 4
+Safe zero cells        : 732 / 762
+
+--- INTERIOR REVIEW ---
+ component_id n_zero_cells n_lake_neighbors n_river_area_neighbors
+           13           15               71                      0
+          203            1                3                      0
+          353            1                4                      0
+          523            1                1                      0
+ n_river_line_neighbors lake_objectids  min_x  max_x   min_y   max_y
+                      0  110803;110832 418949 418965 7079977 7079995
+                      1         111055 407483 407483 7074327 7074327
+                      1         111137 416107 416107 7073265 7073265
+                      3         111251 418313 418313 7070373 7070373
+ terminal_min_z_m min_adjacent_water_z_m          dz_m
+        110.51600                110.530 -0.0139999390
+         97.41925                 97.420 -0.0007476807
+         81.08041                 81.130 -0.0495910645
+         97.46000                 97.531 -0.0709991455
+========================================
+
+=== 02C FINAL SHORE TARGETS ===
+Safe components       : 585
+Safe zero cells       : 732
+Edge components       : 9
+Interior review       : 4
+Deferred zero cells   : 30
+D8 pointer modified   : NO
+Target raster         : shore_target_lake_objectid.tif
+=================================
+
+=== 02D.1 LAKE SHORE INVENTORY ===
+Lakes                    : 108
+Shore edges              : 67235
+  -> LAND                : 66770
+  -> RIVER_AREA          : 120
+  -> RIVER_LINE          : 61
+  -> OTHER_LAKE          : 284
+Lakes touching river     : 13 / 108
+Lakes touching other lake: 6
+Lakes raised by storage  : 50 / 108
+Maximum storage raise    : 2.338005 m
+Shore edges min/med/q95/max: 36 / 105 / 1054 / 30248
+Candidate CSV            : 02D_lake_shore_candidates_all.csv
+=====================================
+
+=== 02D.2 LOWEST SPILL GROUPS ===
+Lakes                    : 108
+Lowest-spill groups      : 418
+Lakes with 1 group       : 71
+Lakes with >1 groups     : 37
+Groups touching river    : 14
+Groups touching other lake: 3
+Groups touching edge     : 7
+Lakes requiring spill raise: 49
+Groups/lake min/med/q95/max: 1 / 1 / 8 / 96
+Cells/group min/med/q95/max: 1 / 7 / 54 / 318
+Group CSV                : 02D_lowest_spill_groups.csv
+====================================
+
+=== 02D.2A SPILL GROUP DIAGNOSTIC ===
+Storage-raised lakes       : 50
+Spill-raised lakes         : 49
+Raise classification mismatch: 1
+Multi-group raised lakes   : 22
+Multi-group non-raised     : 15
+Groups, raised min/med/q95/max    : 1 / 1 / 8 / 27
+Groups, non-raised min/med/q95/max: 1 / 1 / 7 / 96
+
+--- RAISE MISMATCH ---
+ lake_objectid lake_z_m min_storage_raise_m max_storage_raise_m
+        111137    81.13                   0           0.2060013
+ lowest_spill_level_m spill_raise_m n_low_groups n_low_edges n_land_edges
+                81.13             0           96        1470        13056
+ n_river_area_edges n_river_line_edges n_other_lake_edges
+                  0                  2                127
+
+--- TOP 15 BY NUMBER OF LOW GROUPS ---
+ lake_objectid storage_raised spill_raised spill_raise_m n_low_groups
+        111137           TRUE        FALSE    0.00000000           96
+        111022          FALSE        FALSE    0.00000000           81
+        111229          FALSE        FALSE    0.00000000           31
+        111107           TRUE         TRUE    0.02373505           27
+        111258           TRUE         TRUE    0.02400208           11
+        111154           TRUE         TRUE    0.70700073            8
+        111177           TRUE         TRUE    0.08999634            7
+        110727           TRUE         TRUE    0.51155090            5
+        110758           TRUE         TRUE    0.79699707            5
+        110888           TRUE         TRUE    0.43800354            5
+        111079           TRUE         TRUE    0.06850433            5
+        111185           TRUE         TRUE    0.20253754            5
+        111006          FALSE        FALSE    0.00000000            4
+        111086           TRUE         TRUE    0.05500031            4
+        111096           TRUE         TRUE    0.15006753            4
+ n_low_edges n_river_area_edges n_river_line_edges n_other_lake_edges
+        1470                  0                  2                127
+        1073                120                  5                127
+         357                  0                  0                  0
+         962                  0                  3                  0
+         180                  0                  5                  0
+         831                  0                  0                  0
+         609                  0                  0                  0
+          61                  0                  0                  0
+          56                  0                  0                  0
+          49                  0                  0                  0
+         120                  0                  0                  0
+         965                  0                  7                  0
+         233                  0                  3                  0
+          33                  0                  0                  0
+          46                  0                  0                  0
+========================================
+
+=== 02D.3 LOW-SPILL TARGET EVIDENCE ===
+Groups total             : 418
+LOWER_OTHER_LAKE         : 3
+RIVER_CONTACT            : 14
+MULTI_WATER_CONTACT      : 0
+LAND_ONLY                : 394
+EDGE_CASE                : 7
+Lakes with direct water evidence: 14 / 108
+Lakes with only LAND_ONLY groups : 94
+
+--- DIRECT LOWER-LAKE LINKS ---
+ spill_group_id lake_objectid lower_lake_objectids n_other_lake_edges
+             25        110832               110803                 14
+             61        110930               110932                  1
+            242        111137               111022                127
+ spill_level_m
+        110.95
+         92.88
+         81.13
+=========================================
+
+02D.4: building raised depression components...
+           used  (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells  1236653  66.1    2244687  119.9   2244687  119.9
+Vcells 24472414 186.8  163802450 1249.8 204549174 1560.6
+
+=== 02D.4 RAISED DEPRESSION COMPONENTS ===
+Lakes total                    : 108
+Spill-raised, one component    : 49
+Spill-raised, multi-component  : 0
+Spill-raised, no component     : 0
+Partial raise, no spill raise  : 1
+No raised component            : 58
+
+--- EXCEPTIONS ---
+ lake_objectid n_lake_cells n_raised_lake_cells raised_fraction
+        111137       287215                  13    4.526226e-05
+ n_depression_components depression_component_ids spill_raise_m
+                       1                      467             0
+ max_storage_raise_m n_low_groups            depression_status
+           0.2060013           96 PARTIAL_RAISE_NO_SPILL_RAISE
+============================================
+02D.5 depression 1 / 4502D.5 depression 2 / 4502D.5 depression 3 / 4502D.5 depression 4 / 4502D.5 depression 5 / 4502D.5 depression 6 / 4502D.5 depression 7 / 4502D.5 depression 8 / 4502D.5 depression 9 / 4502D.5 depression 10 / 4502D.5 depression 11 / 4502D.5 depression 12 / 4502D.5 depression 13 / 4502D.5 depression 14 / 4502D.5 depression 15 / 4502D.5 depression 16 / 4502D.5 depression 17 / 4502D.5 depression 18 / 4502D.5 depression 19 / 4502D.5 depression 20 / 4502D.5 depression 21 / 4502D.5 depression 22 / 4502D.5 depression 23 / 4502D.5 depression 24 / 4502D.5 depression 25 / 4502D.5 depression 26 / 4502D.5 depression 27 / 4502D.5 depression 28 / 4502D.5 depression 29 / 4502D.5 depression 30 / 4502D.5 depression 31 / 4502D.5 depression 32 / 4502D.5 depression 33 / 4502D.5 depression 34 / 4502D.5 depression 35 / 4502D.5 depression 36 / 4502D.5 depression 37 / 4502D.5 depression 38 / 4502D.5 depression 39 / 4502D.5 depression 40 / 4502D.5 depression 41 / 4502D.5 depression 42 / 4502D.5 depression 43 / 4502D.5 depression 44 / 4502D.5 depression 45 / 45
+
+=== 02D.5 DEPRESSION SPILL GATES ===
+Spill-raised lakes           : 49
+Unique depression components : 45
+Components shared by >1 lake : 4
+Depressions with 1 gate group: 31
+Depressions with >1 groups   : 14
+Gate groups total            : 146
+Gate groups touching river   : 1
+Gate groups touching lake    : 1
+Gate groups touching edge    : 3
+Max |gate - lake spill|      : 0.000000000 m
+Max storage range/component  : 0.000000000 m
+Components requiring review  : 16
+
+--- GATE REVIEW (first 20) ---
+ depression_component_id n_component_cells n_member_lakes  member_lakes
+                      21            111119              1        110961
+                     332              2246              1        111173
+                     422              1851              1        111258
+                     336              4739              1        111177
+                      28              1147              2 110905;110908
+                     221              4141              1        111072
+                      34               147              1        110910
+                     229               305              1        111101
+                     287              8259              1        111154
+                     458               166              1        111264
+                       9                82              1        110809
+                     282               414              1        111153
+                     450               441              2 111265;111266
+                     453               824              1        111261
+                       2               861              2 110727;110741
+                     101               565              2 111017;111018
+ component_storage_range_m expected_lake_spill_min_m depression_gate_level_m
+                         0                   71.2140                 71.2140
+                         0                  114.8690                114.8690
+                         0                  101.5140                101.5140
+                         0                  109.8100                109.8100
+                         0                  109.7440                109.7440
+                         0                  133.1140                133.1140
+                         0                  101.8900                101.8900
+                         0                  105.6310                105.6310
+                         0                  125.9570                125.9570
+                         0                   82.4470                 82.4470
+                         0                  112.8480                112.8480
+                         0                  124.9900                124.9900
+                         0                  101.6840                101.6840
+                         0                   96.7670                 96.7670
+                         0                  114.8816                114.8816
+                         0                   77.3000                 77.3000
+ gate_minus_expected_min_m n_min_gate_edges n_min_gate_source_cells
+                         0              223                     221
+                         0               45                      45
+                         0               60                      53
+                         0               31                      29
+                         0               19                      19
+                         0               22                      21
+                         0               12                      11
+                         0               10                      10
+                         0               10                      10
+                         0                7                       7
+                         0                8                       7
+                         0                7                       7
+                         0                5                       5
+                         0                5                       5
+                         0                1                       1
+                         0               24                      10
+ n_gate_groups
+            54
+            12
+            10
+             7
+             6
+             5
+             4
+             3
+             3
+             3
+             2
+             2
+             2
+             2
+             1
+             1
+========================================
+
+=== 02D.5A GATE ESCAPE EVIDENCE ===
+Gate edges total              : 565
+Receiver LOWER than gate      : 0
+Receiver LEVEL with gate      : 565
+Receiver ABOVE gate           : 0
+Gate groups DIRECT_LOWER      : 0
+Gate groups DIRECT_WATER      : 2
+Gate groups LEVEL_LAND_ONLY   : 144
+Depressions with lower escape : 0 / 45
+Depressions with water contact: 2 / 45
+Depressions entirely LEVEL    : 43 / 45
+
+--- ALL-LEVEL DEPRESSIONS ---
+ depression_component_id n_gate_groups groups_direct_lower groups_direct_water
+                       1             1                   0                   0
+                       2             1                   0                   0
+                       3             1                   0                   0
+                       5             1                   0                   0
+                       7             1                   0                   0
+                       8             1                   0                   0
+                       9             2                   0                   0
+                      21            54                   0                   0
+                      27             1                   0                   0
+                      28             6                   0                   0
+                      34             4                   0                   0
+                      40             1                   0                   0
+                      42             1                   0                   0
+                      44             1                   0                   0
+                      57             1                   0                   0
+                      58             1                   0                   0
+                      59             1                   0                   0
+                      68             1                   0                   0
+                      75             1                   0                   0
+                      76             1                   0                   0
+                      82             1                   0                   0
+                     145             1                   0                   0
+                     213             1                   0                   0
+                     221             5                   0                   0
+                     223             1                   0                   0
+                     226             1                   0                   0
+                     227             1                   0                   0
+                     229             3                   0                   0
+                     230             1                   0                   0
+                     249             1                   0                   0
+                     252             1                   0                   0
+                     257             1                   0                   0
+                     282             2                   0                   0
+                     287             3                   0                   0
+                     332            12                   0                   0
+                     336             7                   0                   0
+                     338             1                   0                   0
+                     386             1                   0                   0
+                     403             1                   0                   0
+                     422            10                   0                   0
+                     450             2                   0                   0
+                     453             2                   0                   0
+                     458             3                   0                   0
+ groups_level_land_only all_groups_level_land_only
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      2                       TRUE
+                     54                       TRUE
+                      1                       TRUE
+                      6                       TRUE
+                      4                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      5                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      3                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      2                       TRUE
+                      3                       TRUE
+                     12                       TRUE
+                      7                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                      1                       TRUE
+                     10                       TRUE
+                      2                       TRUE
+                      2                       TRUE
+                      3                       TRUE
+========================================
+
+02D.6 target LEVEL_LAND_ONLY depressions: 43
+02D.6 depression 1 / 43 | ID 102D.6 depression 2 / 43 | ID 202D.6 depression 3 / 43 | ID 302D.6 depression 4 / 43 | ID 502D.6 depression 5 / 43 | ID 702D.6 depression 6 / 43 | ID 802D.6 depression 7 / 43 | ID 902D.6 depression 8 / 43 | ID 21|---------|---------|---------|---------|=========================================                                          |---------|---------|---------|---------|=========================================                                          02D.6 depression 9 / 43 | ID 2702D.6 depression 10 / 43 | ID 2802D.6 depression 11 / 43 | ID 3402D.6 depression 12 / 43 | ID 4002D.6 depression 13 / 43 | ID 4202D.6 depression 14 / 43 | ID 4402D.6 depression 15 / 43 | ID 5702D.6 depression 16 / 43 | ID 5802D.6 depression 17 / 43 | ID 5902D.6 depression 18 / 43 | ID 6802D.6 depression 19 / 43 | ID 7502D.6 depression 20 / 43 | ID 7602D.6 depression 21 / 43 | ID 8202D.6 depression 22 / 43 | ID 14502D.6 depression 23 / 43 | ID 21302D.6 depression 24 / 43 | ID 22102D.6 depression 25 / 43 | ID 22302D.6 depression 26 / 43 | ID 22602D.6 depression 27 / 43 | ID 22702D.6 depression 28 / 43 | ID 22902D.6 depression 29 / 43 | ID 23002D.6 depression 30 / 43 | ID 24902D.6 depression 31 / 43 | ID 25202D.6 depression 32 / 43 | ID 25702D.6 depression 33 / 43 | ID 28202D.6 depression 34 / 43 | ID 28702D.6 depression 35 / 43 | ID 33202D.6 depression 36 / 43 | ID 33602D.6 depression 37 / 43 | ID 33802D.6 depression 38 / 43 | ID 38602D.6 depression 39 / 43 | ID 40302D.6 depression 40 / 43 | ID 42202D.6 depression 41 / 43 | ID 45002D.6 depression 42 / 43 | ID 45302D.6 depression 43 / 43 | ID 458
+
+=== 02D.6 LEVEL-FLAT ESCAPE TRACE ===
+Target depressions              : 43
+Resolved                        : 42
+Resolved + edge ambiguity       : 1
+Other-depression only           : 0
+Other-depression + edge         : 0
+Censored by raster edge         : 0
+Trace incomplete                : 0
+No escape found                 : 0
+Depressions with LOWER escape   : 43
+Depressions with LEVEL water    : 0
+Depressions -> other depression : 0
+Depressions touching raster edge: 1
+Back-to-origin edges filtered   : 540
+Untraced LEVEL-land edges       : 0
+
+--- STATUS ---
+
+                   RESOLVED RESOLVED_BUT_EDGE_AMBIGUITY 
+                         42                           1 
+
+--- UNRESOLVED / EDGE CASES ---
+ depression_component_id gate_level_m n_gate_groups n_flat_cells
+                      21       71.214            54           58
+ n_flat_components n_back_to_origin_edges_filtered n_lower_escape_edges
+                57                             223                    1
+ n_level_water_edges n_other_depression_edges n_untraced_level_land_edges
+                   0                        0                           0
+ n_components_raster_edge used_margin_m                      status
+                        1          8000 RESOLVED_BUT_EDGE_AMBIGUITY
+
+Depression summary : 02D6_depression_flat_escape_summary.csv
+Flat summary       : 02D6_flat_component_summary.csv
+Escape edges       : 02D6_flat_escape_edges.csv
+Gate -> flat       : 02D6_gate_to_flat_component.csv
+=========================================
+
+02D.6 HARD QA: PASS
+
+=== 02D.7A NON-RAISED LAKE COVERAGE ===
+All lakes                  : 108
+Spill-raised lakes         : 49
+Non-raised lakes           : 59
+Direct-water only          : 1
+Direct-water + LAND        : 8
+LAND_ONLY                  : 48
+LAND + EDGE                : 2
+EDGE_ONLY                  : 0
+UNCLASSIFIED               : 0
+Lakes requiring LAND trace : 58
+Partial-raise special cases: 1
+
+--- LAKE CLASS ---
+
+DIRECT_WATER_AND_LAND     DIRECT_WATER_ONLY         LAND_AND_EDGE 
+                    8                     1                     2 
+            LAND_ONLY 
+                   48 
+
+--- PARTIAL-RAISE CASES ---
+ lake_objectid            depression_status n_low_groups n_lower_lake_groups
+        111137 PARTIAL_RAISE_NO_SPILL_RAISE           96                   1
+ n_river_groups n_multi_water_groups n_land_only_groups n_edge_groups
+              0                    0                 95             0
+ has_direct_water needs_land_trace            lake_class
+             TRUE             TRUE DIRECT_WATER_AND_LAND
+
+--- NON-RAISED LAKES REQUIRING LAND TRACE ---
+ lake_objectid            depression_status n_low_groups n_lower_lake_groups
+        110760          NO_RAISED_COMPONENT            1                   0
+        110803          NO_RAISED_COMPONENT            2                   0
+        110819          NO_RAISED_COMPONENT            1                   0
+        110832          NO_RAISED_COMPONENT            2                   1
+        110847          NO_RAISED_COMPONENT            1                   0
+        110883          NO_RAISED_COMPONENT            2                   0
+        110884          NO_RAISED_COMPONENT            1                   0
+        110885          NO_RAISED_COMPONENT            1                   0
+        110903          NO_RAISED_COMPONENT            1                   0
+        110904          NO_RAISED_COMPONENT            1                   0
+        110906          NO_RAISED_COMPONENT            3                   0
+        110909          NO_RAISED_COMPONENT            1                   0
+        110913          NO_RAISED_COMPONENT            1                   0
+        110915          NO_RAISED_COMPONENT            1                   0
+        110918          NO_RAISED_COMPONENT            1                   0
+        110921          NO_RAISED_COMPONENT            1                   0
+        110923          NO_RAISED_COMPONENT            1                   0
+        110924          NO_RAISED_COMPONENT            1                   0
+        110927          NO_RAISED_COMPONENT            1                   0
+        110929          NO_RAISED_COMPONENT            1                   0
+        110930          NO_RAISED_COMPONENT            2                   1
+        110931          NO_RAISED_COMPONENT            1                   0
+        110932          NO_RAISED_COMPONENT            1                   0
+        110933          NO_RAISED_COMPONENT            1                   0
+        110935          NO_RAISED_COMPONENT            1                   0
+        110941          NO_RAISED_COMPONENT            1                   0
+        110942          NO_RAISED_COMPONENT            1                   0
+        110943          NO_RAISED_COMPONENT            1                   0
+        110946          NO_RAISED_COMPONENT            1                   0
+        110951          NO_RAISED_COMPONENT            1                   0
+        110952          NO_RAISED_COMPONENT            1                   0
+        110953          NO_RAISED_COMPONENT            1                   0
+        110972          NO_RAISED_COMPONENT            1                   0
+        110974          NO_RAISED_COMPONENT            2                   0
+        110984          NO_RAISED_COMPONENT            1                   0
+        110987          NO_RAISED_COMPONENT            1                   0
+        111003          NO_RAISED_COMPONENT            1                   0
+        111004          NO_RAISED_COMPONENT            1                   0
+        111006          NO_RAISED_COMPONENT            4                   0
+        111008          NO_RAISED_COMPONENT            1                   0
+        111012          NO_RAISED_COMPONENT            1                   0
+        111016          NO_RAISED_COMPONENT            1                   0
+        111019          NO_RAISED_COMPONENT            1                   0
+        111020          NO_RAISED_COMPONENT            2                   0
+        111022          NO_RAISED_COMPONENT           81                   0
+        111025          NO_RAISED_COMPONENT            1                   0
+        111040          NO_RAISED_COMPONENT            1                   0
+        111049          NO_RAISED_COMPONENT            2                   0
+        111054          NO_RAISED_COMPONENT            1                   0
+        111055          NO_RAISED_COMPONENT            2                   0
+        111103          NO_RAISED_COMPONENT            1                   0
+        111117          NO_RAISED_COMPONENT            2                   0
+        111129          NO_RAISED_COMPONENT            1                   0
+        111137 PARTIAL_RAISE_NO_SPILL_RAISE           96                   1
+        111141          NO_RAISED_COMPONENT            1                   0
+        111146          NO_RAISED_COMPONENT            2                   0
+        111162          NO_RAISED_COMPONENT            1                   0
+        111229          NO_RAISED_COMPONENT           31                   0
+ n_river_groups n_land_only_groups n_edge_groups            lake_class
+              0                  1             0             LAND_ONLY
+              0                  1             1         LAND_AND_EDGE
+              0                  1             0             LAND_ONLY
+              0                  1             0 DIRECT_WATER_AND_LAND
+              0                  1             0             LAND_ONLY
+              0                  2             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  3             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0 DIRECT_WATER_AND_LAND
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  2             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              1                  3             0 DIRECT_WATER_AND_LAND
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              1                  1             0 DIRECT_WATER_AND_LAND
+              3                 78             0 DIRECT_WATER_AND_LAND
+              0                  1             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              1                  1             0 DIRECT_WATER_AND_LAND
+              0                  1             0             LAND_ONLY
+              1                  1             0 DIRECT_WATER_AND_LAND
+              0                  1             0             LAND_ONLY
+              0                  2             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                 95             0 DIRECT_WATER_AND_LAND
+              0                  1             0             LAND_ONLY
+              0                  2             0             LAND_ONLY
+              0                  1             0             LAND_ONLY
+              0                 29             2         LAND_AND_EDGE
+==========================================
+
+02D.7A HARD QA: PASS
+
+=== 02D.7B NON-RAISED LAND SEED INVENTORY ===
+LAND-trace lakes             : 58
+LAND_ONLY spill groups       : 265
+Unique group/seed rows       : 1967
+
+--- POINTER STATUS ---
+
+VALID_D8     ZERO 
+    1419      548 
+
+--- FIRST D8 STEP ---
+
+        LAND   OTHER_LAKE   RIVER_LINE ZERO_POINTER 
+        1409            4            6          548 
+
+--- ZERO POINTER COMPONENT STATUS ---
+
+    INTERIOR_REVIEW SAFE_LAKE_CONNECTOR 
+                 17                 531 
+
+Lakes with at least one ZERO seed : 34
+Lakes with at least one next-LAND: 53
+Lakes with origin-lake return    : 0
+Lakes with domain-exit seed      : 0
+===============================================
+
+02D.7B HARD QA: PASS
+02D.7C trace 1 / 196602D.7C trace 100 / 196602D.7C trace 200 / 196602D.7C trace 300 / 196602D.7C trace 400 / 196602D.7C trace 500 / 196602D.7C trace 600 / 196602D.7C trace 700 / 196602D.7C trace 800 / 196602D.7C trace 900 / 196602D.7C trace 1000 / 196602D.7C trace 1100 / 196602D.7C trace 1200 / 196602D.7C trace 1300 / 196602D.7C trace 1400 / 196602D.7C trace 1500 / 196602D.7C trace 1600 / 196602D.7C trace 1700 / 196602D.7C trace 1800 / 196602D.7C trace 1900 / 196602D.7C trace 1966 / 1966
+
+=== 02D.7C NON-RAISED LAND D8 TRACE ===
+Unique start cells            : 1966
+Group/seed rows               : 1967
+Lakes                         : 58
+Maximum D8 steps              : 905
+
+--- RAW TERMINAL STATUS, UNIQUE SEEDS ---
+
+       WATER ZERO_POINTER 
+         631         1335 
+
+--- ORIGIN-RELATIVE TERMINAL CLASS, GROUP/SEED ROWS ---
+
+           OTHER_LAKE            RIVER_AREA            RIVER_LINE 
+                   93                   289                   249 
+ ZERO_INTERIOR_REVIEW ZERO_SAFE_ORIGIN_LAKE  ZERO_SAFE_OTHER_LAKE 
+                   46                  1242                    47 
+    ZERO_UNCLASSIFIED 
+                    1 
+
+Lakes with ORIGIN_LAKE terminal       : 32
+Lakes with OTHER_LAKE terminal        : 10
+Lakes with river terminal             : 35
+Lakes with zero-pointer review        : 4
+Lakes with pointer/domain/cycle issue : 0
+=============================================
+
+02D.7C HARD QA: PASS
