@@ -1,6 +1,6 @@
 # TEST_SULKU_11 automated QA
 
-Commit: 381738491440e9409b51650c7e4870af48f13691
+Commit: d6efa04bffa598d2717349e20f4f0fc3ac43e7b4
 
 ## Key diagnostic lines
 ~~~
@@ -25,4 +25,8 @@ Lakes with domain-exit seed      : 0
 LAND_ONLY spill groups       : 265
 02D.7E HARD QA: PASS
 Untraced LEVEL-land edges     : 0 
+02D.7F HARD QA: PASS
+02D.7G HARD QA: PASS
+02D.7H HARD QA: PASS
+02D.7I HARD QA: PASS
 ~~~
