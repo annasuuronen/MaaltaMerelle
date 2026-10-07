@@ -121,7 +121,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          Rscript R/02_build_baseline_hydrology.R 2>&1 | tee hydro02.log
+          Rscript -e 'source("R/02_build_baseline_hydrology.R"); source("R/02D7I_non_target_raised_gate_evidence.R")' 2>&1 | tee hydro02.log
 
       - name: Extract key QA lines
         if: always()
@@ -135,7 +135,7 @@ jobs:
             echo '## Key diagnostic lines'
             echo '~~~'
             if test -f hydro02.log; then
-              grep -E                 '02D\.6 HARD QA|02D\.7A HARD QA|02D\.7B HARD QA|02D\.7C HARD QA|02D\.7D HARD QA|02D\.7E HARD QA|Untraced LEVEL-land edges|All lakes|Spill-raised lakes|Non-raised lakes|LAND-trace lakes|LAND_ONLY spill groups|Unique group/seed rows|Lakes with at least one ZERO seed|Lakes with at least one next-LAND|Lakes with origin-lake return|Lakes with domain-exit seed'                 hydro02.log || true
+              grep -E                 '02D\.6 HARD QA|02D\.7A HARD QA|02D\.7B HARD QA|02D\.7C HARD QA|02D\.7D HARD QA|02D\.7E HARD QA|02D\.7F HARD QA|02D\.7G HARD QA|02D\.7H HARD QA|02D\.7I HARD QA|Untraced LEVEL-land edges|All lakes|Spill-raised lakes|Non-raised lakes|LAND-trace lakes|LAND_ONLY spill groups|Unique group/seed rows|Lakes with at least one ZERO seed|Lakes with at least one next-LAND|Lakes with origin-lake return|Lakes with domain-exit seed'                 hydro02.log || true
             fi
             echo '~~~'
           } > TEST_SULKU_11_QA_SUMMARY.md
