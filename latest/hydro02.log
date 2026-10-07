@@ -734,3 +734,13 @@ Components touching edge       : 0
 ABOVE min-gate edges           : 0 
 Adjacent other raised at gate  : 0 
 02D.7I HARD QA: PASS
+
+=== 02D.7I NON-TARGET RAISED MIN-GATE EVIDENCE ===
+Target raised components       : 275 
+Components with LOWER gate     : 0 
+Components with LEVEL gate     : 275 
+Components with water gate     : 275 
+Components touching edge       : 0 
+ABOVE min-gate edges           : 0 
+Adjacent other raised at gate  : 0 
+02D.7I HARD QA: PASS
