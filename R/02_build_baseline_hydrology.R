@@ -12095,3 +12095,7 @@ source(file.path("R", "02D7I_non_target_raised_gate_evidence.R"))
 
 # 02D.7J: diagnostic LEVEL-flat trace; no routing or outlet changes.
 source(file.path("R", "02D7J_non_target_raised_level_flat_trace.R"))
+
+
+# 02D.7K: resolve non-target raised links as external vs origin-return evidence.
+source(file.path("R", "02D7K_non_target_raised_link_resolution.R"))
