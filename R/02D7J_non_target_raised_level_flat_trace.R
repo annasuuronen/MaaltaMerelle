@@ -105,7 +105,7 @@ for (ii in seq_len(nrow(keys_02d7j))) {
     rel[fin & rz<lev-tol_02d7j]<-"LOWER"
     rel[fin & abs(rz-lev)<=tol_02d7j]<-"LEVEL"
     rel[fin & rz>lev+tol_02d7j]<-"ABOVE"
-    typ<-rep("LAND",nrow(ap)); typ[rw==1]<-"LAKE"; typ[rw==2]<-"RIVER_AREA"; typ[rw==3]<-"RIVER_LINE"
+    typ<-rep("LAND",nrow(ap)); typ[!is.na(rw) & rw==1]<-"LAKE"; typ[!is.na(rw) & rw==2]<-"RIVER_AREA"; typ[!is.na(rw) & rw==3]<-"RIVER_LINE"
     otherdep<-is.finite(rd) & as.integer(rd)!=as.integer(did)
     et<-data.frame(depression_component_id=did,gate_level_m=lev,
       source_cell=ap[,1],receiver_cell=ap[,2],receiver_storage_z_m=rz,relation=rel,
