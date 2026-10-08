@@ -13,7 +13,7 @@ storage       pass=N/A    NA-diff=NA  max-diff=NA  changed=NA
 QA file            : 02A_storage_regression_QA.csv
 ===========================
           used (Mb) gc trigger   (Mb)  max used   (Mb)
-Ncells 1173797 62.7    2244687  119.9   2244687  119.9
+Ncells 1173793 62.7    2244675  119.9   2244675  119.9
 Vcells 3003800 23.0  158623315 1210.2 198142147 1511.8
 
 === 02B LAND -> FIRST WATER ===
@@ -737,3 +737,16 @@ Components touching edge       : 0
 ABOVE min-gate edges           : 0 
 Adjacent other raised at gate  : 0 
 02D.7I HARD QA: PASS
+
+=== 02D.7J NON-TARGET RAISED LEVEL-FLAT ESCAPE TRACE ===
+Target components             : 17 
+Untraced LEVEL-land edges     : 0 
+Back-to-origin edges filtered : 41 
+
+--- STATUS ---
+
+LEVEL_WATER_ESCAPE          NO_ESCAPE 
+                13                  4 
+==========================================================
+
+02D.7J HARD QA: PASS

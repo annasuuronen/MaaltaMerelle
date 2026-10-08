@@ -1,6 +1,6 @@
 # TEST_SULKU_11 automated QA
 
-Commit: 766d41d23f85b31345bb18a47ebb7fa3ef06ac84
+Commit: 71bdd649f453c5c996e12942402c4c71fa21e4fd
 
 ## Key diagnostic lines
 ~~~
@@ -29,4 +29,5 @@ Untraced LEVEL-land edges     : 0
 02D.7G HARD QA: PASS
 02D.7H HARD QA: PASS
 02D.7I HARD QA: PASS
+Untraced LEVEL-land edges     : 0 
 ~~~
