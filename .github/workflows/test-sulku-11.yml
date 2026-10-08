@@ -165,7 +165,7 @@ jobs:
             done
             echo
             echo -e "sha256\tfile"
-            sha256sum               R/00_pipeline_config.R               R/01_prepare_hydrology_inputs.R               R/02_build_baseline_hydrology.R               R/02D7F_nonraised_level_flat_trace.R               R/02D7G_candidate_evidence.R               R/02D7H_nonraised_depression_links.R               R/02D7I_non_target_raised_gate_evidence.R               R/02D7J_non_target_raised_level_flat_trace.R               R/02D7K_non_target_raised_link_resolution.R
+            sha256sum               R/00_pipeline_config.R               R/01_prepare_hydrology_inputs.R               R/02_build_baseline_hydrology.R               R/02D7F_nonraised_level_flat_trace.R               R/02D7G_candidate_evidence.R               R/02D7H_nonraised_depression_links.R               R/02D7I_non_target_raised_gate_evidence.R               R/02D7J_non_target_raised_level_flat_trace.R               R/02D7K_non_target_raised_link_resolution.R               R/02D7K2_non_target_raised_link_resolution.R
           } > EXECUTION_MANIFEST.tsv
 
       - name: Extract key QA lines
