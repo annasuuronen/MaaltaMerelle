@@ -7188,6 +7188,19 @@ for (ii in seq_along(level_dep_ids)) {
             # - not RANTA10 water
             # - not part of any raised depression
 
+            # Force the largest 02D.6 intermediates to disk. Natural
+            # reference tiles can contain very large same-level flats; keeping
+            # flat_land + patches in RAM can exceed hosted-runner memory even
+            # though the hydrological operation itself is valid.
+            tmp_flat_land <- tempfile(
+                pattern = paste0("02d6_flat_land_", did, "_"),
+                fileext = ".tif"
+            )
+            tmp_flat_patch <- tempfile(
+                pattern = paste0("02d6_flat_patch_", did, "_"),
+                fileext = ".tif"
+            )
+
             flat_land <- ifel(
                 abs(
                     s_local -
@@ -7196,13 +7209,18 @@ for (ii in seq_along(level_dep_ids)) {
                     is.na(w_local) &
                     is.na(dep_local),
                 1,
-                NA
+                NA,
+                filename = tmp_flat_land,
+                overwrite = TRUE,
+                wopt = list(datatype = "INT1U")
             )
 
 
             flat_patch <- patches(
                 flat_land,
-                directions = 8
+                directions = 8,
+                filename = tmp_flat_patch,
+                overwrite = TRUE
             )
 
 
@@ -7255,10 +7273,17 @@ for (ii in seq_along(level_dep_ids)) {
             # raster to a data.frame can exhaust a hosted runner. Mask to
             # only the gate-connected patch IDs first; the hydrological
             # result is unchanged.
+            tmp_selected_patch <- tempfile(
+                pattern = paste0("02d6_selected_patch_", did, "_"),
+                fileext = ".tif"
+            )
+
             selected_patch <- ifel(
                 flat_patch %in% seed_patch_id,
                 flat_patch,
-                NA
+                NA,
+                filename = tmp_selected_patch,
+                overwrite = TRUE
             )
 
             selected <- as.data.frame(
@@ -7268,6 +7293,7 @@ for (ii in seq_along(level_dep_ids)) {
             )
 
             rm(selected_patch)
+            unlink(tmp_selected_patch)
             gc(verbose = FALSE)
 
             if (nrow(selected) == 0) {
@@ -7395,6 +7421,7 @@ for (ii in seq_along(level_dep_ids)) {
                 flat_patch,
                 selected
             )
+            unlink(c(tmp_flat_land, tmp_flat_patch))
             gc(verbose = FALSE)
 
             old_margin <- margin_m
@@ -7419,6 +7446,18 @@ for (ii in seq_along(level_dep_ids)) {
                 )
             }
         }
+
+        # The final selected cells are already represented by plateau_map;
+        # temporary raster backing files are no longer needed after tracing.
+        if (exists("tmp_flat_land", inherits = FALSE)) {
+            rm(flat_land)
+            unlink(tmp_flat_land)
+        }
+        if (exists("tmp_flat_patch", inherits = FALSE)) {
+            rm(flat_patch)
+            unlink(tmp_flat_patch)
+        }
+        gc(verbose = FALSE)
     }
 
 
