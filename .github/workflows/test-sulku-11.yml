@@ -141,6 +141,7 @@ jobs:
             "02D.7I HARD QA: PASS"
             "02D.7J HARD QA: PASS"
             "02D.7K HARD QA: PASS"
+            "02D.8 HARD QA: PASS"
           )
 
           for marker in "${required_markers[@]}"; do
