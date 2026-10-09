@@ -420,7 +420,7 @@ Untraced LEVEL-land edges       : 0
  n_level_water_edges n_other_depression_edges n_untraced_level_land_edges
                    0                        0                           0
  n_components_raster_edge used_margin_m                      status
-                        1          8000 RESOLVED_BUT_EDGE_AMBIGUITY
+                        1         12000 RESOLVED_BUT_EDGE_AMBIGUITY
 
 Depression summary : 02D6_depression_flat_escape_summary.csv
 Flat summary       : 02D6_flat_component_summary.csv
