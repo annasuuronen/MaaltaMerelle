@@ -61,7 +61,7 @@ stopifnot(
 # 2. PIPELINE
 # ------------------------------------------------------------
 
-PIPELINE_VERSION <- "2.0-dev"
+PIPELINE_VERSION <- "2.0-baseline-no-structures"
 
 TEST_ID <- "TEST_SULKU_11"
 
@@ -120,18 +120,6 @@ if (HYDRO_MODE == "LOCAL_TEST") {
   SOURCE_TEST_ROOT <- hydro_path(
     "HYDRO_SOURCE_TEST_ROOT", file.path("data", TEST_ID)
   )
-  STRUCTURES_ROOT <- hydro_path(
-    "HYDRO_STRUCTURES_ROOT", SOURCE_TEST_ROOT
-  )
-  STRUCTURES_GPKG <- file.path(
-    # Preserve the existing processed/ layout for explicit structures overrides.
-    if (nzchar(Sys.getenv("HYDRO_STRUCTURES_ROOT", unset = ""))) {
-      file.path(STRUCTURES_ROOT, "processed")
-    } else {
-      SOURCE_TEST_ROOT
-    },
-    "HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg"
-  )
 }
 
 
@@ -148,13 +136,6 @@ if (HYDRO_MODE == "CSC_TEST") {
   )
   SOURCE_TEST_ROOT <- hydro_path(
     "HYDRO_SOURCE_TEST_ROOT", file.path(CSC_ROOT, "hydro_test", TEST_ID)
-  )
-  STRUCTURES_ROOT <- hydro_path(
-    "HYDRO_STRUCTURES_ROOT", file.path(CSC_ROOT, "hydrology_structures")
-  )
-  STRUCTURES_GPKG <- file.path(
-    STRUCTURES_ROOT,
-    "HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg"
   )
 }
 
@@ -196,34 +177,11 @@ DIR_02 <- file.path(
   "02_baseline"
 )
 
-DIR_03 <- file.path(
-  RUN_ROOT,
-  "03_structures"
-)
-
-DIR_04 <- file.path(
-  RUN_ROOT,
-  "04_final_routing"
-)
-
-DIR_05 <- file.path(
-  RUN_ROOT,
-  "05_flow_accumulation"
-)
-
-DIR_06 <- file.path(
-  RUN_ROOT,
-  "06_final"
-)
 
 for (d in c(
   RUN_ROOT,
   DIR_01,
-  DIR_02,
-  DIR_03,
-  DIR_04,
-  DIR_05,
-  DIR_06
+  DIR_02
 )) {
 
   dir.create(
@@ -244,19 +202,7 @@ EXPECTED_TEST <- list(
 
   river_areas = 8L,
 
-  river_lines = 81L,
-
-  physical_structures = 11L,
-
-  hydraulic_sites = 9L,
-
-  confirms_current = 3L,
-
-  controls_existing = 4L,
-
-  adds_outlet_candidate = 2L,
-
-  unresolved_flow_split = 2L
+  river_lines = 81L
 )
 
 
