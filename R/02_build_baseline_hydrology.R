@@ -5250,25 +5250,132 @@ stopifnot(
     spill_lakes$lake_objectid
   ),
   all(
+    is.finite(
+      spill_lakes$n_depression_components
+    )
+  ),
+  all(
+    spill_lakes$n_depression_components >= 1
+  ),
+  all(
+    nzchar(
+      as.character(
+        spill_lakes$depression_component_ids
+      )
+    )
+  )
+)
+
+# TEST_SULKU_11 has one raised depression component per spill-raised
+# lake. Preserve that as a regression fact, not as a general rule.
+hydro_sulku11_regression_assert(
+  nrow(spill_lakes) == 49,
+  all(
     spill_lakes$n_depression_components == 1
   )
 )
 
-hydro_sulku11_regression_assert(
-  nrow(spill_lakes) == 49
-)
 
-spill_lakes$depression_component_id <-
-  as.integer(
-    spill_lakes$depression_component_ids
+# ------------------------------------------------------------
+# 109A. SPILL-RAISED LAKE -> 1..N DEPRESSION COMPONENT LINKS
+#
+# A natural lake may contain multiple disconnected raised components.
+# Keep each observed component as separate evidence. Do not merge
+# components and do not select an outlet here.
+# ------------------------------------------------------------
+
+if (nrow(spill_lakes) == 0) {
+
+  spill_lake_components <- data.frame(
+    lake_objectid = integer(0),
+    depression_component_id = integer(0),
+    stringsAsFactors = FALSE
   )
+
+} else {
+
+  spill_lake_component_list <- vector(
+    "list",
+    nrow(spill_lakes)
+  )
+
+  for (i in seq_len(nrow(spill_lakes))) {
+
+    ids_i <- trimws(
+      strsplit(
+        as.character(
+          spill_lakes$depression_component_ids[i]
+        ),
+        ";",
+        fixed = TRUE
+      )[[1]]
+    )
+
+    ids_i <- ids_i[
+      nzchar(ids_i)
+    ]
+
+    ids_i <- suppressWarnings(
+      as.integer(ids_i)
+    )
+
+    stopifnot(
+      length(ids_i) ==
+        spill_lakes$n_depression_components[i],
+      all(
+        is.finite(ids_i)
+      ),
+      !anyDuplicated(ids_i)
+    )
+
+    spill_lake_component_list[[i]] <- data.frame(
+      lake_objectid =
+        as.integer(
+          spill_lakes$lake_objectid[i]
+        ),
+      depression_component_id =
+        ids_i,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  spill_lake_components <- do.call(
+    rbind,
+    spill_lake_component_list
+  )
+
+  row.names(
+    spill_lake_components
+  ) <- NULL
+}
 
 stopifnot(
-  all(
-    is.finite(
-      spill_lakes$depression_component_id
+  nrow(spill_lake_components) ==
+    sum(
+      spill_lakes$n_depression_components
+    ),
+  !anyDuplicated(
+    paste(
+      spill_lake_components$lake_objectid,
+      spill_lake_components$depression_component_id,
+      sep = ":"
     )
+  ),
+  setequal(
+    unique(
+      spill_lake_components$lake_objectid
+    ),
+    spill_lakes$lake_objectid
   )
+)
+
+write.csv(
+  spill_lake_components,
+  file.path(
+    DIR_02,
+    "02D_spill_raised_lake_component_map.csv"
+  ),
+  row.names = FALSE
 )
 
 
@@ -5278,7 +5385,7 @@ stopifnot(
 
 target_dep_ids <- sort(
   unique(
-    spill_lakes$depression_component_id
+    spill_lake_components$depression_component_id
   )
 )
 
@@ -5371,8 +5478,8 @@ for (i in seq_along(target_dep_ids)) {
   # 113A. MEMBER LAKES
   # ----------------------------------------------------------
 
-  member_rows <- spill_lakes[
-    spill_lakes$depression_component_id == did,
+  member_rows <- spill_lake_components[
+    spill_lake_components$depression_component_id == did,
     ,
     drop = FALSE
   ]
@@ -6134,6 +6241,18 @@ cat("=== 02D.5 DEPRESSION SPILL GATES ===\n")
 cat(sprintf(
   "Spill-raised lakes           : %d\n",
   nrow(spill_lakes)
+))
+
+cat(sprintf(
+  "Multi-component spill lakes  : %d\n",
+  sum(
+    spill_lakes$n_depression_components > 1
+  )
+))
+
+cat(sprintf(
+  "Lake-component links         : %d\n",
+  nrow(spill_lake_components)
 ))
 
 cat(sprintf(
