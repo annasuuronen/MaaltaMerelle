@@ -1,0 +1,88 @@
+name: Validation fixture integrity audit
+
+on:
+  push:
+    branches:
+      - baseline-no-structures
+    paths:
+      - ".github/workflows/audit-validation-fixtures.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fixture-audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout validation fixtures
+        uses: actions/checkout@v4
+        with:
+          ref: ci-testdata-validation-gradient
+          path: fixtures
+
+      - name: Verify binary transfer hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd fixtures/ci/VALIDATION_GRADIENT
+          grep -E '(\.gpkg|\.part[0-9]+)$' MANIFEST.sha256 | sha256sum -c -
+
+      - name: Verify all reconstructed DEM identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="fixtures/ci/VALIDATION_GRADIENT"
+
+          check_case() {
+            case_dir="$1"
+            expected_parts="$2"
+            tmp="$(mktemp)"
+            mapfile -t parts < <(find "$case_dir" -maxdepth 1 -type f -name 'dem_12km_rumpukorjattu.tif.part*' | sort)
+            test "${#parts[@]}" -eq "$expected_parts"
+            cat "${parts[@]}" > "$tmp"
+
+            meta="$case_dir/DEM_RECONSTRUCTION.txt"
+            size="$(grep '^original_size_bytes=' "$meta" | cut -d= -f2)"
+            sha="$(grep '^original_sha256=' "$meta" | cut -d= -f2)"
+            test -n "$size"
+            test -n "$sha"
+            test "$(stat -c%s "$tmp")" = "$size"
+            echo "$sha  $tmp" | sha256sum -c -
+            rm -f "$tmp"
+          }
+
+          check_case "$root/NATURAL_E0560000_N7690000" 3
+          check_case "$root/LOW_E200000_N6900000" 2
+          check_case "$root/MODERATE_E0510000_N7620000" 4
+
+      - name: Verify fixture metadata coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="fixtures/ci/VALIDATION_GRADIENT"
+          grep -Fq 'E0560000_N7690000' "$root/validation_gradient_selection.csv"
+          grep -Fq 'E200000_N6900000' "$root/validation_gradient_selection.csv"
+          grep -Fq 'E0510000_N7620000' "$root/validation_gradient_selection.csv"
+          grep -Fq 'TEST_SULKU_11' "$root/validation_gradient_selection.csv"
+
+      - name: Write audit summary
+        shell: bash
+        run: |
+          cat > VALIDATION_FIXTURE_AUDIT.txt <<'EOF'
+          Validation fixture integrity audit: PASS
+          NATURAL DEM reconstruction: PASS
+          LOW DEM reconstruction: PASS
+          MODERATE DEM reconstruction: PASS
+          Binary GeoPackage and DEM-part transfer hashes: PASS
+          Validation-gradient metadata coverage: PASS
+          EOF
+
+      - name: Upload audit summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-fixture-integrity-${{ github.sha }}
+          retention-days: 30
+          path: VALIDATION_FIXTURE_AUDIT.txt
