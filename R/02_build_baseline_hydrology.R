@@ -7116,15 +7116,23 @@ for (ii in seq_along(level_dep_ids)) {
     # --------------------------------------------------------
     # 132E. TRACE COMPLETE OUTSIDE LEVEL-FLAT
     #
-    # Crop grows until:
-    # 1) selected gate-connected flat no longer touches crop
-    #    boundary
-    # OR
-    # 2) crop is the complete raster.
+    # Exact 8-neighbour flood fill from the minimum-gate land
+    # receiver cells. This is hydrologically equivalent to
+    # selecting the seed-connected patches from a binary
+    # same-level LAND raster, but it never labels unrelated
+    # flats over the full 6000 x 6000 validation raster.
     #
-    # CRITICAL:
-    # depression_components must be NA for a cell to enter
-    # flat_land. Raised cells are removed BEFORE patches().
+    # The previous patches()-based implementation exhausted
+    # hosted-runner memory for a large NATURAL level-flat.
+    # This implementation keeps only:
+    # - one raw state byte per raster cell
+    # - a bounded frontier batch
+    # - cells that actually belong to seed-connected flats
+    #
+    # State values:
+    #   0 = not tested
+    #   1 = eligible and reached
+    #   2 = tested but not eligible
     # --------------------------------------------------------
 
     plateau_map <- NULL
@@ -7133,330 +7141,279 @@ for (ii in seq_along(level_dep_ids)) {
 
     if (length(seed_flat) > 0) {
 
-        margin_m <- initial_margin_m
+        nr_02d6 <- nrow(surface_storage)
+        nc_02d6 <- ncol(surface_storage)
+        ncell_02d6 <- ncell(surface_storage)
 
-        repeat {
+        # One byte per cell. Re-created for this depression so
+        # component membership from different spill levels can
+        # never leak between depressions.
+        flat_state <- raw(ncell_02d6)
 
-            if (
-                margin_m >=
-                    max_margin_m
-            ) {
+        # Gate seeds were already hard-checked above, but repeat
+        # the exact eligibility predicate here so the flood-fill
+        # contract is explicit and self-contained.
+        seed_z <- cell_values(
+            surface_storage,
+            seed_flat
+        )
 
-                e <- full_ext
+        seed_w <- cell_values(
+            water_class,
+            seed_flat
+        )
 
-            } else {
+        seed_d <- cell_values(
+            depression_components,
+            seed_flat
+        )
 
-                e <- ext(
-                    max(
-                        xmin(full_ext),
-                        xmin_comp - margin_m
-                    ),
-                    min(
-                        xmax(full_ext),
-                        xmax_comp + margin_m
-                    ),
-                    max(
-                        ymin(full_ext),
-                        ymin_comp - margin_m
-                    ),
-                    min(
-                        ymax(full_ext),
-                        ymax_comp + margin_m
+        seed_ok <- (
+            is.finite(seed_z) &
+                abs(seed_z - gate_level) <= flat_tol_m &
+                !is.finite(seed_w) &
+                !is.finite(seed_d)
+        )
+
+        stopifnot(
+            all(seed_ok)
+        )
+
+        result_cells <- list()
+        result_patch <- list()
+        result_i <- 0L
+        flat_patch_counter <- 0L
+
+        # Bound the temporary 8-neighbour expansion. 50k source
+        # cells produce at most 400k raw neighbour candidates.
+        frontier_batch_size <- 50000L
+
+        for (seed_cell in seed_flat) {
+
+            seed_cell <- as.integer(seed_cell)
+
+            # A previous seed may already belong to a component
+            # traced from an earlier gate receiver.
+            if (flat_state[seed_cell] == as.raw(1L)) {
+                next
+            }
+
+            stopifnot(
+                flat_state[seed_cell] != as.raw(2L)
+            )
+
+            flat_patch_counter <-
+                flat_patch_counter + 1L
+
+            flat_state[seed_cell] <-
+                as.raw(1L)
+
+            frontier <- seed_cell
+            n_component_cells <- 0L
+            next_report <- 250000L
+
+            while (length(frontier) > 0) {
+
+                # Every frontier cell is part of this exact
+                # seed-connected flat component.
+                result_i <- result_i + 1L
+
+                result_cells[[result_i]] <-
+                    as.integer(frontier)
+
+                result_patch[[result_i]] <-
+                    rep.int(
+                        flat_patch_counter,
+                        length(frontier)
                     )
-                )
-            }
 
+                n_component_cells <-
+                    n_component_cells +
+                    length(frontier)
 
-            s_local <- crop(
-                surface_storage,
-                e
-            )
-
-            w_local <- crop(
-                water_class,
-                e
-            )
-
-            dep_local <- crop(
-                depression_components,
-                e
-            )
-
-
-            # TRUE OUTSIDE LAND FLAT:
-            # - same filled-surface elevation as the gate
-            # - not RANTA10 water
-            # - not part of any raised depression
-
-            # Force the largest 02D.6 intermediates to disk. Natural
-            # reference tiles can contain very large same-level flats; keeping
-            # flat_land + patches in RAM can exceed hosted-runner memory even
-            # though the hydrological operation itself is valid.
-            tmp_flat_land <- tempfile(
-                pattern = paste0("02d6_flat_land_", did, "_"),
-                fileext = ".tif"
-            )
-            tmp_flat_patch <- tempfile(
-                pattern = paste0("02d6_flat_patch_", did, "_"),
-                fileext = ".tif"
-            )
-
-            flat_land <- ifel(
-                abs(
-                    s_local -
-                        gate_level
-                ) <= flat_tol_m &
-                    is.na(w_local) &
-                    is.na(dep_local),
-                1,
-                NA,
-                filename = tmp_flat_land,
-                overwrite = TRUE,
-                wopt = list(datatype = "INT1U")
-            )
-
-
-            flat_patch <- patches(
-                flat_land,
-                directions = 8,
-                filename = tmp_flat_patch,
-                overwrite = TRUE
-            )
-
-
-            # Gate receiver seeds -> local raster cells.
-
-            seed_xy <- xyFromCell(
-                surface_storage,
-                seed_flat
-            )
-
-            seed_local <- cellFromXY(
-                flat_patch,
-                seed_xy
-            )
-
-            seed_local <- seed_local[
-                is.finite(
-                    seed_local
-                )
-            ]
-
-            if (length(seed_local) == 0) {
-                break
-            }
-
-            seed_patch_id <- cell_values(
-                flat_patch,
-                seed_local
-            )
-
-            seed_patch_id <- sort(
-                unique(
-                    seed_patch_id[
-                        is.finite(
-                            seed_patch_id
-                        )
-                    ]
-                )
-            )
-
-            if (length(seed_patch_id) == 0) {
-                break
-            }
-
-
-            # MEMORY-SAFE SELECTION:
-            # Do not materialize every flat patch in the crop. On natural
-            # tiles a full-raster crop can contain a very large number of
-            # unrelated level-flat cells, and converting the whole patch
-            # raster to a data.frame can exhaust a hosted runner. Mask to
-            # only the gate-connected patch IDs first; the hydrological
-            # result is unchanged.
-            tmp_selected_patch <- tempfile(
-                pattern = paste0("02d6_selected_patch_", did, "_"),
-                fileext = ".tif"
-            )
-
-            selected_patch <- ifel(
-                flat_patch %in% seed_patch_id,
-                flat_patch,
-                NA,
-                filename = tmp_selected_patch,
-                overwrite = TRUE
-            )
-
-            selected <- as.data.frame(
-                selected_patch,
-                cells = TRUE,
-                na.rm = TRUE
-            )
-
-            rm(selected_patch)
-            unlink(tmp_selected_patch)
-            gc(verbose = FALSE)
-
-            if (nrow(selected) == 0) {
-                break
-            }
-
-            names(selected)[2] <-
-                "flat_patch_id"
-
-
-            # Does the selected flat touch the current crop edge?
-
-            rc_local <- rowColFromCell(
-                flat_patch,
-                selected$cell
-            )
-
-            touches_crop_edge <- any(
-                rc_local[, 1] == 1 |
-                    rc_local[, 1] ==
-                    nrow(flat_patch) |
-                    rc_local[, 2] == 1 |
-                    rc_local[, 2] ==
-                    ncol(flat_patch)
-            )
-
-
-            ee <- ext(
-                flat_patch
-            )
-
-            full_crop <- (
-                abs(
-                    xmin(ee) -
-                        xmin(full_ext)
-                ) <= 1e-8 &&
-                    abs(
-                        xmax(ee) -
-                            xmax(full_ext)
-                    ) <= 1e-8 &&
-                    abs(
-                        ymin(ee) -
-                            ymin(full_ext)
-                    ) <= 1e-8 &&
-                    abs(
-                        ymax(ee) -
-                            ymax(full_ext)
-                    ) <= 1e-8
-            )
-
-
-            # Complete enough:
-            # - flat does not touch crop boundary, or
-            # - complete raster has already been reached.
-
-            if (
-                !touches_crop_edge ||
-                    full_crop
-            ) {
-
-                selected_xy <- xyFromCell(
-                    flat_patch,
-                    selected$cell
-                )
-
-                global_cells <- cellFromXY(
-                    surface_storage,
-                    selected_xy
-                )
-
-                plateau_map <- data.frame(
-                    cell =
-                        as.integer(
-                            global_cells
-                        ),
-                    flat_patch_id =
-                        as.integer(
-                            selected$flat_patch_id
-                        ),
-                    stringsAsFactors = FALSE
-                )
-
-                plateau_map <- unique(
-                    plateau_map
-                )
-
-                plateau_map <- plateau_map[
-                    is.finite(
-                        plateau_map$cell
-                    ),
-                    ,
-                    drop = FALSE
-                ]
-
-                stopifnot(
-                    nrow(plateau_map) > 0,
-                    !anyDuplicated(
-                        plateau_map$cell
-                    )
-                )
-
-                used_margin <- margin_m
-
-                if (
-                    touches_crop_edge &&
-                        full_crop
-                ) {
-
-                    plateau_reaches_raster_edge <-
-                        TRUE
+                if (n_component_cells >= next_report) {
+                    cat(sprintf(
+                        "\n02D.6 ID %d | flat component %d | traced cells %d",
+                        did,
+                        flat_patch_counter,
+                        n_component_cells
+                    ))
+                    next_report <-
+                        next_report + 250000L
                 }
 
-                break
-            }
+                next_frontier_parts <- list()
+                next_i <- 0L
 
-
-            # Enlarge crop. Release crop-local rasters before the
-            # next expansion so a large natural flat does not accumulate
-            # stale temporary raster handles in memory.
-            rm(
-                s_local,
-                w_local,
-                dep_local,
-                flat_land,
-                flat_patch,
-                selected
-            )
-            unlink(c(tmp_flat_land, tmp_flat_patch))
-            gc(verbose = FALSE)
-
-            old_margin <- margin_m
-
-            margin_m <- min(
-                margin_m * 2,
-                max_margin_m
-            )
-
-            if (
-                margin_m <= old_margin
-            ) {
-
-                stop(
-                    sprintf(
-                        paste0(
-                            "02D.6 crop could not be enlarged ",
-                            "for depression %d."
-                        ),
-                        did
-                    )
+                block_starts <- seq.int(
+                    1L,
+                    length(frontier),
+                    by = frontier_batch_size
                 )
+
+                for (bs in block_starts) {
+
+                    be <- min(
+                        length(frontier),
+                        bs + frontier_batch_size - 1L
+                    )
+
+                    ff <- as.integer(
+                        frontier[bs:be]
+                    )
+
+                    rr <- (
+                        (ff - 1L) %/% nc_02d6
+                    ) + 1L
+
+                    cc <- (
+                        (ff - 1L) %% nc_02d6
+                    ) + 1L
+
+                    # Exact queen/8-neighbour cells without row
+                    # wrapping at raster edges.
+                    candidates <- c(
+                        ff[cc > 1L] - 1L,
+                        ff[cc < nc_02d6] + 1L,
+                        ff[rr > 1L] - nc_02d6,
+                        ff[rr < nr_02d6] + nc_02d6,
+                        ff[rr > 1L & cc > 1L] - nc_02d6 - 1L,
+                        ff[rr > 1L & cc < nc_02d6] - nc_02d6 + 1L,
+                        ff[rr < nr_02d6 & cc > 1L] + nc_02d6 - 1L,
+                        ff[rr < nr_02d6 & cc < nc_02d6] + nc_02d6 + 1L
+                    )
+
+                    if (length(candidates) == 0) {
+                        next
+                    }
+
+                    candidates <- unique(
+                        as.integer(candidates)
+                    )
+
+                    candidates <- candidates[
+                        flat_state[candidates] ==
+                            as.raw(0L)
+                    ]
+
+                    if (length(candidates) == 0) {
+                        next
+                    }
+
+                    # Mark all candidates tested immediately.
+                    # This prevents the same rejected boundary
+                    # cell from being read repeatedly from disk.
+                    flat_state[candidates] <-
+                        as.raw(2L)
+
+                    cz <- cell_values(
+                        surface_storage,
+                        candidates
+                    )
+
+                    cw <- cell_values(
+                        water_class,
+                        candidates
+                    )
+
+                    cd <- cell_values(
+                        depression_components,
+                        candidates
+                    )
+
+                    eligible <- (
+                        is.finite(cz) &
+                            abs(cz - gate_level) <=
+                            flat_tol_m &
+                            !is.finite(cw) &
+                            !is.finite(cd)
+                    )
+
+                    new_cells <- candidates[
+                        eligible
+                    ]
+
+                    if (length(new_cells) > 0) {
+
+                        flat_state[new_cells] <-
+                            as.raw(1L)
+
+                        next_i <- next_i + 1L
+
+                        next_frontier_parts[[next_i]] <-
+                            as.integer(new_cells)
+                    }
+                }
+
+                if (length(next_frontier_parts) == 0) {
+
+                    frontier <- integer(0)
+
+                } else {
+
+                    # A candidate can occur in neighbour lists
+                    # from multiple frontier blocks. The state
+                    # marking above normally removes duplicates;
+                    # unique() is retained as a hard deterministic
+                    # guard.
+                    frontier <- unique(
+                        unlist(
+                            next_frontier_parts,
+                            use.names = FALSE
+                        )
+                    )
+                }
             }
         }
 
-        # The final selected cells are already represented by plateau_map;
-        # temporary raster backing files are no longer needed after tracing.
-        if (exists("tmp_flat_land", inherits = FALSE)) {
-            rm(flat_land)
-            unlink(tmp_flat_land)
+        if (length(result_cells) > 0) {
+
+            plateau_cells_all <- as.integer(
+                unlist(
+                    result_cells,
+                    use.names = FALSE
+                )
+            )
+
+            plateau_patch_all <- as.integer(
+                unlist(
+                    result_patch,
+                    use.names = FALSE
+                )
+            )
+
+            stopifnot(
+                length(plateau_cells_all) ==
+                    length(plateau_patch_all),
+                length(plateau_cells_all) > 0,
+                !anyDuplicated(plateau_cells_all)
+            )
+
+            plateau_map <- data.frame(
+                cell = plateau_cells_all,
+                flat_patch_id =
+                    plateau_patch_all,
+                stringsAsFactors = FALSE
+            )
+
+            plateau_reaches_raster_edge <- any(
+                is_edge_cell(
+                    surface_storage,
+                    plateau_map$cell
+                )
+            )
+
+            # The flood fill is global over the complete raster,
+            # so this records the equivalent of a full-raster
+            # trace rather than a crop-specific local margin.
+            used_margin <- max_margin_m
         }
-        if (exists("tmp_flat_patch", inherits = FALSE)) {
-            rm(flat_patch)
-            unlink(tmp_flat_patch)
-        }
+
+        rm(
+            flat_state,
+            result_cells,
+            result_patch
+        )
         gc(verbose = FALSE)
     }
 
