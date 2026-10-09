@@ -6,6 +6,8 @@ on:
       - baseline-no-structures
     paths:
       - ".github/workflows/test-portability-matrix.yml"
+      - "tests/portability.R"
+      - "R/00_pipeline_config.R"
   workflow_dispatch:
 
 permissions:
