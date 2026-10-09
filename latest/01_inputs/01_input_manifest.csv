@@ -1,5 +1,5 @@
 "key","value"
-"pipeline_version","2.0-dev"
+"pipeline_version","2.0-baseline-no-structures"
 "run_mode","LOCAL_TEST"
 "test_id","TEST_SULKU_11"
 "pointer_scheme","whitebox"
@@ -13,4 +13,3 @@
 "water_class_raster","/home/runner/work/MaaltaMerelle/MaaltaMerelle/data/TEST_SULKU_11/ranta10_water_class.tif"
 "water_mask_raster","/home/runner/work/MaaltaMerelle/MaaltaMerelle/data/TEST_SULKU_11/ranta10_water_mask.tif"
 "lake_elevation_raster","/home/runner/work/MaaltaMerelle/MaaltaMerelle/runs/TEST_SULKU_11/01_inputs/ranta10_lake_elevation_m.tif"
-"structures_gpkg","/home/runner/work/MaaltaMerelle/MaaltaMerelle/data/TEST_SULKU_11/HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg"

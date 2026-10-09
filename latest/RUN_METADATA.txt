@@ -1,4 +1,4 @@
-source_branch=develop-02d7-nonraised-diagnostics
-source_commit=565a1726a2605ee1d8ae7a664dc0d58147b458ee
-workflow_run_id=37777547950
-workflow_run_attempt=2
+source_branch=baseline-no-structures
+source_commit=410c9f8083f21cd63c090cdcfe423d3040415ef8
+workflow_run_id=37887301643
+workflow_run_attempt=1

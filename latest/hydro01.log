@@ -10,15 +10,11 @@ In CPL_read_ogr(dsn, layer, query, as.character(options), quiet,  :
 Warning message:
 In CPL_read_ogr(dsn, layer, query, as.character(options), quiet,  :
   GDAL Message 1: This version of GeoPackage user_version=0x000028A0 (10400, v1.4.0) on '/home/runner/work/MaaltaMerelle/MaaltaMerelle/data/TEST_SULKU_11/RANTA10_TEST_SULKU_11.gpkg' may only be partially supported
-Warning message:
-In CPL_get_layers(dsn, options, do_count) :
-  GDAL Message 1: This version of GeoPackage user_version=0x000028A0 (10400, v1.4.0) on '/home/runner/work/MaaltaMerelle/MaaltaMerelle/data/TEST_SULKU_11/HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg' may only be partially supported
 === 01 PREP INPUTS PASS ===
 Mode              : LOCAL_TEST
 DEM               : 6000 x 6000 | 2 m
 RANTA10 L/A/line  : 108 / 8 / 81
 Lake heights      : 108 / 108 valid
 Lake raster IDs   : 108
-Structure package : 5 layers
 Manifest          : 01_input_manifest.csv
 ===========================

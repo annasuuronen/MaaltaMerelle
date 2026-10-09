@@ -3,8 +3,8 @@
 "adjacent_land_valid_pointer",162820
 "direct_land_to_first_water",118883
 "first_water_lake",22685
-"first_water_river_area",20665
-"first_water_river_line",75533
+"first_water_river_area",20664
+"first_water_river_line",75534
 "target_lakes",101
 "total_lakes",108
 "adjacent_land_pointer_zero",762

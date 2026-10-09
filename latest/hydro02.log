@@ -1,3 +1,13 @@
+Building land_dem_raw...
+          used (Mb) gc trigger  (Mb) max used  (Mb)
+Ncells 1157581 61.9    2247842 120.1  2247842 120.1
+Vcells 1459429 11.2    8388608  64.0  2289749  17.5
+Running land FillDepressions...
+Building land + lake routing surface...
+          used (Mb) gc trigger  (Mb) max used  (Mb)
+Ncells 1163083 62.2    2247842 120.1  2247842 120.1
+Vcells 1500197 11.5    8388608  64.0  2289749  17.5
+Running WATER_STORAGE FillDepressions...
 === 02A LAND + STORAGE ===
 DEM cells          : 36000000
 Lake cells         : 667921
@@ -12,17 +22,20 @@ storage       pass=N/A    NA-diff=NA  max-diff=NA  changed=NA
 02A RESULT         : CHECK DIFFERENCES
 QA file            : 02A_storage_regression_QA.csv
 ===========================
+
+02B: building land-water D8 pointer...
+[1] TRUE
           used (Mb) gc trigger   (Mb)  max used   (Mb)
-Ncells 1173797 62.7    2244687  119.9   2244687  119.9
-Vcells 3003800 23.0  158623315 1210.2 198142147 1511.8
+Ncells 1181558 63.2    2247842  120.1   2247842  120.1
+Vcells 3048171 23.3  158666308 1210.6 198186932 1512.1
 
 === 02B LAND -> FIRST WATER ===
 True land adjacent to water : 163582
 Valid D8 pointers           : 162820
 Direct first-water entries  : 118883
   -> LAKE                   : 22685
-  -> RIVER_AREA             : 20665
-  -> RIVER_LINE             : 75533
+  -> RIVER_AREA             : 20664
+  -> RIVER_LINE             : 75534
 Target lakes / all lakes    : 101 / 108
 Adjacent pointer zero       : 762
 Adjacent pointer NA         : 0
@@ -180,6 +193,11 @@ Lakes with only LAND_ONLY groups : 94
          81.13
 =========================================
 
+02D.4: building raised depression components...
+           used  (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells  1236447  66.1    2247842  120.1   2247842  120.1
+Vcells 24472223 186.8  163802223 1249.8 204549031 1560.6
+
 === 02D.4 RAISED DEPRESSION COMPONENTS ===
 Lakes total                    : 108
 Spill-raised, one component    : 49
@@ -284,9 +302,9 @@ Components requiring review  : 16
 ========================================
 
 === 02D.5A GATE ESCAPE EVIDENCE ===
-Gate edges total              : 565
+Gate edges total              : 568
 Receiver LOWER than gate      : 0
-Receiver LEVEL with gate      : 565
+Receiver LEVEL with gate      : 568
 Receiver ABOVE gate           : 0
 Gate groups DIRECT_LOWER      : 0
 Gate groups DIRECT_WATER      : 2
@@ -402,7 +420,7 @@ Depressions with LOWER escape   : 43
 Depressions with LEVEL water    : 0
 Depressions -> other depression : 0
 Depressions touching raster edge: 1
-Back-to-origin edges filtered   : 540
+Back-to-origin edges filtered   : 543
 Untraced LEVEL-land edges       : 0
 
 --- STATUS ---
