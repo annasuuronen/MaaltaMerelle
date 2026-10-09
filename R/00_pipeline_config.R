@@ -66,6 +66,15 @@ PIPELINE_VERSION <- "2.0-baseline-no-structures"
 TEST_ID <- Sys.getenv("HYDRO_TEST_ID", unset = "TEST_SULKU_11")
 if (!nzchar(TEST_ID)) stop("HYDRO_TEST_ID must not be empty.")
 
+IS_SULKU11_REGRESSION <- identical(TEST_ID, "TEST_SULKU_11")
+
+hydro_sulku11_regression_assert <- function(...) {
+  if (IS_SULKU11_REGRESSION) {
+    stopifnot(...)
+  }
+  invisible(TRUE)
+}
+
 CRS_EPSG <- 3067
 
 CELL_SIZE_M <- 2

@@ -40,6 +40,7 @@ run_checks <- function() {
             e$CRS_EPSG == 3067, e$CELL_SIZE_M == 2, e$HALO_M == 1000,
             e$STREAM_THRESHOLD_HA == 4, e$STREAM_THRESHOLD_CELLS == 10000,
             e$POINTER_SCHEME == "whitebox", identical(e$OVERWRITE, FALSE),
+            isTRUE(e$IS_SULKU11_REGRESSION),
             identical(e$TEST_EXTENT, c(xmin=407030, xmax=419030, ymin=7070072, ymax=7082072)),
             e$TEST_NCOL == 6000L, e$TEST_NROW == 6000L,
             identical(e$EXPECTED_TEST, list(lakes=108L, river_areas=8L, river_lines=81L)))
@@ -54,6 +55,7 @@ run_checks <- function() {
   ))
   stopifnot(
     e$TEST_ID == "E0560000_N7690000",
+    identical(e$IS_SULKU11_REGRESSION, FALSE),
     identical(
       e$TEST_EXTENT,
       c(xmin=559000, xmax=571000, ymin=7689000, ymax=7701000)

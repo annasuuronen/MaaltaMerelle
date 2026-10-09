@@ -477,7 +477,7 @@ stopifnot(
 )
 
 # TEST_SULKU_11 regression lock; these observed values do not define the method.
-stopifnot(
+hydro_sulku11_regression_assert(
   nrow(component_resolution_02d7k2) == 275,
   nrow(link_resolution_02d7k2) == 296,
   nrow(group_resolution_02d7k2) == 210,

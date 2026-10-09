@@ -2375,12 +2375,18 @@ safe_component_target <- component_summary[
 ]
 
 stopifnot(
-  nrow(safe_component_target) == 585,
+  !anyDuplicated(
+    safe_component_target$component_id
+  ),
   all(
     is.finite(
       safe_component_target$target_lake_objectid
     )
   )
+)
+
+hydro_sulku11_regression_assert(
+  nrow(safe_component_target) == 585
 )
 
 
@@ -2403,8 +2409,18 @@ safe_cells <- safe_cells[
 ]
 
 stopifnot(
-  nrow(safe_cells) == 732,
+  nrow(safe_cells) ==
+    sum(
+      component_summary$n_zero_cells[
+        component_summary$connector_status ==
+          "SAFE_LAKE_CONNECTOR"
+      ]
+    ),
   !anyDuplicated(safe_cells$cell)
+)
+
+hydro_sulku11_regression_assert(
+  nrow(safe_cells) == 732
 )
 
 
@@ -3973,6 +3989,20 @@ spill_diag <- merge(
 )
 
 stopifnot(
+  !anyDuplicated(
+    spill_diag$lake_objectid
+  ),
+  setequal(
+    spill_diag$lake_objectid,
+    lake_low_summary$lake_objectid
+  ),
+  setequal(
+    spill_diag$lake_objectid,
+    lake_outlet_summary$lake_objectid
+  )
+)
+
+hydro_sulku11_regression_assert(
   nrow(spill_diag) == 108
 )
 
@@ -4979,6 +5009,18 @@ lake_depression_summary <- merge(
 )
 
 stopifnot(
+  nrow(lake_depression_summary) ==
+    nrow(spill_diag),
+  !anyDuplicated(
+    lake_depression_summary$lake_objectid
+  ),
+  setequal(
+    lake_depression_summary$lake_objectid,
+    spill_diag$lake_objectid
+  )
+)
+
+hydro_sulku11_regression_assert(
   nrow(lake_depression_summary) == 108
 )
 
@@ -5017,7 +5059,7 @@ lake_depression_summary$depression_status[
 
 
 # Not spill-raised, but some lake cells nevertheless raised.
-# 111137 is expected to be here.
+# TEST_SULKU_11 regression contains lake 111137 here; other tiles may differ.
 
 lake_depression_summary$depression_status[
   !lake_depression_summary$spill_raised &
@@ -5204,10 +5246,16 @@ spill_lakes <- lake_depression_summary[
 ]
 
 stopifnot(
-  nrow(spill_lakes) == 49,
+  !anyDuplicated(
+    spill_lakes$lake_objectid
+  ),
   all(
     spill_lakes$n_depression_components == 1
   )
+)
+
+hydro_sulku11_regression_assert(
+  nrow(spill_lakes) == 49
 )
 
 spill_lakes$depression_component_id <-
@@ -8577,6 +8625,25 @@ nonraised_ids <- setdiff(
 )
 
 stopifnot(
+    !anyDuplicated(all_lakes_02d7),
+    length(
+        intersect(
+            raised_ids,
+            nonraised_ids
+        )
+    ) == 0,
+    setequal(
+        c(
+            raised_ids,
+            nonraised_ids
+        ),
+        all_lakes_02d7
+    ),
+    length(all_lakes_02d7) ==
+        nrow(lake_depression_summary)
+)
+
+hydro_sulku11_regression_assert(
     length(all_lakes_02d7) == 108,
     length(raised_ids) == 49,
     length(nonraised_ids) == 59
@@ -8606,10 +8673,19 @@ nonraised_base <- nonraised_base[
 ]
 
 stopifnot(
-    nrow(nonraised_base) == 59,
+    nrow(nonraised_base) ==
+        length(nonraised_ids),
     !anyDuplicated(
         nonraised_base$lake_objectid
+    ),
+    setequal(
+        nonraised_base$lake_objectid,
+        nonraised_ids
     )
+)
+
+hydro_sulku11_regression_assert(
+    nrow(nonraised_base) == 59
 )
 
 
@@ -8701,15 +8777,24 @@ nonraised_summary <- merge(
 )
 
 stopifnot(
-    nrow(nonraised_summary) == 59,
+    nrow(nonraised_summary) ==
+        length(nonraised_ids),
     !anyDuplicated(
         nonraised_summary$lake_objectid
+    ),
+    setequal(
+        nonraised_summary$lake_objectid,
+        nonraised_ids
     ),
     all(
         is.finite(
             nonraised_summary$n_low_groups
         )
     )
+)
+
+hydro_sulku11_regression_assert(
+    nrow(nonraised_summary) == 59
 )
 
 nonraised_summary$has_direct_water <- (
@@ -8948,6 +9033,35 @@ cat("==========================================\n")
 stopifnot(
     sum(
         nonraised_summary$lake_class ==
+            "UNCLASSIFIED"
+    ) == 0,
+
+    nrow(
+        land_trace_lakes
+    ) ==
+        sum(
+            nonraised_summary$needs_land_trace
+        ),
+
+    setequal(
+        land_trace_lakes$lake_objectid,
+        nonraised_summary$lake_objectid[
+            nonraised_summary$needs_land_trace
+        ]
+    ),
+
+    nrow(
+        partial_raise
+    ) ==
+        sum(
+            nonraised_summary$depression_status ==
+                "PARTIAL_RAISE_NO_SPILL_RAISE"
+        )
+)
+
+hydro_sulku11_regression_assert(
+    sum(
+        nonraised_summary$lake_class ==
             "DIRECT_WATER_ONLY"
     ) == 1,
 
@@ -8969,11 +9083,6 @@ stopifnot(
     sum(
         nonraised_summary$lake_class ==
             "EDGE_ONLY"
-    ) == 0,
-
-    sum(
-        nonraised_summary$lake_class ==
-            "UNCLASSIFIED"
     ) == 0,
 
     nrow(
@@ -9036,11 +9145,20 @@ land_only_groups_02d7b <- unique(
 )
 
 stopifnot(
-    length(land_trace_ids) == 58,
+    length(land_trace_ids) ==
+        nrow(land_trace_lakes),
+    setequal(
+        land_trace_ids,
+        land_trace_lakes$lake_objectid
+    ),
     nrow(land_only_groups_02d7b) > 0,
     !anyDuplicated(
         land_only_groups_02d7b$spill_group_id
     )
+)
+
+hydro_sulku11_regression_assert(
+    length(land_trace_ids) == 58
 )
 
 lakes_with_land_groups_02d7b <- sort(
@@ -9865,8 +9983,6 @@ cat("===============================================\n")
 # ------------------------------------------------------------
 
 stopifnot(
-    length(land_trace_ids) == 58,
-
     identical(
         sort(
             unique(
@@ -9896,6 +10012,10 @@ stopifnot(
                 land_seed_inventory$zero_component_id
             )
     )
+)
+
+hydro_sulku11_regression_assert(
+    length(land_trace_ids) == 58
 )
 
 cat("\n02D.7B HARD QA: PASS\n")
@@ -12026,6 +12146,53 @@ stopifnot(
     nrow(
         land_level_group_summary_02d7e
     ) ==
+        length(
+            unique(
+                land_seed_level_02d7e$spill_group_id
+            )
+        ),
+
+    sum(
+        land_level_group_summary_02d7e$n_seed_cells
+    ) ==
+        nrow(
+            land_seed_level_02d7e
+        ),
+
+    sum(
+        land_seed_level_02d7e$level_relation %in%
+            c(
+                "LOWER",
+                "LEVEL",
+                "ABOVE"
+            )
+    ) ==
+        nrow(
+            land_seed_level_02d7e
+        ),
+
+    sum(
+        land_seed_level_02d7e$level_relation ==
+            "ABOVE"
+    ) ==
+        0,
+
+    sum(
+        land_level_group_summary_02d7e$group_class ==
+            "ABOVE_INVALID"
+    ) ==
+        0,
+
+    !any(
+        land_level_group_summary_02d7e$group_class ==
+            "UNCLASSIFIED"
+    )
+)
+
+hydro_sulku11_regression_assert(
+    nrow(
+        land_level_group_summary_02d7e
+    ) ==
         265,
 
     nrow(
@@ -12046,12 +12213,6 @@ stopifnot(
         964,
 
     sum(
-        land_seed_level_02d7e$level_relation ==
-            "ABOVE"
-    ) ==
-        0,
-
-    sum(
         land_level_group_summary_02d7e$group_class ==
             "LOWER_ONLY"
     ) ==
@@ -12067,18 +12228,7 @@ stopifnot(
         land_level_group_summary_02d7e$group_class ==
             "LEVEL_ONLY"
     ) ==
-        208,
-
-    sum(
-        land_level_group_summary_02d7e$group_class ==
-            "ABOVE_INVALID"
-    ) ==
-        0,
-
-    !any(
-        land_level_group_summary_02d7e$group_class ==
-            "UNCLASSIFIED"
-    )
+        208
 )
 
 cat("\n02D.7E HARD QA: PASS\n")
