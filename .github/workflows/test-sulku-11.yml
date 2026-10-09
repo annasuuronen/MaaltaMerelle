@@ -1,9 +1,9 @@
-name: TEST_SULKU_11 hydrology QA
+name: TEST_SULKU_11 baseline hydrology QA (no structures)
 
 on:
   push:
     branches:
-      - develop-02d7-nonraised-diagnostics
+      - baseline-no-structures
     paths:
       - "R/**"
       - "tests/**"
@@ -36,7 +36,7 @@ jobs:
       - name: Checkout QA results branch
         uses: actions/checkout@v4
         with:
-          ref: ci-results-test-sulku-11
+          ref: ci-results-test-sulku-11-baseline-no-structures
           path: _ci-results
 
       - name: Reconstruct and verify TEST_SULKU_11 inputs
@@ -54,7 +54,7 @@ jobs:
 
           cat             "$fixture_dir/dem_12km_rumpukorjattu.tif.part01"             "$fixture_dir/dem_12km_rumpukorjattu.tif.part02"             "$fixture_dir/dem_12km_rumpukorjattu.tif.part03"             > "$target_dir/dem_12km_rumpukorjattu.tif"
 
-          for f in             RANTA10_TEST_SULKU_11.gpkg             ranta10_lake_id.tif             ranta10_river_area_mask.tif             ranta10_river_line_mask.tif             ranta10_water_class.tif             ranta10_water_mask.tif             HYDRO_STRUCTURES_LOCAL_TEST_SULKU_11_12km.gpkg
+          for f in             RANTA10_TEST_SULKU_11.gpkg             ranta10_lake_id.tif             ranta10_river_area_mask.tif             ranta10_river_line_mask.tif             ranta10_water_class.tif             ranta10_water_mask.tif
           do
             cp "$fixture_dir/$f" "$target_dir/$f"
           done
@@ -153,7 +153,7 @@ jobs:
 
           {
             echo -e "field\tvalue"
-            echo -e "source_branch\tdevelop-02d7-nonraised-diagnostics"
+            echo -e "source_branch\tbaseline-no-structures"
             echo -e "source_commit\t${GITHUB_SHA}"
             echo -e "workflow_run_id\t${GITHUB_RUN_ID}"
             echo -e "workflow_run_attempt\t${GITHUB_RUN_ATTEMPT}"
@@ -218,7 +218,7 @@ jobs:
           cp runs/TEST_SULKU_11/02_baseline/*.csv "$result_root/02_baseline/" 2>/dev/null || true
 
           cat > "$result_root/RUN_METADATA.txt" <<EOF
-          source_branch=develop-02d7-nonraised-diagnostics
+          source_branch=baseline-no-structures
           source_commit=${GITHUB_SHA}
           workflow_run_id=${GITHUB_RUN_ID}
           workflow_run_attempt=${GITHUB_RUN_ATTEMPT}
@@ -233,5 +233,5 @@ jobs:
             echo "No QA result changes to publish."
           else
             git commit -m "Update TEST_SULKU_11 QA results for ${GITHUB_SHA}"
-            git push origin HEAD:ci-results-test-sulku-11
+            git push origin HEAD:ci-results-test-sulku-11-baseline-no-structures
           fi
