@@ -1,0 +1,4 @@
+"role","area_id","dem","dem_qa"
+"NATURAL","E0560000_N7690000","D:/pienvedet/hydrology_validation_tests/NATURAL_E0560000_N7690000/DEM2m_E0560000_N7690000_12km.tif","D:/pienvedet/hydrology_validation_tests/NATURAL_E0560000_N7690000/DEM_QA_E0560000_N7690000_12km.csv"
+"LOW","E200000_N6900000","D:/pienvedet/hydrology_validation_tests/LOW_E200000_N6900000/DEM2m_E200000_N6900000_12km.tif","D:/pienvedet/hydrology_validation_tests/LOW_E200000_N6900000/DEM_QA_E200000_N6900000_12km.csv"
+"MODERATE","E0510000_N7620000","D:/pienvedet/hydrology_validation_tests/MODERATE_E0510000_N7620000/DEM2m_E0510000_N7620000_12km.tif","D:/pienvedet/hydrology_validation_tests/MODERATE_E0510000_N7620000/DEM_QA_E0510000_N7620000_12km.csv"

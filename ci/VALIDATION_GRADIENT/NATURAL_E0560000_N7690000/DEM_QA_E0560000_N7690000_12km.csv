@@ -1,0 +1,2 @@
+"role","area_id","source_dem","output_dem","crs_epsg","resolution_x_m","resolution_y_m","nrow","ncol","xmin","ymin","xmax","ymax","geometry_pass"
+"NATURAL","E0560000_N7690000","//fs-luontotyypit/LTgisdata2/Priodiversity/Pienvedet/DEM2m_runpukorjattu/dem_2m_rumpukorjattu.tif","D:/pienvedet/hydrology_validation_tests/NATURAL_E0560000_N7690000/DEM2m_E0560000_N7690000_12km.tif",3067,2,2,6000,6000,559000,7689000,571000,7701000,TRUE

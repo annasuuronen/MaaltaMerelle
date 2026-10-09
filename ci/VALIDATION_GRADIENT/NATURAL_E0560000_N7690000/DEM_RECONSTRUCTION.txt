@@ -1,0 +1,8 @@
+area_id=E0560000_N7690000
+role=NATURAL
+original_name=DEM2m_E0560000_N7690000_12km.tif
+reconstructed_name=dem_12km_rumpukorjattu.tif
+original_size_bytes=86520456
+original_sha256=4ca2bcefe61fd0b0aa14fd530b0f57511b4fb251e2f92f209e0ce9dc0907bfcb
+part_size_limit_bytes=31457280
+part_count=3

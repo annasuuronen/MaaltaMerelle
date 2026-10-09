@@ -1,0 +1,8 @@
+area_id=E200000_N6900000
+role=LOW
+original_name=DEM2m_E200000_N6900000_12km.tif
+reconstructed_name=dem_12km_rumpukorjattu.tif
+original_size_bytes=44497282
+original_sha256=3da847530be2b91736bda5f71e0a39dadd8934de0ff9496f15a6b9be4c5aff81
+part_size_limit_bytes=31457280
+part_count=2

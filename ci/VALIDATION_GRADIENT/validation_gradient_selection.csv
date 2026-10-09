@@ -1,0 +1,5 @@
+"role","area_id","canonical_tile_id","tile_xmin","tile_ymin","n_unique_structures_12km","n_regulated_lakes_12km","n_lakes_core","n_lakes_crossing_core_boundary","hydrology_score"
+"NATURAL","E0560000_N7690000","E0560000_N7690000",560000,7690000,0,0,653,36,31.8165758738769
+"LOW","E200000_N6900000","E0200000_N6900000",200000,6900000,1,0,21,1,13.7560062157061
+"MODERATE","E0510000_N7620000","E0510000_N7620000",510000,7620000,3,1,106,9,25.5649983141211
+"HIGH","TEST_SULKU_11",,408030,7071071,11,1,,,

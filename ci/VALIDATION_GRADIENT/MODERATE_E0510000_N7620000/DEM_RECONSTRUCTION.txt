@@ -1,0 +1,8 @@
+area_id=E0510000_N7620000
+role=MODERATE
+original_name=DEM2m_E0510000_N7620000_12km.tif
+reconstructed_name=dem_12km_rumpukorjattu.tif
+original_size_bytes=94892607
+original_sha256=55b4c07ebdfe71104aff50822c40d865a00d42989c5b2d145bfbeccf40310f32
+part_size_limit_bytes=31457280
+part_count=4
