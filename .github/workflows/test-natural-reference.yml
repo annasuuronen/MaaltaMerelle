@@ -20,16 +20,16 @@ jobs:
 
     env:
       HYDRO_MODE: LOCAL_TEST
-      HYDRO_PROJECT_ROOT: \${{ github.workspace }}
+      HYDRO_PROJECT_ROOT: ${{ github.workspace }}
       HYDRO_TEST_ID: E0560000_N7690000
       HYDRO_TEST_EXTENT: 559000,571000,7689000,7701000
       HYDRO_EXPECTED_LAKES: "875"
       HYDRO_EXPECTED_RIVER_AREAS: "9"
       HYDRO_EXPECTED_RIVER_LINES: "71"
-      HYDRO_SOURCE_TEST_ROOT: \${{ github.workspace }}/data/E0560000_N7690000
-      HYDRO_RUN_ROOT: \${{ github.workspace }}/runs/E0560000_N7690000
-      R_WHITEBOX_EXE_PATH: \${{ github.workspace }}/fixtures/ci/whitebox/whitebox_tools
-      VALIDATION_SOURCE_GPKG: \${{ github.workspace }}/fixtures/ci/VALIDATION_GRADIENT/NATURAL_E0560000_N7690000/VALIDATION_INPUTS_E0560000_N7690000_12km.gpkg
+      HYDRO_SOURCE_TEST_ROOT: ${{ github.workspace }}/data/E0560000_N7690000
+      HYDRO_RUN_ROOT: ${{ github.workspace }}/runs/E0560000_N7690000
+      R_WHITEBOX_EXE_PATH: ${{ github.workspace }}/fixtures/ci/whitebox/whitebox_tools
+      VALIDATION_SOURCE_GPKG: ${{ github.workspace }}/fixtures/ci/VALIDATION_GRADIENT/NATURAL_E0560000_N7690000/VALIDATION_INPUTS_E0560000_N7690000_12km.gpkg
 
     steps:
       - name: Checkout code
@@ -72,8 +72,8 @@ jobs:
             find "$src" -maxdepth 1 -type f \
               -name 'dem_12km_rumpukorjattu.tif.part*' | sort
           )
-          test "\${#parts[@]}" -gt 0
-          cat "\${parts[@]}" > "$dst/dem_12km_rumpukorjattu.tif"
+          test "${#parts[@]}" -gt 0
+          cat "${parts[@]}" > "$dst/dem_12km_rumpukorjattu.tif"
 
           expected_size="$(grep '^original_size_bytes=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
           expected_sha="$(grep '^original_sha256=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
@@ -126,7 +126,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: NATURAL-E0560000-N7690000-QA-\${{ github.sha }}
+          name: NATURAL-E0560000-N7690000-QA-${{ github.sha }}
           if-no-files-found: warn
           retention-days: 30
           path: |
