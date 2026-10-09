@@ -1,0 +1,121 @@
+name: Partial gradient evidence audit
+
+on:
+  push:
+    branches:
+      - baseline-no-structures
+    paths:
+      - ".github/workflows/audit-partial-gradient.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download NATURAL artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 37963092869
+          pattern: NATURAL-E0560000-N7690000-QA-*
+          path: audit/NATURAL
+          merge-multiple: true
+
+      - name: Download MODERATE artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 37966257767
+          pattern: MODERATE-E0510000-N7620000-QA-*
+          path: audit/MODERATE
+          merge-multiple: true
+
+      - name: Download HIGH SULKU11 artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 37963092893
+          pattern: TEST_SULKU_11-QA-*
+          path: audit/HIGH
+          merge-multiple: true
+
+      - name: Verify 02D execution and evidence-only contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import csv, pathlib, sys
+
+          roots = {
+              "NATURAL": pathlib.Path("audit/NATURAL"),
+              "MODERATE": pathlib.Path("audit/MODERATE"),
+              "HIGH": pathlib.Path("audit/HIGH"),
+          }
+
+          required = [
+              "02D.6 HARD QA: PASS",
+              "02D.7A HARD QA: PASS",
+              "02D.7B HARD QA: PASS",
+              "02D.7C HARD QA: PASS",
+              "02D.7D HARD QA: PASS",
+              "02D.7E HARD QA: PASS",
+              "02D.7F HARD QA: PASS",
+              "02D.7G HARD QA: PASS",
+              "02D.7H HARD QA: PASS",
+              "02D.7I HARD QA: PASS",
+              "02D.7J HARD QA: PASS",
+              "02D.7K HARD QA: PASS",
+              "02D.8 HARD QA: PASS",
+          ]
+
+          out = []
+          for label, root in roots.items():
+              logs = list(root.rglob("hydro02.log")) + list(root.rglob("moderate02.log"))
+              if not logs:
+                  raise SystemExit(f"{label}: hydrology log not found")
+              log = logs[0].read_text(encoding="utf-8", errors="replace")
+              for marker in required:
+                  n = sum(1 for line in log.splitlines() if line.strip() == marker)
+                  if n != 1:
+                      raise SystemExit(f"{label}: expected one {marker!r}, found {n}")
+
+              evidence = list(root.rglob("02D8_final_spill_evidence.csv"))
+              if not evidence:
+                  raise SystemExit(f"{label}: 02D8_final_spill_evidence.csv not found")
+              with evidence[0].open(newline="", encoding="utf-8-sig") as f:
+                  rows = list(csv.DictReader(f))
+              if not rows:
+                  raise SystemExit(f"{label}: evidence table empty")
+              if "outlet_selection" not in rows[0]:
+                  raise SystemExit(f"{label}: outlet_selection missing")
+              vals = {r["outlet_selection"] for r in rows}
+              if vals != {"UNASSIGNED"}:
+                  raise SystemExit(f"{label}: unexpected outlet_selection values {sorted(vals)}")
+              out.append((label, len(rows)))
+
+          with open("PARTIAL_GRADIENT_AUDIT.txt", "w", encoding="utf-8") as f:
+              f.write("Partial validation-gradient evidence audit: PASS\n")
+              f.write("Levels audited: NATURAL, MODERATE, HIGH/TEST_SULKU_11\n")
+              f.write("LOW is intentionally not included until its independent run succeeds.\n")
+              for label, n in out:
+                  f.write(f"{label}: 02D.6-02D.8 markers PASS; evidence rows={n}; outlet_selection=UNASSIGNED\n")
+          PY
+
+      - name: Upload audit summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: partial-gradient-evidence-audit-${{ github.sha }}
+          retention-days: 30
+          path: PARTIAL_GRADIENT_AUDIT.txt
