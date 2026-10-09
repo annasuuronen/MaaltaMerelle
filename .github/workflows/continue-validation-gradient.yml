@@ -1,0 +1,201 @@
+name: Validation gradient continuation
+
+on:
+  push:
+    branches:
+      - baseline-no-structures
+    paths:
+      - "R/**"
+      - "tests/**"
+      - ".github/workflows/test-natural-reference.yml"
+      - ".github/workflows/continue-validation-gradient.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  wait-natural-then-transfer:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 300
+
+    env:
+      HYDRO_MODE: LOCAL_TEST
+      HYDRO_PROJECT_ROOT: ${{ github.workspace }}
+      R_WHITEBOX_EXE_PATH: ${{ github.workspace }}/fixtures/ci/whitebox/whitebox_tools
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Resolve NATURAL source commit
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")
+          if [ "${#changed[@]}" -eq 1 ] && [ "${changed[0]}" = ".github/workflows/continue-validation-gradient.yml" ]; then
+            target_sha="$(git rev-parse "$GITHUB_SHA^")"
+          else
+            target_sha="$GITHUB_SHA"
+          fi
+          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
+          echo "Will continue after NATURAL succeeds for $target_sha"
+
+      - name: Wait for matching NATURAL validation
+        id: wait_natural
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ steps.source.outputs.target_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/test-natural-reference.yml/runs?branch=baseline-no-structures&per_page=50"
+          for attempt in $(seq 1 240); do
+            json="$(curl -fsSL \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "$api")"
+            row="$(jq -c --arg sha "$TARGET_SHA" \
+              '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.run_number) | reverse | .[0] // empty' \
+              <<<"$json")"
+
+            if [ -z "$row" ]; then
+              echo "NATURAL run for $TARGET_SHA not visible yet; retry $attempt/240"
+              sleep 60
+              continue
+            fi
+
+            run_id="$(jq -r '.id' <<<"$row")"
+            status="$(jq -r '.status' <<<"$row")"
+            conclusion="$(jq -r '.conclusion // ""' <<<"$row")"
+            echo "NATURAL run $run_id: status=$status conclusion=$conclusion"
+
+            if [ "$status" = "completed" ]; then
+              echo "natural_run_id=$run_id" >> "$GITHUB_OUTPUT"
+              if [ "$conclusion" != "success" ]; then
+                echo "NATURAL did not pass; LOW/MODERATE are correctly blocked." >&2
+                exit 1
+              fi
+              exit 0
+            fi
+            sleep 60
+          done
+          echo "Timed out waiting for NATURAL validation." >&2
+          exit 1
+
+      - name: Checkout validation fixtures
+        uses: actions/checkout@v4
+        with:
+          ref: ci-testdata-validation-gradient
+          path: fixtures
+
+      - name: Verify transfer fixtures and reconstruct DEMs
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="fixtures/ci/VALIDATION_GRADIENT"
+          cd "$root"
+          grep -E '(\.gpkg|\.part[0-9]+)$' MANIFEST.sha256 | sha256sum -c -
+          cd "$GITHUB_WORKSPACE"
+
+          reconstruct_case() {
+            src="$1"
+            dst="$2"
+            expected_parts="$3"
+            mkdir -p "$dst"
+            mapfile -t parts < <(find "$src" -maxdepth 1 -type f -name 'dem_12km_rumpukorjattu.tif.part*' | sort)
+            test "${#parts[@]}" -eq "$expected_parts"
+            cat "${parts[@]}" > "$dst/dem_12km_rumpukorjattu.tif"
+            expected_size="$(grep '^original_size_bytes=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+            expected_sha="$(grep '^original_sha256=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+            test "$(stat -c%s "$dst/dem_12km_rumpukorjattu.tif")" = "$expected_size"
+            echo "$expected_sha  $dst/dem_12km_rumpukorjattu.tif" | sha256sum -c -
+          }
+
+          reconstruct_case \
+            "$root/LOW_E200000_N6900000" \
+            "data/E200000_N6900000" \
+            2
+
+          reconstruct_case \
+            "$root/MODERATE_E0510000_N7620000" \
+            "data/E0510000_N7620000" \
+            4
+
+          chmod +x "$R_WHITEBOX_EXE_PATH"
+          test -x "$R_WHITEBOX_EXE_PATH"
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.5.0"
+
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::terra@1.8-29
+            any::whitebox@2.4.3
+            any::sf
+
+      - name: Run portability tests
+        run: Rscript tests/portability.R
+
+      - name: Run LOW transfer validation
+        shell: bash
+        env:
+          HYDRO_TEST_ID: E200000_N6900000
+          HYDRO_TEST_EXTENT: 199000,211000,6899000,6911000
+          HYDRO_EXPECTED_LAKES: "24"
+          HYDRO_EXPECTED_RIVER_AREAS: "5"
+          HYDRO_EXPECTED_RIVER_LINES: "30"
+          HYDRO_SOURCE_TEST_ROOT: ${{ github.workspace }}/data/E200000_N6900000
+          HYDRO_RUN_ROOT: ${{ github.workspace }}/runs/E200000_N6900000
+          VALIDATION_SOURCE_GPKG: ${{ github.workspace }}/fixtures/ci/VALIDATION_GRADIENT/LOW_E200000_N6900000/VALIDATION_INPUTS_E200000_N6900000_12km.gpkg
+        run: |
+          set -euo pipefail
+          Rscript R/00A_prepare_validation_fixture.R 2>&1 | tee low00a.log
+          Rscript R/01_prepare_hydrology_inputs.R 2>&1 | tee low01.log
+          Rscript R/02_build_baseline_hydrology.R 2>&1 | tee low02.log
+          test "$(grep -Fxc '02D.8 HARD QA: PASS' low02.log || true)" -eq 1
+
+      - name: Run MODERATE transfer validation
+        shell: bash
+        env:
+          HYDRO_TEST_ID: E0510000_N7620000
+          HYDRO_TEST_EXTENT: 509000,521000,7619000,7631000
+          HYDRO_EXPECTED_LAKES: "158"
+          HYDRO_EXPECTED_RIVER_AREAS: "2"
+          HYDRO_EXPECTED_RIVER_LINES: "105"
+          HYDRO_SOURCE_TEST_ROOT: ${{ github.workspace }}/data/E0510000_N7620000
+          HYDRO_RUN_ROOT: ${{ github.workspace }}/runs/E0510000_N7620000
+          VALIDATION_SOURCE_GPKG: ${{ github.workspace }}/fixtures/ci/VALIDATION_GRADIENT/MODERATE_E0510000_N7620000/VALIDATION_INPUTS_E0510000_N7620000_12km.gpkg
+        run: |
+          set -euo pipefail
+          Rscript R/00A_prepare_validation_fixture.R 2>&1 | tee moderate00a.log
+          Rscript R/01_prepare_hydrology_inputs.R 2>&1 | tee moderate01.log
+          Rscript R/02_build_baseline_hydrology.R 2>&1 | tee moderate02.log
+          test "$(grep -Fxc '02D.8 HARD QA: PASS' moderate02.log || true)" -eq 1
+
+      - name: Upload gradient QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-gradient-continuation-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            low00a.log
+            low01.log
+            low02.log
+            moderate00a.log
+            moderate01.log
+            moderate02.log
+            runs/E200000_N6900000/01_inputs/*.csv
+            runs/E200000_N6900000/02_baseline/*.csv
+            runs/E0510000_N7620000/01_inputs/*.csv
+            runs/E0510000_N7620000/02_baseline/*.csv
