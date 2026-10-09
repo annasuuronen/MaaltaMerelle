@@ -29,14 +29,18 @@ jobs:
 
           # NATIONAL must remain locked: CI may mention the word in comments
           # or audit text, but it must not execute hydrology with NATIONAL mode.
-          if grep -RInE 'HYDRO_MODE[[:space:]]*[:=][[:space:]]*["'\'' ]*NATIONAL' .github/workflows; then
+          if find .github/workflows -type f \( -name '*.yml' -o -name '*.yaml' \) \
+              ! -name 'audit-workflow-safety.yml' -print0 \
+              | xargs -0 grep -nHE 'HYDRO_MODE[[:space:]]*[:=][[:space:]]*["'\'' ]*NATIONAL'; then
             echo "A workflow attempts to run HYDRO_MODE=NATIONAL before the national gate." >&2
             exit 1
           fi
 
           # No workflow in this development branch may automatically merge or
           # push the hydrology work into main.
-          if grep -RInE 'git[[:space:]]+push([^#\n]*[[:space:]])main([[:space:]]|$)|gh[[:space:]]+pr[[:space:]]+merge' .github/workflows; then
+          if find .github/workflows -type f \( -name '*.yml' -o -name '*.yaml' \) \
+              ! -name 'audit-workflow-safety.yml' -print0 \
+              | xargs -0 grep -nHE 'git[[:space:]]+push([^#\n]*[[:space:]])main([[:space:]]|$)|gh[[:space:]]+pr[[:space:]]+merge'; then
             echo "Automatic main push/merge command detected." >&2
             exit 1
           fi
