@@ -1,0 +1,109 @@
+name: MODERATE transfer hydrology QA
+
+on:
+  push:
+    branches:
+      - baseline-no-structures
+    paths:
+      - ".github/workflows/test-moderate-transfer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  moderate-transfer:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 240
+
+    env:
+      HYDRO_MODE: LOCAL_TEST
+      HYDRO_PROJECT_ROOT: ${{ github.workspace }}
+      HYDRO_TEST_ID: E0510000_N7620000
+      HYDRO_TEST_EXTENT: 509000,521000,7619000,7631000
+      HYDRO_EXPECTED_LAKES: "158"
+      HYDRO_EXPECTED_RIVER_AREAS: "2"
+      HYDRO_EXPECTED_RIVER_LINES: "105"
+      HYDRO_SOURCE_TEST_ROOT: ${{ github.workspace }}/data/E0510000_N7620000
+      HYDRO_RUN_ROOT: ${{ github.workspace }}/runs/E0510000_N7620000
+      R_WHITEBOX_EXE_PATH: ${{ github.workspace }}/fixtures/ci/whitebox/whitebox_tools
+      VALIDATION_SOURCE_GPKG: ${{ github.workspace }}/fixtures/ci/VALIDATION_GRADIENT/MODERATE_E0510000_N7620000/VALIDATION_INPUTS_E0510000_N7620000_12km.gpkg
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Checkout validation fixtures
+        uses: actions/checkout@v4
+        with:
+          ref: ci-testdata-validation-gradient
+          path: fixtures
+
+      - name: Verify fixture and reconstruct MODERATE DEM
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="fixtures/ci/VALIDATION_GRADIENT"
+          src="$root/MODERATE_E0510000_N7620000"
+          dst="data/E0510000_N7620000"
+
+          cd "$root"
+          grep -E '(MODERATE_E0510000_N7620000/.*\.gpkg|MODERATE_E0510000_N7620000/.*\.part[0-9]+)$' MANIFEST.sha256 | sha256sum -c -
+          cd "$GITHUB_WORKSPACE"
+
+          mkdir -p "$dst"
+          mapfile -t parts < <(find "$src" -maxdepth 1 -type f -name 'dem_12km_rumpukorjattu.tif.part*' | sort)
+          test "${#parts[@]}" -eq 4
+          cat "${parts[@]}" > "$dst/dem_12km_rumpukorjattu.tif"
+
+          expected_size="$(grep '^original_size_bytes=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+          expected_sha="$(grep '^original_sha256=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+          test "$(stat -c%s "$dst/dem_12km_rumpukorjattu.tif")" = "$expected_size"
+          echo "$expected_sha  $dst/dem_12km_rumpukorjattu.tif" | sha256sum -c -
+
+          chmod +x "$R_WHITEBOX_EXE_PATH"
+          test -x "$R_WHITEBOX_EXE_PATH"
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.5.0"
+
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::terra@1.8-29
+            any::whitebox@2.4.3
+            any::sf
+
+      - name: Run portability tests
+        run: Rscript tests/portability.R
+
+      - name: Build canonical MODERATE inputs
+        run: Rscript R/00A_prepare_validation_fixture.R 2>&1 | tee moderate00a.log
+
+      - name: Run input preparation
+        run: Rscript R/01_prepare_hydrology_inputs.R 2>&1 | tee moderate01.log
+
+      - name: Run MODERATE diagnostics through 02D.8
+        shell: bash
+        run: |
+          set -euo pipefail
+          Rscript R/02_build_baseline_hydrology.R 2>&1 | tee moderate02.log
+          test "$(grep -Fxc '02D.8 HARD QA: PASS' moderate02.log || true)" -eq 1
+
+      - name: Upload MODERATE QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MODERATE-E0510000-N7620000-QA-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            moderate00a.log
+            moderate01.log
+            moderate02.log
+            data/E0510000_N7620000/00A_validation_fixture_QA.csv
+            runs/E0510000_N7620000/01_inputs/*.csv
+            runs/E0510000_N7620000/02_baseline/*.csv
