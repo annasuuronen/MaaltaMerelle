@@ -63,7 +63,8 @@ stopifnot(
 
 PIPELINE_VERSION <- "2.0-baseline-no-structures"
 
-TEST_ID <- "TEST_SULKU_11"
+TEST_ID <- Sys.getenv("HYDRO_TEST_ID", unset = "TEST_SULKU_11")
+if (!nzchar(TEST_ID)) stop("HYDRO_TEST_ID must not be empty.")
 
 CRS_EPSG <- 3067
 
@@ -91,15 +92,38 @@ OVERWRITE <- FALSE
 # Rasterin todellinen grid-aligned extent.
 # ------------------------------------------------------------
 
-TEST_EXTENT <- c(
-  xmin = 407030,
-  xmax = 419030,
-  ymin = 7070072,
-  ymax = 7082072
+hydro_numeric_vector <- function(variable, default, names_out) {
+  raw <- Sys.getenv(variable, unset = "")
+  if (!nzchar(raw)) {
+    out <- as.numeric(default)
+  } else {
+    fields <- trimws(strsplit(raw, ",", fixed = TRUE)[[1L]])
+    if (length(fields) != length(default)) {
+      stop(paste(variable, "must contain", length(default),
+                 "comma-separated numeric values."))
+    }
+    out <- suppressWarnings(as.numeric(fields))
+    if (any(!is.finite(out))) {
+      stop(paste(variable, "contains a non-numeric value."))
+    }
+  }
+  names(out) <- names_out
+  out
+}
+
+TEST_EXTENT <- hydro_numeric_vector(
+  "HYDRO_TEST_EXTENT",
+  c(407030, 419030, 7070072, 7082072),
+  c("xmin", "xmax", "ymin", "ymax")
 )
 
-TEST_NCOL <- 6000L
-TEST_NROW <- 6000L
+TEST_NCOL <- as.integer(Sys.getenv("HYDRO_TEST_NCOL", unset = "6000"))
+TEST_NROW <- as.integer(Sys.getenv("HYDRO_TEST_NROW", unset = "6000"))
+
+stopifnot(
+  is.finite(TEST_NCOL), TEST_NCOL > 0,
+  is.finite(TEST_NROW), TEST_NROW > 0
+)
 
 
 # ------------------------------------------------------------
@@ -142,7 +166,10 @@ if (HYDRO_MODE == "CSC_TEST") {
 if (HYDRO_MODE %in% c("LOCAL_TEST", "CSC_TEST")) {
   RUN_ROOT <- hydro_path("HYDRO_RUN_ROOT", file.path(PIPELINE_ROOT, "runs", TEST_ID))
   DEM_FILE <- file.path(SOURCE_TEST_ROOT, "dem_12km_rumpukorjattu.tif")
-  RANTA10_GPKG <- file.path(SOURCE_TEST_ROOT, "RANTA10_TEST_SULKU_11.gpkg")
+  RANTA10_GPKG <- hydro_path(
+    "HYDRO_RANTA10_GPKG",
+    file.path(SOURCE_TEST_ROOT, paste0("RANTA10_", TEST_ID, ".gpkg"))
+  )
 }
 
 
@@ -198,11 +225,25 @@ for (d in c(
 
 EXPECTED_TEST <- list(
 
-  lakes = 108L,
+  lakes = as.integer(
+    Sys.getenv("HYDRO_EXPECTED_LAKES", unset = "108")
+  ),
 
-  river_areas = 8L,
+  river_areas = as.integer(
+    Sys.getenv("HYDRO_EXPECTED_RIVER_AREAS", unset = "8")
+  ),
 
-  river_lines = 81L
+  river_lines = as.integer(
+    Sys.getenv("HYDRO_EXPECTED_RIVER_LINES", unset = "81")
+  )
+)
+
+stopifnot(
+  all(vapply(
+    EXPECTED_TEST,
+    function(x) length(x) == 1L && is.finite(x) && x >= 0,
+    logical(1)
+  ))
 )
 
 
