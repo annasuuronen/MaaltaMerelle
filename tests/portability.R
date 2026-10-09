@@ -98,8 +98,20 @@ run_checks <- function() {
   }
   cat("PASS: relative, absolute and project-root overrides; Windows path recognition\n")
   e <- load_config(list(HYDRO_MODE="CSC_TEST", HYDRO_RUN_ROOT=file.path(work, "csc run")))
-  stopifnot(e$PIPELINE_ROOT == "/scratch/project_2004707/pienvedet/hydrology_pipeline_v2",
-            e$SOURCE_TEST_ROOT == "/scratch/project_2004707/pienvedet/hydro_test/TEST_SULKU_11")
+  expected_csc_pipeline <- normalizePath(
+    "/scratch/project_2004707/pienvedet/hydrology_pipeline_v2",
+    winslash = "/",
+    mustWork = FALSE
+  )
+  expected_csc_source <- normalizePath(
+    "/scratch/project_2004707/pienvedet/hydro_test/TEST_SULKU_11",
+    winslash = "/",
+    mustWork = FALSE
+  )
+  stopifnot(
+    e$PIPELINE_ROOT == expected_csc_pipeline,
+    e$SOURCE_TEST_ROOT == expected_csc_source
+  )
   e <- load_config(list(HYDRO_MODE="CSC_TEST", HYDRO_CSC_ROOT="csc", HYDRO_RUN_ROOT="csc runs"))
   stopifnot(e$PIPELINE_ROOT == file.path(root, "csc", "hydrology_pipeline_v2"))
   cat("PASS: CSC_TEST defaults and overrides\n")
