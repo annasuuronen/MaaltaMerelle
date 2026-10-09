@@ -7248,29 +7248,34 @@ for (ii in seq_along(level_dep_ids)) {
             }
 
 
-            patch_tab <- as.data.frame(
+            # MEMORY-SAFE SELECTION:
+            # Do not materialize every flat patch in the crop. On natural
+            # tiles a full-raster crop can contain a very large number of
+            # unrelated level-flat cells, and converting the whole patch
+            # raster to a data.frame can exhaust a hosted runner. Mask to
+            # only the gate-connected patch IDs first; the hydrological
+            # result is unchanged.
+            selected_patch <- ifel(
+                flat_patch %in% seed_patch_id,
                 flat_patch,
+                NA
+            )
+
+            selected <- as.data.frame(
+                selected_patch,
                 cells = TRUE,
                 na.rm = TRUE
             )
 
-            if (nrow(patch_tab) == 0) {
-                break
-            }
-
-            names(patch_tab)[2] <-
-                "flat_patch_id"
-
-            selected <- patch_tab[
-                patch_tab$flat_patch_id %in%
-                    seed_patch_id,
-                ,
-                drop = FALSE
-            ]
+            rm(selected_patch)
+            gc(verbose = FALSE)
 
             if (nrow(selected) == 0) {
                 break
             }
+
+            names(selected)[2] <-
+                "flat_patch_id"
 
 
             # Does the selected flat touch the current crop edge?
@@ -7379,7 +7384,18 @@ for (ii in seq_along(level_dep_ids)) {
             }
 
 
-            # Enlarge crop.
+            # Enlarge crop. Release crop-local rasters before the
+            # next expansion so a large natural flat does not accumulate
+            # stale temporary raster handles in memory.
+            rm(
+                s_local,
+                w_local,
+                dep_local,
+                flat_land,
+                flat_patch,
+                selected
+            )
+            gc(verbose = FALSE)
 
             old_margin <- margin_m
 
