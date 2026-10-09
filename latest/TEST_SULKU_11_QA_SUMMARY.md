@@ -1,6 +1,6 @@
 # TEST_SULKU_11 automated QA
 
-Commit: 62d07f745e41b38de7570b6bddd0ddfa44382552
+Commit: b3f30f298d2c4d0ff2e23d86dae40a4215fa99de
 
 ## Key diagnostic lines
 ~~~
