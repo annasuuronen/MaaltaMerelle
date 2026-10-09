@@ -8,7 +8,6 @@
 #   - tarkista RANTA10
 #   - tarkista järvien korkeudet
 #   - tarkista jo tehdyt RANTA10-rasterit
-#   - tarkista rakenteiden lähtöaineisto
 #   - tee canonical input manifest
 #
 # EI:
@@ -99,7 +98,6 @@ f_water_mask <- file.path(
 required_files <- c(
   DEM_FILE,
   RANTA10_GPKG,
-  STRUCTURES_GPKG,
   f_lake_id,
   f_river_area,
   f_river_line,
@@ -452,23 +450,7 @@ stopifnot(
 )
 
 # ------------------------------------------------------------
-# 10. RAKENNEAINEISTO
-#
-# Tässä vain varmistetaan että paketti löytyy.
-# Varsinainen standardointi/deduplikointi tehdään 03:ssa.
-# ------------------------------------------------------------
-
-structure_layers <- st_layers(
-  STRUCTURES_GPKG
-)$name
-
-stopifnot(
-  length(structure_layers) > 0
-)
-
-
-# ------------------------------------------------------------
-# 11. INPUT MANIFEST
+# 10. INPUT MANIFEST
 # ------------------------------------------------------------
 
 manifest <- data.frame(
@@ -489,9 +471,7 @@ manifest <- data.frame(
     "river_line_raster",
     "water_class_raster",
     "water_mask_raster",
-    "lake_elevation_raster",
-
-    "structures_gpkg"
+    "lake_elevation_raster"
   ),
 
   value = c(
@@ -540,11 +520,6 @@ manifest <- data.frame(
     normalizePath(
       f_lake_z,
       winslash = "/"
-    ),
-
-    normalizePath(
-      STRUCTURES_GPKG,
-      winslash = "/"
     )
   ),
 
@@ -564,7 +539,7 @@ write.csv(
 
 
 # ------------------------------------------------------------
-# 12. QA
+# 11. QA
 # ------------------------------------------------------------
 
 qa <- data.frame(
@@ -587,9 +562,7 @@ qa <- data.frame(
     "lake_heights_valid",
     "lake_heights_missing",
 
-    "lake_ids_raster",
-
-    "structure_layers"
+    "lake_ids_raster"
   ),
 
   value = c(
@@ -610,9 +583,7 @@ qa <- data.frame(
     n_lake_z_ok,
     n_lake_z_missing,
 
-    n_lake_ids,
-
-    length(structure_layers)
+    n_lake_ids
   )
 )
 
@@ -629,7 +600,7 @@ write.csv(
 
 
 # ------------------------------------------------------------
-# 13. TIIVIS KONSOLITULOSTE
+# 12. TIIVIS KONSOLITULOSTE
 # ------------------------------------------------------------
 
 cat("\014")
@@ -666,10 +637,6 @@ cat(sprintf(
   n_lake_ids
 ))
 
-cat(sprintf(
-  "Structure package : %d layers\n",
-  length(structure_layers)
-))
 
 cat(sprintf(
   "Manifest          : %s\n",
