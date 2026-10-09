@@ -1,0 +1,105 @@
+name: NATURAL evidence audit
+
+on:
+  push:
+    branches:
+      - baseline-no-structures
+    paths:
+      - ".github/workflows/audit-natural-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  audit-natural:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download successful NATURAL QA artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: 37963092869
+          pattern: NATURAL-E0560000-N7690000-QA-*
+          path: natural-artifact
+          merge-multiple: true
+
+      - name: Verify NATURAL 02D execution contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="$(find natural-artifact -type f -name 'hydro02.log' -print -quit)"
+          test -n "$log"
+          test -s "$log"
+
+          required=(
+            "02D.6 HARD QA: PASS"
+            "02D.7A HARD QA: PASS"
+            "02D.7B HARD QA: PASS"
+            "02D.7C HARD QA: PASS"
+            "02D.7D HARD QA: PASS"
+            "02D.7E HARD QA: PASS"
+            "02D.7F HARD QA: PASS"
+            "02D.7G HARD QA: PASS"
+            "02D.7H HARD QA: PASS"
+            "02D.7I HARD QA: PASS"
+            "02D.7J HARD QA: PASS"
+            "02D.7K HARD QA: PASS"
+            "02D.8 HARD QA: PASS"
+          )
+
+          for marker in "${required[@]}"; do
+            count="$(grep -Fxc "$marker" "$log" || true)"
+            if [ "$count" -ne 1 ]; then
+              echo "Expected exactly one marker: $marker; found $count" >&2
+              exit 1
+            fi
+          done
+
+      - name: Verify 02D.8 remains evidence-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          evidence="$(find natural-artifact -type f -name '02D8_final_spill_evidence.csv' -print -quit)"
+          test -n "$evidence"
+          test -s "$evidence"
+
+          python - "$evidence" <<'PY'
+          import csv, sys
+          p=sys.argv[1]
+          with open(p, newline='', encoding='utf-8-sig') as f:
+              rows=list(csv.DictReader(f))
+          if not rows:
+              raise SystemExit("02D.8 evidence table is empty")
+          if "outlet_selection" not in rows[0]:
+              raise SystemExit("Missing outlet_selection column")
+          vals={r["outlet_selection"] for r in rows}
+          if vals != {"UNASSIGNED"}:
+              raise SystemExit(f"Unexpected outlet_selection values: {sorted(vals)}")
+          print(f"02D.8 rows: {len(rows)}; outlet_selection=UNASSIGNED for all rows")
+          PY
+
+      - name: Write audit summary
+        shell: bash
+        run: |
+          cat > NATURAL_EVIDENCE_AUDIT.txt <<'EOF'
+          NATURAL E0560000_N7690000 evidence audit: PASS
+          02D.6 through 02D.8 execution markers: PASS
+          02D.8 remains evidence-only: PASS
+          outlet_selection is UNASSIGNED for all evidence rows.
+          No routing choice was introduced by this audit.
+          EOF
+
+      - name: Upload audit summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: NATURAL-evidence-audit-${{ github.sha }}
+          retention-days: 30
+          path: NATURAL_EVIDENCE_AUDIT.txt
