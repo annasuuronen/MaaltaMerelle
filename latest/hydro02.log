@@ -200,6 +200,8 @@ No raised component            : 58
 
 === 02D.5 DEPRESSION SPILL GATES ===
 Spill-raised lakes           : 49
+Multi-component spill lakes  : 0
+Lake-component links         : 49
 Unique depression components : 45
 Components shared by >1 lake : 4
 Depressions with 1 gate group: 31
