@@ -77,8 +77,19 @@ run_checks <- function() {
   stopifnot(e$SOURCE_TEST_ROOT == file.path(root, "external inputs"),
             e$PIPELINE_ROOT == file.path(root, "output"),
             e$RUN_ROOT == file.path(root, "custom runs"))
-  e <- load_config(list(HYDRO_PROJECT_ROOT=root, HYDRO_SOURCE_TEST_ROOT=file.path(work, "absolute inputs")))
-  stopifnot(e$PROJECT_ROOT == root, e$SOURCE_TEST_ROOT == file.path(work, "absolute inputs"))
+  e <- load_config(list(
+    HYDRO_PROJECT_ROOT=root,
+    HYDRO_SOURCE_TEST_ROOT=file.path(work, "absolute inputs")
+  ))
+  expected_absolute_inputs <- normalizePath(
+    file.path(work, "absolute inputs"),
+    winslash = "/",
+    mustWork = FALSE
+  )
+  stopifnot(
+    e$PROJECT_ROOT == root,
+    e$SOURCE_TEST_ROOT == expected_absolute_inputs
+  )
   # Exercise the actual resolver; native Windows execution is a separate check.
   for (path in c("C:/inputs", "C:\\inputs", "\\\\server\\share")) {
     Sys.setenv(HYDRO_SOURCE_TEST_ROOT=path)
