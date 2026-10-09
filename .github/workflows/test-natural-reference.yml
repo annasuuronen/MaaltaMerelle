@@ -41,12 +41,251 @@ jobs:
           ref: ci-testdata-validation-gradient
           path: fixtures
 
-      - name: Verify fixture transfer hashes
+      - name: Verify fixture transfer integrity
         shell: bash
         run: |
           set -euo pipefail
           cd fixtures/ci/VALIDATION_GRADIENT
-          sha256sum -c MANIFEST.sha256
+
+          # Binary fixture identity must be bit-for-bit exact.
+          grep -E '(\\.gpkg|\\.part[0-9]+)
+      - name: Reconstruct NATURAL DEM
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="fixtures/ci/VALIDATION_GRADIENT/NATURAL_E0560000_N7690000"
+          dst="data/E0560000_N7690000"
+          mkdir -p "$dst"
+          mapfile -t parts < <(find "$src" -maxdepth 1 -type f -name 'dem_12km_rumpukorjattu.tif.part*' | sort)
+          test "${#parts[@]}" -gt 0
+          cat "${parts[@]}" > "$dst/dem_12km_rumpukorjattu.tif"
+          expected_size="$(grep '^original_size_bytes=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+          expected_sha="$(grep '^original_sha256=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+          test "$(stat -c%s "$dst/dem_12km_rumpukorjattu.tif")" = "$expected_size"
+          echo "$expected_sha  $dst/dem_12km_rumpukorjattu.tif" | sha256sum -c -
+          chmod +x "$R_WHITEBOX_EXE_PATH"
+          test -x "$R_WHITEBOX_EXE_PATH"
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.5.0"
+
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::terra@1.8-29
+            any::whitebox@2.4.3
+            any::sf
+
+      - name: Run portability tests
+        run: Rscript tests/portability.R
+
+      - name: Build canonical NATURAL inputs
+        run: Rscript R/00A_prepare_validation_fixture.R 2>&1 | tee hydro00a.log
+
+      - name: Run input preparation
+        run: Rscript R/01_prepare_hydrology_inputs.R 2>&1 | tee hydro01.log
+
+      - name: Run baseline diagnostics through 02D
+        run: Rscript R/02_build_baseline_hydrology.R 2>&1 | tee hydro02.log
+
+      - name: Upload NATURAL QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NATURAL-E0560000-N7690000-QA-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            hydro00a.log
+            hydro01.log
+            hydro02.log
+            data/E0560000_N7690000/00A_validation_fixture_QA.csv
+            runs/E0560000_N7690000/01_inputs/*.csv
+            runs/E0560000_N7690000/02_baseline/*.csv
+ MANIFEST.sha256 | sha256sum -c -
+
+          # Text files are checked semantically because Git may normalize
+          # CRLF to LF between Windows fixture creation and Linux CI checkout.
+          grep -q '^original_size_bytes=[0-9][0-9]*
+      - name: Reconstruct NATURAL DEM
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="fixtures/ci/VALIDATION_GRADIENT/NATURAL_E0560000_N7690000"
+          dst="data/E0560000_N7690000"
+          mkdir -p "$dst"
+          mapfile -t parts < <(find "$src" -maxdepth 1 -type f -name 'dem_12km_rumpukorjattu.tif.part*' | sort)
+          test "${#parts[@]}" -gt 0
+          cat "${parts[@]}" > "$dst/dem_12km_rumpukorjattu.tif"
+          expected_size="$(grep '^original_size_bytes=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+          expected_sha="$(grep '^original_sha256=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+          test "$(stat -c%s "$dst/dem_12km_rumpukorjattu.tif")" = "$expected_size"
+          echo "$expected_sha  $dst/dem_12km_rumpukorjattu.tif" | sha256sum -c -
+          chmod +x "$R_WHITEBOX_EXE_PATH"
+          test -x "$R_WHITEBOX_EXE_PATH"
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.5.0"
+
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::terra@1.8-29
+            any::whitebox@2.4.3
+            any::sf
+
+      - name: Run portability tests
+        run: Rscript tests/portability.R
+
+      - name: Build canonical NATURAL inputs
+        run: Rscript R/00A_prepare_validation_fixture.R 2>&1 | tee hydro00a.log
+
+      - name: Run input preparation
+        run: Rscript R/01_prepare_hydrology_inputs.R 2>&1 | tee hydro01.log
+
+      - name: Run baseline diagnostics through 02D
+        run: Rscript R/02_build_baseline_hydrology.R 2>&1 | tee hydro02.log
+
+      - name: Upload NATURAL QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NATURAL-E0560000-N7690000-QA-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            hydro00a.log
+            hydro01.log
+            hydro02.log
+            data/E0560000_N7690000/00A_validation_fixture_QA.csv
+            runs/E0560000_N7690000/01_inputs/*.csv
+            runs/E0560000_N7690000/02_baseline/*.csv
+ NATURAL_E0560000_N7690000/DEM_RECONSTRUCTION.txt
+          grep -q '^original_sha256=[0-9a-f][0-9a-f]*
+      - name: Reconstruct NATURAL DEM
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="fixtures/ci/VALIDATION_GRADIENT/NATURAL_E0560000_N7690000"
+          dst="data/E0560000_N7690000"
+          mkdir -p "$dst"
+          mapfile -t parts < <(find "$src" -maxdepth 1 -type f -name 'dem_12km_rumpukorjattu.tif.part*' | sort)
+          test "${#parts[@]}" -gt 0
+          cat "${parts[@]}" > "$dst/dem_12km_rumpukorjattu.tif"
+          expected_size="$(grep '^original_size_bytes=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+          expected_sha="$(grep '^original_sha256=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+          test "$(stat -c%s "$dst/dem_12km_rumpukorjattu.tif")" = "$expected_size"
+          echo "$expected_sha  $dst/dem_12km_rumpukorjattu.tif" | sha256sum -c -
+          chmod +x "$R_WHITEBOX_EXE_PATH"
+          test -x "$R_WHITEBOX_EXE_PATH"
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.5.0"
+
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::terra@1.8-29
+            any::whitebox@2.4.3
+            any::sf
+
+      - name: Run portability tests
+        run: Rscript tests/portability.R
+
+      - name: Build canonical NATURAL inputs
+        run: Rscript R/00A_prepare_validation_fixture.R 2>&1 | tee hydro00a.log
+
+      - name: Run input preparation
+        run: Rscript R/01_prepare_hydrology_inputs.R 2>&1 | tee hydro01.log
+
+      - name: Run baseline diagnostics through 02D
+        run: Rscript R/02_build_baseline_hydrology.R 2>&1 | tee hydro02.log
+
+      - name: Upload NATURAL QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NATURAL-E0560000-N7690000-QA-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            hydro00a.log
+            hydro01.log
+            hydro02.log
+            data/E0560000_N7690000/00A_validation_fixture_QA.csv
+            runs/E0560000_N7690000/01_inputs/*.csv
+            runs/E0560000_N7690000/02_baseline/*.csv
+ NATURAL_E0560000_N7690000/DEM_RECONSTRUCTION.txt
+          grep -q '^part_count=3
+      - name: Reconstruct NATURAL DEM
+        shell: bash
+        run: |
+          set -euo pipefail
+          src="fixtures/ci/VALIDATION_GRADIENT/NATURAL_E0560000_N7690000"
+          dst="data/E0560000_N7690000"
+          mkdir -p "$dst"
+          mapfile -t parts < <(find "$src" -maxdepth 1 -type f -name 'dem_12km_rumpukorjattu.tif.part*' | sort)
+          test "${#parts[@]}" -gt 0
+          cat "${parts[@]}" > "$dst/dem_12km_rumpukorjattu.tif"
+          expected_size="$(grep '^original_size_bytes=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+          expected_sha="$(grep '^original_sha256=' "$src/DEM_RECONSTRUCTION.txt" | cut -d= -f2)"
+          test "$(stat -c%s "$dst/dem_12km_rumpukorjattu.tif")" = "$expected_size"
+          echo "$expected_sha  $dst/dem_12km_rumpukorjattu.tif" | sha256sum -c -
+          chmod +x "$R_WHITEBOX_EXE_PATH"
+          test -x "$R_WHITEBOX_EXE_PATH"
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.5.0"
+
+      - name: Install R dependencies
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::terra@1.8-29
+            any::whitebox@2.4.3
+            any::sf
+
+      - name: Run portability tests
+        run: Rscript tests/portability.R
+
+      - name: Build canonical NATURAL inputs
+        run: Rscript R/00A_prepare_validation_fixture.R 2>&1 | tee hydro00a.log
+
+      - name: Run input preparation
+        run: Rscript R/01_prepare_hydrology_inputs.R 2>&1 | tee hydro01.log
+
+      - name: Run baseline diagnostics through 02D
+        run: Rscript R/02_build_baseline_hydrology.R 2>&1 | tee hydro02.log
+
+      - name: Upload NATURAL QA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NATURAL-E0560000-N7690000-QA-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            hydro00a.log
+            hydro01.log
+            hydro02.log
+            data/E0560000_N7690000/00A_validation_fixture_QA.csv
+            runs/E0560000_N7690000/01_inputs/*.csv
+            runs/E0560000_N7690000/02_baseline/*.csv
+ NATURAL_E0560000_N7690000/DEM_RECONSTRUCTION.txt
+          grep -q 'NATURAL.*E0560000_N7690000' validation_gradient_selection.csv
+          grep -q 'E0560000_N7690000' validation_gradient_manifest.csv
+          grep -q 'E0560000_N7690000' validation_dem_ready.csv
 
       - name: Reconstruct NATURAL DEM
         shell: bash
