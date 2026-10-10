@@ -1,0 +1,52 @@
+name: Retry hydrology infrastructure failures
+
+on:
+  workflow_run:
+    workflows:
+      - LOW transfer hydrology QA
+      - MODERATE transfer hydrology QA
+      - NATURAL reference hydrology QA
+      - TEST_SULKU_11 baseline hydrology QA (no structures)
+    types:
+      - completed
+    branches:
+      - baseline-no-structures
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  retry-infrastructure-failure:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Inspect failed run and retry only runner interruptions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Inspecting workflow run $RUN_ID attempt $RUN_ATTEMPT"
+
+          # Bound retries so a persistent infrastructure problem cannot loop forever.
+          if [ "$RUN_ATTEMPT" -ge 20 ]; then
+            echo "Retry ceiling reached; leaving this run for the hourly development watchdog."
+            exit 0
+          fi
+
+          logs="$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --log-failed 2>&1 || true)"
+          printf '%s\n' "$logs"
+
+          if grep -Eiq             'Process completed with exit code (137|143)|runner has received a shutdown signal|runner service is stopped|job was canceled because the runner|lost communication with the server'             <<<"$logs"; then
+            echo "Infrastructure interruption detected; rerunning failed jobs immediately."
+            gh api               --method POST               -H "Accept: application/vnd.github+json"               -H "X-GitHub-Api-Version: 2022-11-28"               "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/rerun-failed-jobs"
+          else
+            echo "No recognized runner interruption. Not retrying automatically."
+            echo "The hourly development watchdog will diagnose the scientific/code failure."
+          fi
