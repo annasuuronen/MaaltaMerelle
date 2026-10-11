@@ -5566,18 +5566,41 @@ for (i in seq_along(target_dep_ids)) {
     boundary[, 2]
   )
 
-  stopifnot(
-    all(
-      is.finite(
-        source_storage_z
-      )
-    ),
-    all(
-      is.finite(
-        receiver_storage_z
-      )
+  # NoData is not a spill gate. Diagnose boundary-vs-interior
+  # missing elevations and fail closed without inferring an outlet.
+  nonfinite <- !is.finite(source_storage_z) |
+    !is.finite(receiver_storage_z)
+  if (any(nonfinite)) {
+    bad <- which(nonfinite)
+    source <- boundary[bad, 1]
+    receiver <- boundary[bad, 2]
+    edge <- is_edge_cell(depression_components, source) |
+      is_edge_cell(depression_components, receiver)
+    sample <- head(bad, 100L)
+    qa_file <- file.path(
+      DIR_02,
+      sprintf("02D5_nonfinite_boundary_component_%s.csv", did)
     )
-  )
+    write.csv(
+      data.frame(
+        depression_component_id = did,
+        nonfinite_edges = length(bad),
+        raster_edge_edges = sum(edge),
+        interior_edges = sum(!edge),
+        source_cell = boundary[sample, 1],
+        receiver_cell = boundary[sample, 2],
+        source_storage_z = source_storage_z[sample],
+        receiver_storage_z = receiver_storage_z[sample],
+        source_original_z = source_original_z[sample],
+        receiver_original_z = receiver_original_z[sample]
+      ),
+      qa_file, row.names = FALSE
+    )
+    stop(sprintf(
+      "02D.5 component %s: %d nonfinite boundary edges (%d edge, %d interior); no outlet inferred. See %s",
+      did, length(bad), sum(edge), sum(!edge), basename(qa_file)
+    ))
+  }
 
 
   # ----------------------------------------------------------
