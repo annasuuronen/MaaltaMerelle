@@ -5,6 +5,8 @@ on:
     branches:
       - baseline-no-structures
     paths:
+      - "R/**"
+      - "tests/**"
       - ".github/workflows/audit-r-syntax.yml"
   workflow_dispatch:
 

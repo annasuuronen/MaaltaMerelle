@@ -5510,47 +5510,25 @@ for (i in seq_along(target_dep_ids)) {
   # 113B. ALL 8-NEIGHBOUR EDGES FROM COMPONENT CELLS
   # ----------------------------------------------------------
 
-  ap <- terra::adjacent(
-    depression_components,
-    cells = comp_cells,
-    directions = 8,
-    pairs = TRUE,
-    include = FALSE
-  )
-
-  stopifnot(
-    nrow(ap) > 0
-  )
-
-
-  # ----------------------------------------------------------
-  # 113C. KEEP ONLY COMPONENT -> OUTSIDE EDGES
-  # ----------------------------------------------------------
-
-  receiver_dep <- cell_values(
-    depression_components,
-    ap[, 2]
-  )
-
-  outside <- (
-    !is.finite(receiver_dep) |
-      receiver_dep != did
-  )
-
-  boundary <- ap[
-    outside,
-    ,
-    drop = FALSE
-  ]
-
-  receiver_dep_boundary <- receiver_dep[
-    outside
-  ]
-
-  stopifnot(
-    nrow(boundary) > 0
-  )
-
+  boundary_parts <- list()
+  receiver_parts <- list()
+  for (first in seq.int(1L, length(comp_cells), by = 20000L)) {
+    last <- min(length(comp_cells), first + 19999L)
+    ap <- terra::adjacent(depression_components,
+                          cells = comp_cells[first:last],
+                          directions = 8, pairs = TRUE, include = FALSE)
+    if (nrow(ap) == 0L) next
+    receiver_dep <- cell_values(depression_components, ap[, 2])
+    outside <- !is.finite(receiver_dep) | receiver_dep != did
+    if (any(outside)) {
+      boundary_parts[[length(boundary_parts) + 1L]] <- ap[outside, , drop = FALSE]
+      receiver_parts[[length(receiver_parts) + 1L]] <- receiver_dep[outside]
+    }
+  }
+  stopifnot(length(boundary_parts) > 0L)
+  boundary <- do.call(rbind, boundary_parts)
+  receiver_dep_boundary <- unlist(receiver_parts, use.names = FALSE)
+  stopifnot(nrow(boundary) == length(receiver_dep_boundary))
 
   # Adjacent raised components should not normally occur,
   # because 8-neighbour raised cells should belong to

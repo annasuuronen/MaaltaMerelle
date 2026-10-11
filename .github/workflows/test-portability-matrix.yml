@@ -8,6 +8,7 @@ on:
       - ".github/workflows/test-portability-matrix.yml"
       - "tests/portability.R"
       - "R/00_pipeline_config.R"
+      - "R/02_build_baseline_hydrology.R"
   workflow_dispatch:
 
 permissions:
