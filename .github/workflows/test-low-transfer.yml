@@ -92,6 +92,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Read-only resource telemetry for repeated runner shutdown at 02D.5.
+          # Emit directly to the job log: runner shutdown can skip artifact upload.
+          resource_watch() {
+            while true; do
+              printf 'LOW_RESOURCE_UTC=%s ' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              for f in /sys/fs/cgroup/memory.current /sys/fs/cgroup/memory.peak /sys/fs/cgroup/memory.max; do
+                if [ -r "$f" ]; then
+                  printf '%s=%s ' "$(basename "$f")" "$(cat "$f")"
+                fi
+              done
+              printf '\n'
+              if [ -r /sys/fs/cgroup/memory.events ]; then
+                sed 's/^/LOW_MEMORY_EVENT /' /sys/fs/cgroup/memory.events
+              fi
+              ps -eo pid,ppid,rss,comm --sort=-rss | head -n 5 || true
+              sleep 3
+            done
+          }
+          resource_watch &
+          watch_pid=$!
+          trap 'kill "$watch_pid" 2>/dev/null || true' EXIT
           Rscript R/02_build_baseline_hydrology.R 2>&1 | tee low02.log
           test "$(grep -Fxc '02D.8 HARD QA: PASS' low02.log || true)" -eq 1
 
