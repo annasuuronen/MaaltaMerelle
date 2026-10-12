@@ -110,6 +110,9 @@ jobs:
       - name: Test Whitebox fill retry
         run: Rscript tests/whitebox_fill_retry.R
 
+      - name: Test 02F downstream route diagnostics
+        run: Rscript tests/water_connected_route_diagnostics.R
+
       - name: Build canonical NATURAL inputs
         shell: bash
         run: |
@@ -129,6 +132,7 @@ jobs:
           Rscript R/02_build_baseline_hydrology.R 2>&1 | tee hydro02.log
           test "$(grep -Fxc '02E HARD QA: PASS' hydro02.log || true)" -eq 1
           test "$(grep -Fxc '02E CANDIDATE MASK QA: PASS' hydro02.log || true)" -eq 1
+          test "$(grep -Fxc '02F ROUTE DIAGNOSTIC QA: PASS' hydro02.log || true)" -eq 1
 
       - name: Upload NATURAL QA
         if: always()

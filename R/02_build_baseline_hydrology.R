@@ -12613,3 +12613,48 @@ cat("Receiver mask cells         :",
 cat("Outlet selection            : UNASSIGNED; DEM unchanged\n")
 cat("02E HARD QA: PASS\n")
 cat("02E CANDIDATE MASK QA: PASS\n")
+
+source(file.path("R", "02F_water_connected_route_diagnostics.R"))
+water_connected_routes_02f <- trace_water_connected_candidate_routes(
+  candidate_edges = water_connected_candidate_edges_02e$edges,
+  ptr_land_water = ptr_land_water,
+  water_class = water_class,
+  lake_id = lake_id,
+  nrow_raster = nrow(dem),
+  ncol_raster = ncol(dem),
+  cell_values = cell_values,
+  max_steps = min(as.double(ncell(dem)), 1000000)
+)
+if (!all(water_connected_routes_02f$qa$pass)) {
+  stop("02F route diagnostic QA failed.")
+}
+
+write.csv(
+  water_connected_routes_02f$routes,
+  file.path(DIR_02, "02F_water_connected_route_evidence.csv"),
+  row.names = FALSE
+)
+write.csv(
+  water_connected_routes_02f$edge_routes,
+  file.path(DIR_02, "02F_water_connected_candidate_route_edges.csv"),
+  row.names = FALSE
+)
+write.csv(
+  water_connected_routes_02f$group_summary,
+  file.path(DIR_02, "02F_water_connected_route_summary.csv"),
+  row.names = FALSE
+)
+write.csv(
+  water_connected_routes_02f$qa,
+  file.path(DIR_02, "02F_water_connected_route_QA.csv"),
+  row.names = FALSE
+)
+
+cat("\n=== 02F EXISTING D8 DOWNSTREAM ROUTE DIAGNOSTICS ===\n")
+cat("Unique receiver/origin routes:",
+    nrow(water_connected_routes_02f$routes), "\n")
+cat("Candidate spill edges        :",
+    nrow(water_connected_routes_02f$edge_routes), "\n")
+cat("Terminal classifications:\n")
+print(table(water_connected_routes_02f$routes$route_status, useNA = "ifany"))
+cat("02F ROUTE DIAGNOSTIC QA: PASS\n")

@@ -11,8 +11,10 @@ on:
       - "R/02_build_baseline_hydrology.R"
       - "R/02A_whitebox_fill_retry.R"
       - "R/02E_water_connected_candidates.R"
+      - "R/02F_water_connected_route_diagnostics.R"
       - "tests/whitebox_fill_retry.R"
       - "tests/water_connected_candidates.R"
+      - "tests/water_connected_route_diagnostics.R"
   workflow_dispatch:
 
 permissions:
@@ -93,6 +95,9 @@ jobs:
       - name: Test Whitebox fill retry
         run: Rscript tests/whitebox_fill_retry.R
 
+      - name: Test 02F downstream route diagnostics
+        run: Rscript tests/water_connected_route_diagnostics.R
+
       - name: Build canonical LOW inputs
         run: Rscript R/00A_prepare_validation_fixture.R 2>&1 | tee low00a.log
 
@@ -128,6 +133,7 @@ jobs:
           test "$(grep -Fxc '02D.8 HARD QA: PASS' low02.log || true)" -eq 1
           test "$(grep -Fxc '02E HARD QA: PASS' low02.log || true)" -eq 1
           test "$(grep -Fxc '02E CANDIDATE MASK QA: PASS' low02.log || true)" -eq 1
+          test "$(grep -Fxc '02F ROUTE DIAGNOSTIC QA: PASS' low02.log || true)" -eq 1
 
       - name: Verify LOW 02D.7K component 396 regression
         run: Rscript tests/low_02d7k2_regression.R

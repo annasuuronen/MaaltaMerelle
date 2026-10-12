@@ -98,6 +98,7 @@ jobs:
           stopifnot(any(calls$target == "R/02A_whitebox_fill_retry.R"))
           stopifnot(any(calls$target == "R/02D8_final_spill_evidence.R"))
           stopifnot(any(calls$target == "R/02E_water_connected_candidates.R"))
+          stopifnot(any(calls$target == "R/02F_water_connected_route_diagnostics.R"))
 
           write.csv(calls, "R_SOURCE_GRAPH.csv", row.names = FALSE)
           cat("R source dependency audit: PASS\n")
@@ -112,7 +113,7 @@ jobs:
             echo "R source dependency audit: PASS"
             echo "All statically resolved R source targets exist."
             echo "No recursive source cycles detected."
-            echo "02D.8 final evidence and 02E candidate-mask stages are connected."
+            echo "02D.8 evidence, 02E candidate masks and 02F route diagnostics are connected."
           } > R_SOURCE_GRAPH_AUDIT.txt
 
       - name: Upload audit

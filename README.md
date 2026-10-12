@@ -15,24 +15,29 @@ The planned sequence is:
 1. prepare DEM and RANTA10 inputs;
 2. resolve lake spill, outlet and escape evidence;
 3. preserve WATER_CONNECTED spill candidates and QA without selecting outlets;
-4. build final baseline D8;
-5. calculate baseline flow accumulation and the 4 ha stream network;
-6. build tile handoffs / hydrologic graph;
-7. run QA and golden regression;
-8. produce the baseline output contract;
-9. proceed to CSC and national baseline runs after validation.
+4. trace candidate spill receivers through the existing D8 and classify the
+   first downstream water contact or explicit unresolved terminal;
+5. build final baseline D8;
+6. calculate baseline flow accumulation and the 4 ha stream network;
+7. build tile handoffs / hydrologic graph;
+8. run QA and golden regression;
+9. produce the baseline output contract;
+10. proceed to CSC and national baseline runs after validation.
 
-The current implementation reaches 02D.8 spill/escape evidence and 02E
-candidate QA. 02E includes every spill group with external evidence and no
-review flag as a parallel candidate, preserves all of its lowest-spill shore
-edges, and leaves `outlet_selection` as `UNASSIGNED`. It writes source- and
-receiver-cell masks for those edges and verifies that they match the
-evidence (no masks are emitted when there are no eligible edges). These masks
-stop at the lake shore spill edge: they do not prove a downstream route,
-modify DEM elevations, alter D8 pointers, or constitute a routing surface.
-Any `REVIEW_REQUIRED` group is excluded from the masks; a final
-WATER_CONNECTED routing surface remains unimplemented until downstream paths
-are validated and review cases are resolved.
+The current implementation reaches 02D.8 spill/escape evidence, 02E
+candidate QA and 02F downstream route diagnostics. 02E includes every spill
+group with external evidence and no review flag as a parallel candidate,
+preserves all of its lowest-spill shore edges, and leaves `outlet_selection`
+as `UNASSIGNED`. It writes source- and receiver-cell masks for those edges and
+verifies that they match the evidence.
+
+02F follows each candidate receiver through the existing land-water D8 until
+the first RANTA10 water cell or an explicit terminal such as a zero/invalid
+pointer, raster exit, cycle or step limit. It records the terminal class and
+does not choose an outlet, modify elevations or pointers, route through water,
+or build a WATER_CONNECTED routing surface. These diagnostics must be reviewed
+before designing final routing; unresolved routes remain visible rather than
+being silently treated as connected.
 
 WhiteboxTools `FillDepressions` runs with one worker to avoid its intermittent
 parallel output-handle panic. If it fails to create a non-empty output, the
@@ -104,6 +109,7 @@ Run portability checks with:
 ```sh
 Rscript tests/portability.R
 Rscript tests/water_connected_candidates.R
+Rscript tests/water_connected_route_diagnostics.R
 Rscript tests/whitebox_fill_retry.R
 ```
 

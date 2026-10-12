@@ -63,12 +63,18 @@ jobs:
           test -f R/02A_whitebox_fill_retry.R
           test -f R/02D8_final_spill_evidence.R
           test -f R/02E_water_connected_candidates.R
+          test -f R/02F_water_connected_route_diagnostics.R
           grep -Fq 'source(file.path(PROJECT_ROOT, "R", "02A_whitebox_fill_retry.R"))' R/02_build_baseline_hydrology.R
           grep -Fq 'source(file.path("R", "02D8_final_spill_evidence.R"))' R/02D7K_non_target_raised_link_resolution.R
           grep -Fq '02D.8 HARD QA: PASS' R/02D8_final_spill_evidence.R
           grep -Fq 'source(file.path("R", "02E_water_connected_candidates.R"))' R/02_build_baseline_hydrology.R
           grep -Fq '02E HARD QA: PASS' R/02_build_baseline_hydrology.R
           grep -Fq '02E CANDIDATE MASK QA: PASS' R/02_build_baseline_hydrology.R
+          grep -Fq 'source(file.path("R", "02F_water_connected_route_diagnostics.R"))' R/02_build_baseline_hydrology.R
+          grep -Fq '02F ROUTE DIAGNOSTIC QA: PASS' R/02_build_baseline_hydrology.R
+
+      - name: Test 02F downstream route diagnostics
+        run: Rscript tests/water_connected_route_diagnostics.R
 
       - name: Test bounded Whitebox fill retry
         run: Rscript tests/whitebox_fill_retry.R
