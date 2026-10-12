@@ -8,6 +8,8 @@ on:
       - baseline-no-structures
     paths:
       - ".github/workflows/test-moderate-transfer.yml"
+      - "R/02D7K2_non_target_raised_link_resolution.R"
+      - "tests/low_02d7k2_regression.R"
   workflow_dispatch:
 
 permissions:
