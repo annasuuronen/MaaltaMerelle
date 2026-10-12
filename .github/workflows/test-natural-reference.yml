@@ -104,6 +104,9 @@ jobs:
           set -euo pipefail
           Rscript tests/portability.R
 
+      - name: Test 02E candidate contract
+        run: Rscript tests/water_connected_candidates.R
+
       - name: Build canonical NATURAL inputs
         shell: bash
         run: |
@@ -121,6 +124,7 @@ jobs:
         run: |
           set -euo pipefail
           Rscript R/02_build_baseline_hydrology.R 2>&1 | tee hydro02.log
+          test "$(grep -Fxc '02E HARD QA: PASS' hydro02.log || true)" -eq 1
 
       - name: Upload NATURAL QA
         if: always()

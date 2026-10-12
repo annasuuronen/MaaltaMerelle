@@ -61,8 +61,14 @@ jobs:
           set -euo pipefail
           test -f R/02_build_baseline_hydrology.R
           test -f R/02D8_final_spill_evidence.R
+          test -f R/02E_water_connected_candidates.R
           grep -Fq 'source(file.path("R", "02D8_final_spill_evidence.R"))' R/02D7K_non_target_raised_link_resolution.R
           grep -Fq '02D.8 HARD QA: PASS' R/02D8_final_spill_evidence.R
+          grep -Fq 'source(file.path("R", "02E_water_connected_candidates.R"))' R/02_build_baseline_hydrology.R
+          grep -Fq '02E HARD QA: PASS' R/02_build_baseline_hydrology.R
+
+      - name: Test outlet-independent candidate contract
+        run: Rscript tests/water_connected_candidates.R
 
       - name: Write syntax audit summary
         shell: bash
@@ -70,7 +76,7 @@ jobs:
           cat > R_SYNTAX_AUDIT.txt <<'EOF'
           R script syntax audit: PASS
           All R/ and tests/ .R files parse successfully.
-          Critical 02D.8 evidence stage wiring: PASS
+          Critical 02D.8 evidence and 02E candidate stage wiring: PASS
           EOF
 
       - name: Upload audit summary

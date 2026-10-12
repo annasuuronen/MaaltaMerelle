@@ -10,17 +10,23 @@ The scripts run with R on Windows or Linux. Install `terra`, `sf` and
 
 ## Scope
 
-The active sequence is:
+The planned sequence is:
 
 1. prepare DEM and RANTA10 inputs;
 2. resolve lake spill, outlet and escape evidence;
-3. build the WATER_CONNECTED baseline surface;
+3. preserve WATER_CONNECTED spill candidates and QA without selecting outlets;
 4. build final baseline D8;
 5. calculate baseline flow accumulation and the 4 ha stream network;
 6. build tile handoffs / hydrologic graph;
 7. run QA and golden regression;
 8. produce the baseline output contract;
 9. proceed to CSC and national baseline runs after validation.
+
+The current implementation reaches 02D.8 spill/escape evidence and 02E
+candidate QA. 02E preserves each spill group and explicitly leaves
+`outlet_selection` as `UNASSIGNED`; it does not build a routing surface or
+change pointers. Final outlet selection, the WATER_CONNECTED surface, final
+D8, and flow accumulation are not yet implemented.
 
 No dam, lock or other structure input is required or tested in this branch.
 There is no structure-based routing override in this version.
@@ -87,11 +93,13 @@ Run portability checks with:
 
 ```sh
 Rscript tests/portability.R
+Rscript tests/water_connected_candidates.R
 ```
 
 The LOW transfer workflow also locks the 02D.7K component 396 case: its
 `LAKE:1892` gate and `RIVER_LINE` flat-trace evidence are kept distinct, while
 the separately traced lower escape remains one `EXTERNAL_CANDIDATE`.
 
-The GitHub Actions workflow tests only the baseline lake/outlet/routing path in
-this branch. Structures are deliberately deferred to a later version.
+The GitHub Actions workflows validate spill/escape evidence and the
+outlet-independent 02E candidate contract. They do not yet test final routing.
+Structures are deliberately deferred to a later version.

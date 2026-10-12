@@ -5,17 +5,19 @@
 #
 # VERSION: 0.1
 #
-# TÄSSÄ VAIHEESSA:
+# IMPLEMENTED:
 #   02A LAND + WATER STORAGE
+#   02B LAND -> FIRST WATER
+#   02C ZERO-POINTER SHORE CONNECTORS
+#   02D SPILL / ESCAPE EVIDENCE (02D.8)
+#   02E WATER-CONNECTED CANDIDATES + QA ONLY
 #
 # Ei vielä:
-#   - lake outlet selection
-#   - WATER_CONNECTED
+#   - lake outlet selection or a WATER_CONNECTED routing surface
 #   - final D8
 #   - flow accumulation
 #
-# Kun 02A reproduisoi referenssin, tätä samaa skriptiä
-# jatketaan vaiheilla 02B ... 02J.
+# WATER_CONNECTED surface construction remains a later stage.
 # ============================================================
 
 
@@ -12530,3 +12532,37 @@ source(file.path("R", "02D7J_non_target_raised_level_flat_trace.R"))
 
 # 02D.7K: resolve non-target raised links as external vs origin-return evidence.
 source(file.path("R", "02D7K_non_target_raised_link_resolution.R"))
+
+# 02E preserves every 02D.8 spill group as evidence; it does not select outlets.
+source(file.path("R", "02E_water_connected_candidates.R"))
+water_connected_candidate_tables_02e <-
+  build_water_connected_candidate_tables(out)
+
+write.csv(
+  water_connected_candidate_tables_02e$candidate_evidence,
+  file.path(DIR_02, "02E_water_connected_candidate_evidence.csv"),
+  row.names = FALSE
+)
+write.csv(
+  water_connected_candidate_tables_02e$lake_summary,
+  file.path(DIR_02, "02E_water_connected_lake_summary.csv"),
+  row.names = FALSE
+)
+write.csv(
+  water_connected_candidate_tables_02e$qa,
+  file.path(DIR_02, "02E_water_connected_QA.csv"),
+  row.names = FALSE
+)
+
+cat("\n=== 02E WATER_CONNECTED CANDIDATE QA (NO OUTLET SELECTION) ===\n")
+cat("Candidate spill groups       :",
+    nrow(water_connected_candidate_tables_02e$candidate_evidence), "\n")
+cat("Lakes with candidate groups  :",
+    nrow(water_connected_candidate_tables_02e$lake_summary), "\n")
+cat("External-evidence candidates :",
+    sum(water_connected_candidate_tables_02e$lake_summary$n_external_evidence_candidates),
+    "\n")
+cat("Groups requiring review     :",
+    sum(water_connected_candidate_tables_02e$lake_summary$n_review_required), "\n")
+cat("Outlet selection            : UNASSIGNED\n")
+cat("02E HARD QA: PASS\n")
