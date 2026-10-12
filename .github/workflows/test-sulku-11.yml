@@ -114,6 +114,9 @@ jobs:
       - name: Test 02E candidate contract
         run: Rscript tests/water_connected_candidates.R
 
+      - name: Test Whitebox fill retry
+        run: Rscript tests/whitebox_fill_retry.R
+
       - name: Run input preparation
         shell: bash
         run: |
@@ -171,7 +174,7 @@ jobs:
             done
             echo
             echo -e "sha256\tfile"
-            sha256sum               R/00_pipeline_config.R               R/01_prepare_hydrology_inputs.R               R/02_build_baseline_hydrology.R               R/02D7F_nonraised_level_flat_trace.R               R/02D7G_candidate_evidence.R               R/02D7H_nonraised_depression_links.R               R/02D7I_non_target_raised_gate_evidence.R               R/02D7J_non_target_raised_level_flat_trace.R               R/02D7K_non_target_raised_link_resolution.R               R/02D7K2_non_target_raised_link_resolution.R               R/02D8_final_spill_evidence.R               R/02E_water_connected_candidates.R               tests/water_connected_candidates.R
+            sha256sum               R/00_pipeline_config.R               R/01_prepare_hydrology_inputs.R               R/02A_whitebox_fill_retry.R               R/02_build_baseline_hydrology.R               R/02D7F_nonraised_level_flat_trace.R               R/02D7G_candidate_evidence.R               R/02D7H_nonraised_depression_links.R               R/02D7I_non_target_raised_gate_evidence.R               R/02D7J_non_target_raised_level_flat_trace.R               R/02D7K_non_target_raised_link_resolution.R               R/02D7K2_non_target_raised_link_resolution.R               R/02D8_final_spill_evidence.R               R/02E_water_connected_candidates.R               tests/water_connected_candidates.R               tests/whitebox_fill_retry.R
           } > EXECUTION_MANIFEST.tsv
 
       - name: Extract key QA lines

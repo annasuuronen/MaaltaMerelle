@@ -34,6 +34,10 @@ Any `REVIEW_REQUIRED` group is excluded from the masks; a final
 WATER_CONNECTED routing surface remains unimplemented until downstream paths
 are validated and review cases are resolved.
 
+WhiteboxTools `FillDepressions` runs with one worker to avoid its intermittent
+parallel output-handle panic. If it fails to create a non-empty output, the
+pipeline retries once and then stops with an explicit error.
+
 No dam, lock or other structure input is required or tested in this branch.
 There is no structure-based routing override in this version.
 
@@ -100,6 +104,7 @@ Run portability checks with:
 ```sh
 Rscript tests/portability.R
 Rscript tests/water_connected_candidates.R
+Rscript tests/whitebox_fill_retry.R
 ```
 
 The LOW transfer workflow also locks the 02D.7K component 396 case: its

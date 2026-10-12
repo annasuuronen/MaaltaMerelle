@@ -44,12 +44,16 @@ jobs:
 
           for (f in files) {
             txt <- readLines(f, warn = FALSE, encoding = "UTF-8")
-            hit <- grep('source\\(file\\.path\\("R",\\s*"[^"]+"\\)\\)', txt, value = TRUE)
+            hit <- grep(
+              'source\\(file\\.path\\((PROJECT_ROOT,\\s*)?"R",\\s*"[^"]+"\\)\\)',
+              txt,
+              value = TRUE
+            )
             if (!length(hit)) next
 
             targets <- sub(
-              '.*source\\(file\\.path\\("R",\\s*"([^"]+)"\\)\\).*',
-              'R/\\1',
+              '.*source\\(file\\.path\\((PROJECT_ROOT,\\s*)?"R",\\s*"([^"]+)"\\).*',
+              'R/\\2',
               hit
             )
 
@@ -91,6 +95,7 @@ jobs:
           for (n in nodes) visit(n)
 
           # Required diagnostic chain endpoints.
+          stopifnot(any(calls$target == "R/02A_whitebox_fill_retry.R"))
           stopifnot(any(calls$target == "R/02D8_final_spill_evidence.R"))
           stopifnot(any(calls$target == "R/02E_water_connected_candidates.R"))
 

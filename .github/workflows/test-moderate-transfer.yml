@@ -9,8 +9,10 @@ on:
     paths:
       - ".github/workflows/test-moderate-transfer.yml"
       - "R/02_build_baseline_hydrology.R"
+      - "R/02A_whitebox_fill_retry.R"
       - "R/02D7K2_non_target_raised_link_resolution.R"
       - "tests/low_02d7k2_regression.R"
+      - "tests/whitebox_fill_retry.R"
       - "R/02E_water_connected_candidates.R"
       - "tests/water_connected_candidates.R"
   workflow_dispatch:
@@ -89,6 +91,9 @@ jobs:
 
       - name: Test 02E candidate contract
         run: Rscript tests/water_connected_candidates.R
+
+      - name: Test Whitebox fill retry
+        run: Rscript tests/whitebox_fill_retry.R
 
       - name: Build canonical MODERATE inputs
         run: Rscript R/00A_prepare_validation_fixture.R 2>&1 | tee moderate00a.log

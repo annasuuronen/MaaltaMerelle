@@ -58,6 +58,8 @@ stopifnot(
 
 source(config_file)
 
+source(file.path(PROJECT_ROOT, "R", "02A_whitebox_fill_retry.R"))
+
 
 # ------------------------------------------------------------
 # 1. PAKETIT
@@ -225,11 +227,17 @@ if (
     "Running land FillDepressions...\n"
   )
 
-  whitebox::wbt_fill_depressions(
-    dem = f_land_raw,
+  whitebox_fill_depressions_with_retry(
     output = f_land_fill,
-    fix_flats = TRUE,
-    verbose_mode = TRUE
+    label = "Land FillDepressions",
+    run_fill = function() {
+      whitebox::wbt_fill_depressions(
+        dem = f_land_raw,
+        output = f_land_fill,
+        fix_flats = TRUE,
+        verbose_mode = TRUE
+      )
+    }
   )
 }
 
@@ -313,11 +321,17 @@ if (
     "Running WATER_STORAGE FillDepressions...\n"
   )
 
-  whitebox::wbt_fill_depressions(
-    dem = f_land_water,
+  whitebox_fill_depressions_with_retry(
     output = f_storage,
-    fix_flats = FALSE,
-    verbose_mode = TRUE
+    label = "WATER_STORAGE FillDepressions",
+    run_fill = function() {
+      whitebox::wbt_fill_depressions(
+        dem = f_land_water,
+        output = f_storage,
+        fix_flats = FALSE,
+        verbose_mode = TRUE
+      )
+    }
   )
 }
 

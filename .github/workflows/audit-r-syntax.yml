@@ -60,13 +60,18 @@ jobs:
         run: |
           set -euo pipefail
           test -f R/02_build_baseline_hydrology.R
+          test -f R/02A_whitebox_fill_retry.R
           test -f R/02D8_final_spill_evidence.R
           test -f R/02E_water_connected_candidates.R
+          grep -Fq 'source(file.path(PROJECT_ROOT, "R", "02A_whitebox_fill_retry.R"))' R/02_build_baseline_hydrology.R
           grep -Fq 'source(file.path("R", "02D8_final_spill_evidence.R"))' R/02D7K_non_target_raised_link_resolution.R
           grep -Fq '02D.8 HARD QA: PASS' R/02D8_final_spill_evidence.R
           grep -Fq 'source(file.path("R", "02E_water_connected_candidates.R"))' R/02_build_baseline_hydrology.R
           grep -Fq '02E HARD QA: PASS' R/02_build_baseline_hydrology.R
           grep -Fq '02E CANDIDATE MASK QA: PASS' R/02_build_baseline_hydrology.R
+
+      - name: Test bounded Whitebox fill retry
+        run: Rscript tests/whitebox_fill_retry.R
 
       - name: Test outlet-independent candidate contract
         run: Rscript tests/water_connected_candidates.R

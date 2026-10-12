@@ -107,6 +107,9 @@ jobs:
       - name: Test 02E candidate contract
         run: Rscript tests/water_connected_candidates.R
 
+      - name: Test Whitebox fill retry
+        run: Rscript tests/whitebox_fill_retry.R
+
       - name: Build canonical NATURAL inputs
         shell: bash
         run: |
