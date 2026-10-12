@@ -13,8 +13,8 @@ storage       pass=N/A    NA-diff=NA  max-diff=NA  changed=NA
 QA file            : 02A_storage_regression_QA.csv
 ===========================
           used (Mb) gc trigger   (Mb)  max used   (Mb)
-Ncells 1173912 62.7    2242140  119.8   2242140  119.8
-Vcells 3003770 23.0  158623286 1210.2 198142117 1511.8
+Ncells 1174200 62.8    2242500  119.8   2242500  119.8
+Vcells 3003866 23.0  158623378 1210.3 198142213 1511.8
 
 === 02B LAND -> FIRST WATER ===
 True land adjacent to water : 163582
