@@ -4,16 +4,16 @@ pointer <- rep(0, 16L)
 water_class <- rep(NA_real_, 16L)
 lake_id <- rep(NA_real_, 16L)
 
-water_class[c(1L, 2L, 3L, 5L)] <- c(2, 1, 1, 3)
+water_class[c(1L, 2L, 3L, 8L)] <- c(2, 1, 1, 3)
 lake_id[c(2L, 3L)] <- c(20, 10)
-pointer[c(4L, 6L, 7L, 8L, 9L, 10L, 14L, 11L, 15L)] <-
-  c(2, 0, 3, NA, 16, 8, 128, 8, 128)
+pointer[c(4L, 6L, 7L, 9L, 10L, 11L, 12L, 14L, 15L)] <-
+  c(8, 0, 3, 16, 8, 8, NA, 128, 128)
 
 candidate_edges <- data.frame(
   spill_group_id = c(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 11L, 12L),
   lake_objectid = c(10L, 10L, 10L, 10L, 10L, 10L, 10L, 10L, 10L, 10L, 20L, 10L),
   source_cell = c(20L, 21L, 22L, 23L, 24L, 25L, 26L, 27L, 28L, 29L, 30L, 31L),
-  receiver_cell = c(1L, 2L, 3L, 4L, 6L, 7L, 8L, 9L, 10L, 15L, 3L, 1L),
+  receiver_cell = c(1L, 2L, 3L, 4L, 6L, 7L, 12L, 9L, 10L, 15L, 3L, 1L),
   stringsAsFactors = FALSE
 )
 
@@ -47,7 +47,7 @@ stopifnot(
   route_for(4L)$route_steps == 1L,
   route_for(6L)$route_status == "D8_ZERO_INTERIOR",
   route_for(7L)$route_status == "D8_POINTER_INVALID",
-  route_for(8L)$route_status == "D8_POINTER_NA",
+  route_for(12L)$route_status == "D8_POINTER_NA",
   route_for(9L)$route_status == "D8_DOMAIN_EXIT",
   route_for(10L)$route_status == "D8_CYCLE",
   route_for(15L)$route_status == "D8_CYCLE",
