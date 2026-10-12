@@ -1,0 +1,105 @@
+name: Verify LOW coastline context
+
+on:
+  push:
+    branches:
+      - baseline-no-structures
+    paths:
+      - ".github/workflows/verify-low-coastline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-coastline:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Query NLS Finland hydrography at LOW nonfinite boundary
+        shell: python
+        run: |
+          import json, math, urllib.parse, urllib.request
+
+          # First sampled nonfinite receiver from LOW 02D.5 diagnostic:
+          # E=199001, N=6905999 (EPSG:3067), transformed to CRS84.
+          lat0 = 62.16488417998065
+          lon0 = 21.216456092353763
+
+          base = "https://avoin-paikkatieto.maanmittauslaitos.fi/inspire-hydrography/features/v1/collections"
+
+          def get(collection, pad):
+              bbox = f"{lon0-pad},{lat0-pad},{lon0+pad},{lat0+pad}"
+              url = f"{base}/{collection}/items?" + urllib.parse.urlencode({
+                  "bbox": bbox,
+                  "limit": 100,
+                  "f": "json",
+              })
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "Accept": "application/geo+json, application/json",
+                      "User-Agent": "MaaltaMerelle-validation/1.0",
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.load(r), url
+
+          def xy_m(coord):
+              lon, lat = coord[:2]
+              x = (lon - lon0) * 111320.0 * math.cos(math.radians(lat0))
+              y = (lat - lat0) * 111320.0
+              return x, y
+
+          def point_seg_dist(p, a, b):
+              px, py = p; ax, ay = a; bx, by = b
+              dx, dy = bx-ax, by-ay
+              if dx == 0 and dy == 0:
+                  return math.hypot(px-ax, py-ay)
+              t = ((px-ax)*dx + (py-ay)*dy)/(dx*dx+dy*dy)
+              t = max(0.0, min(1.0, t))
+              qx, qy = ax+t*dx, ay+t*dy
+              return math.hypot(px-qx, py-qy)
+
+          def lines(geom):
+              if not geom:
+                  return
+              typ = geom.get("type")
+              c = geom.get("coordinates")
+              if typ == "LineString":
+                  yield c
+              elif typ == "MultiLineString":
+                  yield from c
+              elif typ == "GeometryCollection":
+                  for g in geom.get("geometries", []):
+                      yield from lines(g)
+
+          coast, coast_url = get("landwaterboundary", 0.01)
+          features = coast.get("features", [])
+          dists = []
+          for f in features:
+              for line in lines(f.get("geometry")):
+                  m = [xy_m(c) for c in line]
+                  for a, b in zip(m, m[1:]):
+                      dists.append(point_seg_dist((0.0,0.0), a, b))
+
+          standing, standing_url = get("standingwater", 0.01)
+          courses, courses_url = get("watercourse", 0.01)
+
+          print("LOW_PROBLEM_EPSG3067=199001,6905999")
+          print(f"LOW_PROBLEM_CRS84={lat0:.9f},{lon0:.9f}")
+          print(f"NLS_LANDWATERBOUNDARY_FEATURES={len(features)}")
+          print("NLS_NEAREST_LANDWATERBOUNDARY_M=" +
+                (f"{min(dists):.3f}" if dists else "NONE"))
+          print(f"NLS_STANDINGWATER_FEATURES_~1KM={len(standing.get('features', []))}")
+          print(f"NLS_WATERCOURSE_FEATURES_~1KM={len(courses.get('features', []))}")
+
+          # Print compact properties from the closest-area shoreline features.
+          for i, f in enumerate(features[:10], 1):
+              p = f.get("properties", {})
+              print("BOUNDARY_FEATURE", i, json.dumps(p, ensure_ascii=False, sort_keys=True))
+
+          # Fail only if the authoritative service cannot provide any shoreline
+          # evidence in the local ~1 km search area.
+          if not features:
+              raise SystemExit("No NLS land-water boundary found within local search bbox")
