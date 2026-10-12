@@ -778,3 +778,11 @@ ORIGIN_RETURN_ONLY
                   46                  337                   35 
 Lakes with multiple lowest-spill groups: 37 
 02D.8 HARD QA: PASS
+
+=== 02E WATER_CONNECTED CANDIDATE QA (NO OUTLET SELECTION) ===
+Candidate spill groups       : 418 
+Lakes with candidate groups  : 108 
+External-evidence candidates : 46 
+Groups requiring review     : 35 
+Outlet selection            : UNASSIGNED
+02E HARD QA: PASS
