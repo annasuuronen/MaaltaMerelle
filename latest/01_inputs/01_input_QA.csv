@@ -1,0 +1,15 @@
+"item","value"
+"dem_cols",6000
+"dem_rows",6000
+"dem_res_x",2
+"dem_res_y",2
+"xmin",407030
+"xmax",419030
+"ymin",7070072
+"ymax",7082072
+"ranta10_lakes",108
+"ranta10_river_areas",8
+"ranta10_river_lines",81
+"lake_heights_valid",108
+"lake_heights_missing",0
+"lake_ids_raster",108

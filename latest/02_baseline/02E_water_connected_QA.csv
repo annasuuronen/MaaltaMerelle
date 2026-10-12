@@ -1,0 +1,16 @@
+"check","pass"
+"all_spill_groups_preserved",TRUE
+"spill_groups_unique",TRUE
+"all_outlets_unassigned",TRUE
+"review_groups_excluded",TRUE
+"evidence_status_consistent",TRUE
+"lake_group_counts_reconcile",TRUE
+"no_eligible_candidates_have_no_edges",TRUE
+"all_eligible_spill_groups_have_edges",TRUE
+"all_eligible_group_edges_preserved",TRUE
+"only_eligible_groups_in_edge_table",TRUE
+"lake_ids_match_evidence",TRUE
+"spill_levels_match_evidence",TRUE
+"source_mask_matches_all_candidate_edges",TRUE
+"receiver_mask_matches_all_candidate_edges",TRUE
+"routing_elevation_surface_not_generated",TRUE

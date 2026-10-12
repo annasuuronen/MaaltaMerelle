@@ -1,0 +1,9 @@
+"check","pass"
+"one_classified_outcome_per_receiver_and_origin",TRUE
+"route_ends_on_water_or_explicit_d8_terminal",TRUE
+"all_candidate_edges_link_to_a_route",TRUE
+"all_candidate_edges_have_a_classified_status",TRUE
+"connected_routes_end_on_ranta10_water",TRUE
+"other_lake_routes_have_lake_ids",TRUE
+"group_summary_reconciles_candidate_edges",TRUE
+"existing_routing_surfaces_only",TRUE
