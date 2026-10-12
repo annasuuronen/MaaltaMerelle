@@ -784,5 +784,9 @@ Candidate spill groups       : 418
 Lakes with candidate groups  : 108 
 External-evidence candidates : 46 
 Groups requiring review     : 35 
-Outlet selection            : UNASSIGNED
+Parallel candidate edges    : 2948 
+Source mask cells           : 1253 
+Receiver mask cells         : 1306 
+Outlet selection            : UNASSIGNED; DEM unchanged
 02E HARD QA: PASS
+02E CANDIDATE MASK QA: PASS

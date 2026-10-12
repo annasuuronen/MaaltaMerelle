@@ -1,4 +1,4 @@
-"lake_objectid","n_spill_groups","n_external_evidence_candidates","n_review_required","n_no_external_evidence"
+"lake_objectid","n_spill_groups","n_included_parallel_candidates","n_review_required","n_no_external_evidence"
 110727,5,0,0,5
 110741,1,0,0,1
 110742,3,0,0,3
