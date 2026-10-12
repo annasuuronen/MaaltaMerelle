@@ -59,6 +59,7 @@ links_02d7h$is_spill_raised_target <- !is.na(m_dep)
 
 links_02d7h$groups_direct_lower <- 0L
 links_02d7h$groups_direct_water <- 0L
+links_02d7h$groups_domain_exit <- 0L
 links_02d7h$all_groups_level_land_only <- FALSE
 known_dep_02d7h <- which(links_02d7h$is_spill_raised_target)
 if (length(known_dep_02d7h)) {
@@ -66,6 +67,8 @@ if (length(known_dep_02d7h)) {
     dep_escape_summary$groups_direct_lower[m_dep[known_dep_02d7h]]
   links_02d7h$groups_direct_water[known_dep_02d7h] <-
     dep_escape_summary$groups_direct_water[m_dep[known_dep_02d7h]]
+  links_02d7h$groups_domain_exit[known_dep_02d7h] <-
+    dep_escape_summary$groups_domain_exit[m_dep[known_dep_02d7h]]
   links_02d7h$all_groups_level_land_only[known_dep_02d7h] <-
     dep_escape_summary$all_groups_level_land_only[m_dep[known_dep_02d7h]]
 }
@@ -99,6 +102,7 @@ for (i in seq_len(nrow(links_02d7h))) {
 links_02d7h$has_known_external_escape <- (
   links_02d7h$groups_direct_lower > 0 |
   links_02d7h$groups_direct_water > 0 |
+  links_02d7h$groups_domain_exit > 0 |
   links_02d7h$n_flat_lower_escape_edges > 0 |
   links_02d7h$n_flat_level_water_edges > 0
 )
