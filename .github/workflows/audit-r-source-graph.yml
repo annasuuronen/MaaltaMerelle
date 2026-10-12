@@ -1,5 +1,7 @@
 name: R source dependency audit
 
+# domain-exit source audit marker
+
 on:
   push:
     branches:
