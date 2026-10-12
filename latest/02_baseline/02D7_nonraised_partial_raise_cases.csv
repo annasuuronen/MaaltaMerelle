@@ -1,2 +1,0 @@
-"lake_objectid","depression_status","n_low_groups","n_lower_lake_groups","n_river_groups","n_multi_water_groups","n_land_only_groups","n_edge_groups","has_direct_water","needs_land_trace","lake_class"
-111137,"PARTIAL_RAISE_NO_SPILL_RAISE",96,1,0,0,95,0,TRUE,TRUE,"DIRECT_WATER_AND_LAND"

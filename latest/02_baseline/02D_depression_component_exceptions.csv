@@ -1,2 +1,0 @@
-"lake_objectid","n_lake_cells","n_raised_lake_cells","raised_fraction","n_depression_components","depression_component_ids","storage_raised","spill_raised","spill_raise_m","max_storage_raise_m","n_low_groups","depression_status"
-111137,287215,13,4.52622599794579e-05,1,"467",TRUE,FALSE,0,0.206001281738281,96,"PARTIAL_RAISE_NO_SPILL_RAISE"
