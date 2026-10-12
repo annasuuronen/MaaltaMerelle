@@ -43,7 +43,7 @@ jobs:
                   },
               )
               with urllib.request.urlopen(req, timeout=30) as r:
-                  return json.load(r), url
+                  return json.load(r)
 
           def xy_m(coord):
               lon, lat = coord[:2]
@@ -51,15 +51,16 @@ jobs:
               y = (lat - lat0) * 111320.0
               return x, y
 
-          def point_seg_dist(p, a, b):
-              px, py = p; ax, ay = a; bx, by = b
-              dx, dy = bx-ax, by-ay
+          def closest_on_segment(a, b):
+              ax, ay = a
+              bx, by = b
+              dx, dy = bx - ax, by - ay
               if dx == 0 and dy == 0:
-                  return math.hypot(px-ax, py-ay)
-              t = ((px-ax)*dx + (py-ay)*dy)/(dx*dx+dy*dy)
-              t = max(0.0, min(1.0, t))
-              qx, qy = ax+t*dx, ay+t*dy
-              return math.hypot(px-qx, py-qy)
+                  t = 0.0
+              else:
+                  t = max(0.0, min(1.0, (-(ax)*dx + -(ay)*dy) / (dx*dx + dy*dy)))
+              qx, qy = ax + t*dx, ay + t*dy
+              return math.hypot(qx, qy), qx, qy
 
           def lines(geom):
               if not geom:
@@ -74,45 +75,33 @@ jobs:
                   for g in geom.get("geometries", []):
                       yield from lines(g)
 
-          coast, coast_url = get("landwaterboundary", 0.05)
+          coast = get("landwaterboundary", 0.05)
+          standing = get("standingwater", 0.01)
+          courses = get("watercourse", 0.01)
+
           features = coast.get("features", [])
-          dists = []\n          closest = None
-          for f in features:
-              for line in lines(f.get("geometry")):
+          closest = None
+          for feat in features:
+              for line in lines(feat.get("geometry")):
                   m = [xy_m(c) for c in line]
                   for a, b in zip(m, m[1:]):
-                      d = point_seg_dist((0.0,0.0), a, b)
-                      dists.append(d)
+                      d, qx, qy = closest_on_segment(a, b)
                       if closest is None or d < closest[0]:
-                          # Closest point on segment in local metres.
-                          ax, ay = a; bx, by = b
-                          dx, dy = bx-ax, by-ay
-                          if dx == 0 and dy == 0:
-                              t = 0.0
-                          else:
-                              t = max(0.0, min(1.0, (-(ax)*dx + -(ay)*dy)/(dx*dx+dy*dy)))
-                          qx, qy = ax+t*dx, ay+t*dy
-                          qlon = lon0 + qx/(111320.0*math.cos(math.radians(lat0)))
-                          qlat = lat0 + qy/111320.0
-                          closest = (d, qlat, qlon)
-
-          standing, standing_url = get("standingwater", 0.01)
-          courses, courses_url = get("watercourse", 0.01)
+                          qlon = lon0 + qx / (111320.0 * math.cos(math.radians(lat0)))
+                          qlat = lat0 + qy / 111320.0
+                          closest = (d, qlat, qlon, feat.get("properties", {}))
 
           print("LOW_PROBLEM_EPSG3067=199001,6905999")
           print(f"LOW_PROBLEM_CRS84={lat0:.9f},{lon0:.9f}")
           print(f"NLS_LANDWATERBOUNDARY_FEATURES_~5KM={len(features)}")
-          print("NLS_NEAREST_LANDWATERBOUNDARY_M=" +
-                (f"{min(dists):.3f}" if dists else "NONE"))
           print(f"NLS_STANDINGWATER_FEATURES_~1KM={len(standing.get('features', []))}")
           print(f"NLS_WATERCOURSE_FEATURES_~1KM={len(courses.get('features', []))}")
 
-          # Print compact properties from the closest-area shoreline features.
-          for i, f in enumerate(features[:10], 1):
-              p = f.get("properties", {})
-              print("BOUNDARY_FEATURE", i, json.dumps(p, ensure_ascii=False, sort_keys=True))
+          if closest is None:
+              raise SystemExit("No NLS land-water boundary found within ~5 km search bbox")
 
-          # Fail only if the authoritative service cannot provide any shoreline
-          # evidence in the local ~1 km search area.
-          if not features:
-              raise SystemExit("No NLS land-water boundary found within local search bbox")
+          print(f"NLS_NEAREST_LANDWATERBOUNDARY_M={closest[0]:.3f}")
+          print(f"NLS_CLOSEST_BOUNDARY_CRS84={closest[1]:.9f},{closest[2]:.9f}")
+          print(f"NLS_CLOSEST_BOUNDARY_EAST_OF_POINT={closest[2] > lon0}")
+          print("NLS_CLOSEST_BOUNDARY_PROPERTIES=" +
+                json.dumps(closest[3], ensure_ascii=False, sort_keys=True))
