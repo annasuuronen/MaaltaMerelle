@@ -122,6 +122,18 @@ for (ii in seq_along(component_ids_k2)) {
       setequal(flat_keys, gate_keys)
   )
 
+  flat_water_mismatch_supported_by_lower_river_exit <- (
+    !flat_agrees &&
+      length(gate_keys) == 1L &&
+      grepl("^LAKE:[0-9]+$", gate_keys[1]) &&
+      identical(flat_keys, "RIVER_LINE") &&
+      flat_lower > 0 &&
+      flat_other == 0 &&
+      flat_untraced == 0 &&
+      !flat_edge &&
+      !isTRUE(gs$touches_raster_edge[1])
+  )
+
   component_rows_k2[[ii]] <- data.frame(
     depression_component_id=did,
     gate_level_m=as.numeric(gs$gate_level_m[1]),
@@ -130,6 +142,8 @@ for (ii in seq_along(component_ids_k2)) {
     n_flat_target_keys=length(flat_keys),
     flat_target_keys=if(length(flat_keys)) paste(flat_keys, collapse=";") else "",
     flat_water_agrees_with_gate=flat_agrees,
+    flat_water_mismatch_supported_by_lower_river_exit=
+      flat_water_mismatch_supported_by_lower_river_exit,
     n_flat_lower_escape_edges=flat_lower,
     n_flat_other_depression_edges=flat_other,
     n_flat_untraced_level_land_edges=flat_untraced,
@@ -471,10 +485,46 @@ cat("===============================================\n")
 stopifnot(
   nrow(component_resolution_02d7k2) == length(component_ids_k2),
   !anyDuplicated(component_resolution_02d7k2$depression_component_id),
-  all(component_resolution_02d7k2$flat_water_agrees_with_gate),
+  all(
+    component_resolution_02d7k2$flat_water_agrees_with_gate |
+      component_resolution_02d7k2$flat_water_mismatch_supported_by_lower_river_exit
+  ),
   nrow(link_resolution_02d7k2) == nrow(links_k2),
   !any(link_resolution_02d7k2$link_resolution == "REVIEW")
 )
+
+# LOW E200000_N6900000 regression lock: this lake/river-line identity
+# difference has a traced lower escape and remains an external candidate.
+if (identical(TEST_ID, "E200000_N6900000")) {
+  low_component_k2 <- component_resolution_02d7k2[
+    component_resolution_02d7k2$depression_component_id == 396,
+    ,
+    drop=FALSE
+  ]
+  low_links_k2 <- link_resolution_02d7k2[
+    link_resolution_02d7k2$depression_component_id == 396,
+    ,
+    drop=FALSE
+  ]
+
+  stopifnot(
+    nrow(low_component_k2) == 1L,
+    abs(low_component_k2$gate_level_m[1] - 0.370) < 1e-6,
+    low_component_k2$gate_target_keys[1] == "LAKE:1892",
+    low_component_k2$flat_target_keys[1] == "RIVER_LINE",
+    !low_component_k2$flat_water_agrees_with_gate[1],
+    isTRUE(low_component_k2$flat_water_mismatch_supported_by_lower_river_exit[1]),
+    low_component_k2$n_flat_lower_escape_edges[1] == 1L,
+    low_component_k2$n_flat_other_depression_edges[1] == 0L,
+    low_component_k2$n_flat_untraced_level_land_edges[1] == 0L,
+    !low_component_k2$touches_raster_edge[1],
+    nrow(low_links_k2) == 1L,
+    low_links_k2$link_resolution[1] == "EXTERNAL_CANDIDATE",
+    sum(link_resolution_02d7k2$link_resolution == "ORIGIN_RETURN_ONLY") == 195L,
+    sum(link_resolution_02d7k2$link_resolution == "EXTERNAL_CANDIDATE") == 1L,
+    sum(link_resolution_02d7k2$link_resolution == "REVIEW") == 0L
+  )
+}
 
 # TEST_SULKU_11 regression lock; these observed values do not define the method.
 hydro_sulku11_regression_assert(

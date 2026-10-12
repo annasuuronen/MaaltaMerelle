@@ -89,5 +89,9 @@ Run portability checks with:
 Rscript tests/portability.R
 ```
 
+The LOW transfer workflow also locks the 02D.7K component 396 case: its
+`LAKE:1892` gate and `RIVER_LINE` flat-trace evidence are kept distinct, while
+the separately traced lower escape remains one `EXTERNAL_CANDIDATE`.
+
 The GitHub Actions workflow tests only the baseline lake/outlet/routing path in
 this branch. Structures are deliberately deferred to a later version.
