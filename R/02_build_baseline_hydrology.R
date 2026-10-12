@@ -5566,39 +5566,111 @@ for (i in seq_along(target_dep_ids)) {
     boundary[, 2]
   )
 
-  # NoData is not a spill gate. Diagnose boundary-vs-interior
-  # missing elevations and fail closed without inferring an outlet.
-  nonfinite <- !is.finite(source_storage_z) |
-    !is.finite(receiver_storage_z)
-  if (any(nonfinite)) {
-    bad <- which(nonfinite)
-    source <- boundary[bad, 1]
-    receiver <- boundary[bad, 2]
-    edge <- is_edge_cell(depression_components, source) |
-      is_edge_cell(depression_components, receiver)
-    sample <- head(bad, 100L)
+  # A raised depression source must always have a finite routing
+  # elevation. Missing receiver elevations are handled conservatively:
+  # only raw-DEM NoData receiver boundary components that are themselves
+  # 8-neighbour connected to the raster edge are accepted as DOMAIN_EXIT
+  # evidence. Interior NoData and storage-only NoData remain hard failures.
+  source_nonfinite <- !is.finite(source_storage_z)
+  receiver_nonfinite <- !is.finite(receiver_storage_z)
+  domain_exit_edge <- rep(FALSE, nrow(boundary))
+
+  if (any(source_nonfinite)) {
+    stop(sprintf(
+      "02D.5 component %s: %d nonfinite source elevations; no outlet inferred",
+      did, sum(source_nonfinite)
+    ))
+  }
+
+  if (any(receiver_nonfinite)) {
+
+    bad <- which(receiver_nonfinite)
+    bad_receiver <- as.integer(boundary[bad, 2])
+    raw_receiver_z <- cell_values(dem, bad_receiver)
+    raw_nodata <- !is.finite(raw_receiver_z)
+
+    exit_by_bad <- rep(FALSE, length(bad))
+
+    if (any(raw_nodata)) {
+
+      candidate_cells <- sort(unique(bad_receiver[raw_nodata]))
+
+      candidate_components <- make_components(
+        candidate_cells,
+        depression_components
+      )
+
+      candidate_component_ids <- sort(unique(candidate_components))
+
+      component_touches_edge <- vapply(
+        candidate_component_ids,
+        function(cid) {
+          cc <- candidate_cells[
+            candidate_components[
+              as.character(candidate_cells)
+            ] == cid
+          ]
+          any(is_edge_cell(depression_components, cc))
+        },
+        logical(1)
+      )
+
+      names(component_touches_edge) <-
+        as.character(candidate_component_ids)
+
+      bad_component <- candidate_components[
+        as.character(bad_receiver[raw_nodata])
+      ]
+
+      exit_by_bad[raw_nodata] <-
+        component_touches_edge[
+          as.character(bad_component)
+        ]
+    }
+
+    domain_exit_edge[bad[exit_by_bad]] <- TRUE
+    unresolved <- bad[!exit_by_bad]
+
+    sample <- head(bad, 200L)
+    sample_match <- match(sample, bad)
+
     qa_file <- file.path(
       DIR_02,
       sprintf("02D5_nonfinite_boundary_component_%s.csv", did)
     )
+
     write.csv(
       data.frame(
         depression_component_id = did,
         nonfinite_edges = length(bad),
-        raster_edge_edges = sum(edge),
-        interior_edges = sum(!edge),
+        domain_exit_edges = sum(exit_by_bad),
+        unresolved_edges = length(unresolved),
         source_cell = boundary[sample, 1],
         receiver_cell = boundary[sample, 2],
         source_storage_z = source_storage_z[sample],
         receiver_storage_z = receiver_storage_z[sample],
         source_original_z = source_original_z[sample],
-        receiver_original_z = receiver_original_z[sample]
+        receiver_original_z = receiver_original_z[sample],
+        receiver_raw_dem_z = raw_receiver_z[sample_match],
+        receiver_is_domain_exit = exit_by_bad[sample_match]
       ),
-      qa_file, row.names = FALSE
+      qa_file,
+      row.names = FALSE
     )
-    stop(sprintf(
-      "02D.5 component %s: %d nonfinite boundary edges (%d edge, %d interior); no outlet inferred. See %s",
-      did, length(bad), sum(edge), sum(!edge), basename(qa_file)
+
+    if (length(unresolved) > 0) {
+      stop(sprintf(
+        paste0(
+          "02D.5 component %s: %d / %d nonfinite receiver edges are not ",
+          "edge-connected raw-DEM NoData; no outlet inferred. See %s"
+        ),
+        did, length(unresolved), length(bad), basename(qa_file)
+      ))
+    }
+
+    cat(sprintf(
+      "\n02D.5 component %s: classified %d edge-connected raw-DEM NoData edges as DOMAIN_EXIT evidence",
+      did, sum(domain_exit_edge)
     ))
   }
 
@@ -5606,14 +5678,22 @@ for (i in seq_along(target_dep_ids)) {
   # ----------------------------------------------------------
   # 113E. CROSSING LEVEL
   #
-  # D8 edge can cross only when both sides are at or below
-  # this level.
+  # Finite D8 edges can cross only when both sides are at or below
+  # this level. For a validated DOMAIN_EXIT edge the outside terrain
+  # elevation is deliberately unknown, so the boundary source level
+  # is retained as evidence without inventing a receiver elevation.
   # ----------------------------------------------------------
 
   edge_crossing_level <- pmax(
     source_storage_z,
     receiver_storage_z
   )
+
+  edge_crossing_level[
+    domain_exit_edge
+  ] <- source_storage_z[
+    domain_exit_edge
+  ]
 
   min_gate_level <- min(
     edge_crossing_level,
@@ -5667,6 +5747,14 @@ for (i in seq_along(target_dep_ids)) {
   gate_receiver_type[
     gate_receiver_class == 3
   ] <- "RIVER_LINE"
+
+  gate_domain_exit <- domain_exit_edge[
+    is_min_gate
+  ]
+
+  gate_receiver_type[
+    gate_domain_exit
+  ] <- "DOMAIN_EXIT"
 
 
   # ----------------------------------------------------------
@@ -5818,14 +5906,16 @@ for (i in seq_along(target_dep_ids)) {
       gate_receiver_storage,
 
     edge_crossing_level_m =
-      pmax(
-        gate_source_storage,
-        gate_receiver_storage
-      ),
+      edge_crossing_level[
+        is_min_gate
+      ],
 
     storage_drop_m =
       gate_source_storage -
       gate_receiver_storage,
+
+    is_domain_exit =
+      gate_domain_exit,
 
     stringsAsFactors = FALSE
   )
@@ -5930,6 +6020,12 @@ for (i in seq_along(target_dep_ids)) {
             "LAKE"
         ),
 
+      n_domain_exit_edges =
+        sum(
+          gx$receiver_type ==
+            "DOMAIN_EXIT"
+        ),
+
       receiver_lake_objectids =
         if (
           length(receiver_lakes) == 0
@@ -5946,16 +6042,18 @@ for (i in seq_along(target_dep_ids)) {
         min_gate_level,
 
       min_storage_drop_m =
-        min(
-          gx$storage_drop_m,
-          na.rm = TRUE
-        ),
+        if (any(is.finite(gx$storage_drop_m))) {
+          min(gx$storage_drop_m[is.finite(gx$storage_drop_m)])
+        } else {
+          NA_real_
+        },
 
       max_storage_drop_m =
-        max(
-          gx$storage_drop_m,
-          na.rm = TRUE
-        ),
+        if (any(is.finite(gx$storage_drop_m))) {
+          max(gx$storage_drop_m[is.finite(gx$storage_drop_m)])
+        } else {
+          NA_real_
+        },
 
       touches_raster_edge =
         any(
@@ -6391,15 +6489,28 @@ gate_escape$receiver_below_gate_m <-
 gate_escape$receiver_relation <- "LEVEL"
 
 gate_escape$receiver_relation[
-  gate_escape$receiver_original_z_m <
-    gate_escape$edge_crossing_level_m -
-    escape_tol_m
+  gate_escape$receiver_type ==
+    "DOMAIN_EXIT"
+] <- "DOMAIN_EXIT"
+
+finite_gate_receiver <- is.finite(
+  gate_escape$receiver_original_z_m
+) &
+  gate_escape$receiver_type !=
+    "DOMAIN_EXIT"
+
+gate_escape$receiver_relation[
+  finite_gate_receiver &
+    gate_escape$receiver_original_z_m <
+      gate_escape$edge_crossing_level_m -
+      escape_tol_m
 ] <- "LOWER"
 
 gate_escape$receiver_relation[
-  gate_escape$receiver_original_z_m >
-    gate_escape$edge_crossing_level_m +
-    escape_tol_m
+  finite_gate_receiver &
+    gate_escape$receiver_original_z_m >
+      gate_escape$edge_crossing_level_m +
+      escape_tol_m
 ] <- "ABOVE"
 
 
@@ -6488,13 +6599,22 @@ for (i in seq_along(gid)) {
     x$receiver_relation == "ABOVE"
   )
 
+  n_domain_exit <- sum(
+    x$receiver_relation == "DOMAIN_EXIT"
+  )
+
   n_water <- sum(
-    x$receiver_type != "LAND"
+    x$receiver_type %in%
+      c("LAKE", "RIVER_AREA", "RIVER_LINE")
   )
 
   if (n_lower > 0) {
 
     evidence_class <- "DIRECT_LOWER_ESCAPE"
+
+  } else if (n_domain_exit > 0) {
+
+    evidence_class <- "DOMAIN_EXIT"
 
   } else if (n_water > 0) {
 
@@ -6526,6 +6646,9 @@ for (i in seq_along(gid)) {
 
     n_above_edges =
       n_above,
+
+    n_domain_exit_edges =
+      n_domain_exit,
 
     n_land_edges =
       sum(
@@ -6636,6 +6759,12 @@ for (i in seq_along(did)) {
           "DIRECT_WATER_CONTACT"
       ),
 
+    groups_domain_exit =
+      sum(
+        x$evidence_class ==
+          "DOMAIN_EXIT"
+      ),
+
     groups_level_land_only =
       sum(
         x$evidence_class ==
@@ -6706,6 +6835,11 @@ n_group_water <- sum(
     "DIRECT_WATER_CONTACT"
 )
 
+n_group_domain_exit <- sum(
+  gate_escape_groups$evidence_class ==
+    "DOMAIN_EXIT"
+)
+
 n_group_level <- sum(
   gate_escape_groups$evidence_class ==
     "LEVEL_LAND_ONLY"
@@ -6717,6 +6851,10 @@ n_dep_with_lower <- sum(
 
 n_dep_with_water <- sum(
   dep_escape_summary$groups_direct_water > 0
+)
+
+n_dep_with_domain_exit <- sum(
+  dep_escape_summary$groups_domain_exit > 0
 )
 
 n_dep_all_level <- sum(
@@ -6762,6 +6900,11 @@ cat(sprintf(
 ))
 
 cat(sprintf(
+  "Gate groups DOMAIN_EXIT       : %d\n",
+  n_group_domain_exit
+))
+
+cat(sprintf(
   "Gate groups LEVEL_LAND_ONLY   : %d\n",
   n_group_level
 ))
@@ -6775,6 +6918,12 @@ cat(sprintf(
 cat(sprintf(
   "Depressions with water contact: %d / %d\n",
   n_dep_with_water,
+  nrow(dep_escape_summary)
+))
+
+cat(sprintf(
+  "Depressions with domain exit  : %d / %d\n",
+  n_dep_with_domain_exit,
   nrow(dep_escape_summary)
 ))
 
