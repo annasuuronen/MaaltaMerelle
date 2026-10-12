@@ -21,15 +21,19 @@ jobs:
         run: |
           import json, math, urllib.parse, urllib.request
 
-          # First sampled nonfinite receiver from LOW 02D.5 diagnostic:
-          # E=199001, N=6905999 (EPSG:3067), transformed to CRS84.
+          # First sampled nonfinite receiver from LOW 02D.5 diagnostic.
           lat0 = 62.16488417998065
           lon0 = 21.216456092353763
 
+          # Published Kristiinankaupunki guest-harbour coordinate, used only
+          # as a control that the NLS shoreline query returns local features.
+          ctrl_lat = 62.271666667
+          ctrl_lon = 21.383333333
+
           base = "https://avoin-paikkatieto.maanmittauslaitos.fi/inspire-hydrography/features/v1/collections"
 
-          def get(collection, pad):
-              bbox = f"{lon0-pad},{lat0-pad},{lon0+pad},{lat0+pad}"
+          def get(collection, lat, lon, pad):
+              bbox = f"{lon-pad},{lat-pad},{lon+pad},{lat+pad}"
               url = f"{base}/{collection}/items?" + urllib.parse.urlencode({
                   "bbox": bbox,
                   "limit": 100,
@@ -75,13 +79,32 @@ jobs:
                   for g in geom.get("geometries", []):
                       yield from lines(g)
 
-          coast = get("landwaterboundary", 0.05)
-          standing = get("standingwater", 0.01)
-          courses = get("watercourse", 0.01)
+          ctrl = get("landwaterboundary", ctrl_lat, ctrl_lon, 0.01)
+          print(f"NLS_CONTROL_HARBOUR_BOUNDARIES={len(ctrl.get('features', []))}")
 
-          features = coast.get("features", [])
+          coast = None
+          used_pad = None
+          for pad in (0.06, 0.10, 0.15, 0.20, 0.25):
+              z = get("landwaterboundary", lat0, lon0, pad)
+              print(f"NLS_PROBLEM_BOUNDARIES_PAD_{pad:.2f}={len(z.get('features', []))}")
+              if z.get("features"):
+                  coast = z
+                  used_pad = pad
+                  break
+
+          standing = get("standingwater", lat0, lon0, 0.01)
+          courses = get("watercourse", lat0, lon0, 0.01)
+
+          print("LOW_PROBLEM_EPSG3067=199001,6905999")
+          print(f"LOW_PROBLEM_CRS84={lat0:.9f},{lon0:.9f}")
+          print(f"NLS_STANDINGWATER_FEATURES_~1KM={len(standing.get('features', []))}")
+          print(f"NLS_WATERCOURSE_FEATURES_~1KM={len(courses.get('features', []))}")
+
+          if coast is None:
+              raise SystemExit("No NLS land-water boundary found in expanding search")
+
           closest = None
-          for feat in features:
+          for feat in coast.get("features", []):
               for line in lines(feat.get("geometry")):
                   m = [xy_m(c) for c in line]
                   for a, b in zip(m, m[1:]):
@@ -91,15 +114,10 @@ jobs:
                           qlat = lat0 + qy / 111320.0
                           closest = (d, qlat, qlon, feat.get("properties", {}))
 
-          print("LOW_PROBLEM_EPSG3067=199001,6905999")
-          print(f"LOW_PROBLEM_CRS84={lat0:.9f},{lon0:.9f}")
-          print(f"NLS_LANDWATERBOUNDARY_FEATURES_~5KM={len(features)}")
-          print(f"NLS_STANDINGWATER_FEATURES_~1KM={len(standing.get('features', []))}")
-          print(f"NLS_WATERCOURSE_FEATURES_~1KM={len(courses.get('features', []))}")
-
           if closest is None:
-              raise SystemExit("No NLS land-water boundary found within ~5 km search bbox")
+              raise SystemExit("NLS shoreline features returned without usable line geometry")
 
+          print(f"NLS_FIRST_NONEMPTY_SEARCH_PAD_DEG={used_pad:.2f}")
           print(f"NLS_NEAREST_LANDWATERBOUNDARY_M={closest[0]:.3f}")
           print(f"NLS_CLOSEST_BOUNDARY_CRS84={closest[1]:.9f},{closest[2]:.9f}")
           print(f"NLS_CLOSEST_BOUNDARY_EAST_OF_POINT={closest[2] > lon0}")
