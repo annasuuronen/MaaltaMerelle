@@ -12533,14 +12533,40 @@ source(file.path("R", "02D7J_non_target_raised_level_flat_trace.R"))
 # 02D.7K: resolve non-target raised links as external vs origin-return evidence.
 source(file.path("R", "02D7K_non_target_raised_link_resolution.R"))
 
-# 02E preserves every 02D.8 spill group as evidence; it does not select outlets.
+# 02E marks all eligible parallel spill groups; it does not select one outlet.
 source(file.path("R", "02E_water_connected_candidates.R"))
 water_connected_candidate_tables_02e <-
   build_water_connected_candidate_tables(out)
+water_connected_candidate_edges_02e <-
+  build_water_connected_candidate_edges(
+    water_connected_candidate_tables_02e$candidate_evidence,
+    low_shore_edges
+  )
+water_connected_candidate_masks_02e <-
+  run_water_connected_candidate_mask_qa(
+    water_connected_candidate_edges_02e$edges,
+    dem,
+    DIR_02,
+    OVERWRITE,
+    cell_values
+  )
+water_connected_candidate_qa_02e <- rbind(
+  water_connected_candidate_tables_02e$qa,
+  water_connected_candidate_edges_02e$qa,
+  water_connected_candidate_masks_02e$qa
+)
+if (!all(water_connected_candidate_qa_02e$pass)) {
+  stop("02E candidate QA failed.")
+}
 
 write.csv(
   water_connected_candidate_tables_02e$candidate_evidence,
   file.path(DIR_02, "02E_water_connected_candidate_evidence.csv"),
+  row.names = FALSE
+)
+write.csv(
+  water_connected_candidate_edges_02e$edges,
+  file.path(DIR_02, "02E_water_connected_candidate_spill_edges.csv"),
   row.names = FALSE
 )
 write.csv(
@@ -12549,7 +12575,7 @@ write.csv(
   row.names = FALSE
 )
 write.csv(
-  water_connected_candidate_tables_02e$qa,
+  water_connected_candidate_qa_02e,
   file.path(DIR_02, "02E_water_connected_QA.csv"),
   row.names = FALSE
 )
@@ -12560,9 +12586,16 @@ cat("Candidate spill groups       :",
 cat("Lakes with candidate groups  :",
     nrow(water_connected_candidate_tables_02e$lake_summary), "\n")
 cat("External-evidence candidates :",
-    sum(water_connected_candidate_tables_02e$lake_summary$n_external_evidence_candidates),
+    sum(water_connected_candidate_tables_02e$lake_summary$n_included_parallel_candidates),
     "\n")
 cat("Groups requiring review     :",
     sum(water_connected_candidate_tables_02e$lake_summary$n_review_required), "\n")
-cat("Outlet selection            : UNASSIGNED\n")
+cat("Parallel candidate edges    :",
+    nrow(water_connected_candidate_edges_02e$edges), "\n")
+cat("Source mask cells           :",
+    water_connected_candidate_masks_02e$source_cell_count, "\n")
+cat("Receiver mask cells         :",
+    water_connected_candidate_masks_02e$receiver_cell_count, "\n")
+cat("Outlet selection            : UNASSIGNED; DEM unchanged\n")
 cat("02E HARD QA: PASS\n")
+cat("02E CANDIDATE MASK QA: PASS\n")

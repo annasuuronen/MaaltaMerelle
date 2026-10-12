@@ -146,6 +146,7 @@ jobs:
             "02D.7K HARD QA: PASS"
             "02D.8 HARD QA: PASS"
             "02E HARD QA: PASS"
+            "02E CANDIDATE MASK QA: PASS"
           )
 
           for marker in "${required_markers[@]}"; do
@@ -204,6 +205,7 @@ jobs:
             hydro02.log
             runs/TEST_SULKU_11/01_inputs/*.csv
             runs/TEST_SULKU_11/02_baseline/*.csv
+            runs/TEST_SULKU_11/02_baseline/02E_water_connected_candidate_*_mask.tif
 
       - name: Publish text QA results
         if: always()

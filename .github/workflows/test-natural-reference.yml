@@ -125,6 +125,7 @@ jobs:
           set -euo pipefail
           Rscript R/02_build_baseline_hydrology.R 2>&1 | tee hydro02.log
           test "$(grep -Fxc '02E HARD QA: PASS' hydro02.log || true)" -eq 1
+          test "$(grep -Fxc '02E CANDIDATE MASK QA: PASS' hydro02.log || true)" -eq 1
 
       - name: Upload NATURAL QA
         if: always()
@@ -140,3 +141,4 @@ jobs:
             data/E0560000_N7690000/00A_validation_fixture_QA.csv
             runs/E0560000_N7690000/01_inputs/*.csv
             runs/E0560000_N7690000/02_baseline/*.csv
+            runs/E0560000_N7690000/02_baseline/02E_water_connected_candidate_*_mask.tif

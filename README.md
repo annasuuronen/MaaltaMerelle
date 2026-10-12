@@ -23,10 +23,16 @@ The planned sequence is:
 9. proceed to CSC and national baseline runs after validation.
 
 The current implementation reaches 02D.8 spill/escape evidence and 02E
-candidate QA. 02E preserves each spill group and explicitly leaves
-`outlet_selection` as `UNASSIGNED`; it does not build a routing surface or
-change pointers. Final outlet selection, the WATER_CONNECTED surface, final
-D8, and flow accumulation are not yet implemented.
+candidate QA. 02E includes every spill group with external evidence and no
+review flag as a parallel candidate, preserves all of its lowest-spill shore
+edges, and leaves `outlet_selection` as `UNASSIGNED`. It writes source- and
+receiver-cell masks for those edges and verifies that they match the
+evidence (no masks are emitted when there are no eligible edges). These masks
+stop at the lake shore spill edge: they do not prove a downstream route,
+modify DEM elevations, alter D8 pointers, or constitute a routing surface.
+Any `REVIEW_REQUIRED` group is excluded from the masks; a final
+WATER_CONNECTED routing surface remains unimplemented until downstream paths
+are validated and review cases are resolved.
 
 No dam, lock or other structure input is required or tested in this branch.
 There is no structure-based routing override in this version.

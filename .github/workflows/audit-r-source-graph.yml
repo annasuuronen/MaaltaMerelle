@@ -107,7 +107,7 @@ jobs:
             echo "R source dependency audit: PASS"
             echo "All statically resolved R source targets exist."
             echo "No recursive source cycles detected."
-            echo "02D.8 final evidence and 02E candidate stages are connected."
+            echo "02D.8 final evidence and 02E candidate-mask stages are connected."
           } > R_SOURCE_GRAPH_AUDIT.txt
 
       - name: Upload audit

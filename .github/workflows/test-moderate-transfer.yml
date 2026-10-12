@@ -103,6 +103,7 @@ jobs:
           Rscript R/02_build_baseline_hydrology.R 2>&1 | tee moderate02.log
           test "$(grep -Fxc '02D.8 HARD QA: PASS' moderate02.log || true)" -eq 1
           test "$(grep -Fxc '02E HARD QA: PASS' moderate02.log || true)" -eq 1
+          test "$(grep -Fxc '02E CANDIDATE MASK QA: PASS' moderate02.log || true)" -eq 1
 
       - name: Upload MODERATE QA
         if: always()
@@ -118,3 +119,4 @@ jobs:
             data/E0510000_N7620000/00A_validation_fixture_QA.csv
             runs/E0510000_N7620000/01_inputs/*.csv
             runs/E0510000_N7620000/02_baseline/*.csv
+            runs/E0510000_N7620000/02_baseline/02E_water_connected_candidate_*_mask.tif
