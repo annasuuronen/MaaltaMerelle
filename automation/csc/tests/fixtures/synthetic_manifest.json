@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "document_type": "csc_run_manifest",
+  "repository": "annasuuronen/MaaltaMerelle",
+  "repository_id": 1407101587,
+  "branch": "baseline-no-structures",
+  "request_state": "READY_FOR_REVIEW",
+  "run_id": "00000000-0000-4000-8000-000000000001",
+  "created_at_utc": "2026-10-15T08:00:00Z",
+  "commit_sha": "feee323ca8d236ea004f7730b1d1d985ca9c4bf1",
+  "run_type": "READ_EXISTING_CSC_REPORTS",
+  "template_id": "existing_csc_reports/v1",
+  "parameters_version": "existing_reports/v1",
+  "approval_record_ref": "approval:synthetic-review-only",
+  "inputs": [
+    {
+      "input_id": "synthetic-qa",
+      "storage_ref": {
+        "root_id": "CSC_HYDRO_4BBF22B",
+        "relative_path": "reports/synthetic-qa.csv"
+      },
+      "sha256": "d1465212fb7b623ba6ac9216f33bc68ef401e93f84c40d40e7a3ec57bbf34811",
+      "checksum_basis": "EXPECTED",
+      "required": true
+    }
+  ],
+  "parameters": {
+    "max_file_bytes": 5242880,
+    "max_total_bytes": 26214400,
+    "require_job_id_match": true,
+    "require_commit_match": true
+  },
+  "slurm_caps": {
+    "submission_enabled": false,
+    "max_new_jobs": 0,
+    "nodes": 0,
+    "cpus": 0,
+    "memory_mib": 0,
+    "walltime_seconds": 0,
+    "array_tasks": 0,
+    "max_retries": 0
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0",
+  "document_type": "csc_evidence_report",
+  "repository": "annasuuronen/MaaltaMerelle",
+  "repository_id": 1407101587,
+  "branch": "baseline-no-structures",
+  "report_id": "00000000-0000-4000-8000-000000000002",
+  "run_id": "00000000-0000-4000-8000-000000000001",
+  "manifest_fingerprint": "4de92f3750da3dfb4dddadd717d82f0468063663ca5751a5288123e45ab9d985",
+  "commit_sha": "feee323ca8d236ea004f7730b1d1d985ca9c4bf1",
+  "observed_at_utc": "2026-10-15T08:01:00Z",
+  "reader_version": "synthetic-reader-v1",
+  "parser_version": "existing_reports/v1",
+  "sources": [
+    {
+      "source_id": "synthetic-qa",
+      "storage_ref": {
+        "root_id": "CSC_HYDRO_4BBF22B",
+        "relative_path": "reports/synthetic-qa.csv"
+      },
+      "sha256": "d1465212fb7b623ba6ac9216f33bc68ef401e93f84c40d40e7a3ec57bbf34811",
+      "checksum_basis": "REPORTED",
+      "availability": "AVAILABLE",
+      "size_bytes": 48
+    }
+  ],
+  "jobs": [
+    {
+      "job_id": "123456",
+      "array_task_id": null,
+      "step_id": null,
+      "scheduler_state": "COMPLETED",
+      "scheduler_state_raw": "COMPLETED",
+      "exit_code": {
+        "status": 0,
+        "signal": 0,
+        "raw": "0:0"
+      },
+      "started_at_utc": "2026-10-14T10:00:00Z",
+      "ended_at_utc": "2026-10-14T10:10:00Z",
+      "evidence_refs": [
+        {
+          "source_id": "synthetic-qa",
+          "locator": "CSV row 2"
+        }
+      ]
+    }
+  ],
+  "technical_qa": {
+    "status": "PASS",
+    "checks": [
+      {
+        "check_id": "D8_VALUE_COMPARISON",
+        "scope": "MODERATE synthetic 36000000 cells",
+        "status": "PASS",
+        "assessment": "REPORTED_ONLY",
+        "metrics": [
+          {
+            "name": "cells_compared",
+            "value": 36000000,
+            "unit": "cells"
+          }
+        ],
+        "evidence_refs": [
+          {
+            "source_id": "synthetic-qa",
+            "locator": "CSV row 2"
+          }
+        ]
+      }
+    ]
+  },
+  "input_artifacts": [],
+  "output_artifacts": [],
+  "missing_files": [],
+  "diagnostics": {
+    "test_id": "MODERATE",
+    "positive_threshold_no_component_lakes": 52
+  },
+  "scientific_review_state": "REVIEW_REQUIRED",
+  "needs_review": true,
+  "review_reasons": [
+    "POSITIVE_SHORE_THRESHOLD_NO_OBSERVED_RAISE",
+    "SCIENTIFIC_REVIEW_NOT_PERFORMED"
+  ]
+}
