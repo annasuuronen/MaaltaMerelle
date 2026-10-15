@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:maaltamerelle:csc:run-manifest:1.0",
+  "title": "MaaltaMerelle CSC phase-1 read-only run manifest",
+  "type": "object",
+  "description": "Strict draft-2020-12 structural contract. Preflight separately checks completeness, identity, semantic fingerprint, paths, provenance and actual authorization. Validation never submits jobs. UTF-8 byte/file-size limits and duplicate JSON-key rejection are parser/runtime requirements.",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "document_type",
+    "repository",
+    "repository_id",
+    "branch",
+    "request_state",
+    "run_id",
+    "created_at_utc",
+    "commit_sha",
+    "run_type",
+    "template_id",
+    "parameters_version",
+    "approval_record_ref",
+    "inputs",
+    "parameters",
+    "slurm_caps"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "document_type": {
+      "type": "string",
+      "const": "csc_run_manifest"
+    },
+    "repository": {
+      "type": "string",
+      "const": "annasuuronen/MaaltaMerelle"
+    },
+    "repository_id": {
+      "type": "integer",
+      "const": 1407101587
+    },
+    "branch": {
+      "type": "string",
+      "const": "baseline-no-structures"
+    },
+    "request_state": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "READY_FOR_REVIEW"
+      ],
+      "description": "READY_FOR_REVIEW is a document state, not human approval or authorization to read/execute anything."
+    },
+    "run_id": {
+      "$ref": "#/$defs/uuid"
+    },
+    "created_at_utc": {
+      "$ref": "#/$defs/utc_datetime"
+    },
+    "commit_sha": {
+      "$ref": "#/$defs/commit_sha"
+    },
+    "run_type": {
+      "type": "string",
+      "const": "READ_EXISTING_CSC_REPORTS",
+      "description": "Phase 1 only inventories and parses existing small report files. It never launches hydrology, Slurm jobs, shells or arbitrary programs."
+    },
+    "template_id": {
+      "type": "string",
+      "const": "existing_csc_reports/v1",
+      "description": "An allowlisted parser identifier, never a script path or command."
+    },
+    "parameters_version": {
+      "type": "string",
+      "const": "existing_reports/v1"
+    },
+    "approval_record_ref": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 209,
+          "pattern": "^approval:[A-Za-z0-9][A-Za-z0-9._:/#-]{0,199}$"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Opaque reference to independently verifiable user authorization. A draft may use null. The reference and document state do not establish that a real approval exists or matches this manifest."
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "description": "Unique input IDs and truthful checksum bindings are enforced semantically. Null digests are draft gaps, not invented checksum evidence.",
+        "additionalProperties": false,
+        "required": [
+          "input_id",
+          "storage_ref",
+          "sha256",
+          "checksum_basis",
+          "required"
+        ],
+        "properties": {
+          "input_id": {
+            "$ref": "#/$defs/identifier64"
+          },
+          "storage_ref": {
+            "$ref": "#/$defs/report_storage_ref"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/sha256"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checksum_basis": {
+            "$ref": "#/$defs/checksum_basis"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_file_bytes",
+        "max_total_bytes",
+        "require_job_id_match",
+        "require_commit_match"
+      ],
+      "properties": {
+        "max_file_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5242880
+        },
+        "max_total_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 26214400
+        },
+        "require_job_id_match": {
+          "type": "boolean",
+          "const": true
+        },
+        "require_commit_match": {
+          "type": "boolean",
+          "const": true
+        }
+      }
+    },
+    "slurm_caps": {
+      "type": "object",
+      "description": "All launch capabilities are disabled in phase 1. Historical job resource usage is separate evidence.",
+      "additionalProperties": false,
+      "required": [
+        "submission_enabled",
+        "max_new_jobs",
+        "nodes",
+        "cpus",
+        "memory_mib",
+        "walltime_seconds",
+        "array_tasks",
+        "max_retries"
+      ],
+      "properties": {
+        "submission_enabled": {
+          "type": "boolean",
+          "const": false
+        },
+        "max_new_jobs": {
+          "type": "integer",
+          "const": 0
+        },
+        "nodes": {
+          "type": "integer",
+          "const": 0
+        },
+        "cpus": {
+          "type": "integer",
+          "const": 0
+        },
+        "memory_mib": {
+          "type": "integer",
+          "const": 0
+        },
+        "walltime_seconds": {
+          "type": "integer",
+          "const": 0
+        },
+        "array_tasks": {
+          "type": "integer",
+          "const": 0
+        },
+        "max_retries": {
+          "type": "integer",
+          "const": 0
+        }
+      },
+      "const": {
+        "submission_enabled": false,
+        "max_new_jobs": 0,
+        "nodes": 0,
+        "cpus": 0,
+        "memory_mib": 0,
+        "walltime_seconds": 0,
+        "array_tasks": 0,
+        "max_retries": 0
+      }
+    }
+  },
+  "$defs": {
+    "identifier64": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "minLength": 36,
+      "maxLength": 36,
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "commit_sha": {
+      "type": "string",
+      "minLength": 40,
+      "maxLength": 40,
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "utc_datetime": {
+      "type": "string",
+      "format": "date-time",
+      "minLength": 20,
+      "maxLength": 30,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,9})?Z$",
+      "description": "UTC timestamp ending in Z; unknown source timezones must not be guessed."
+    },
+    "storage_ref": {
+      "type": "object",
+      "description": "A location reference is data, not an instruction, command or filesystem permission.",
+      "additionalProperties": false,
+      "required": [
+        "root_id",
+        "relative_path"
+      ],
+      "properties": {
+        "root_id": {
+          "type": "string",
+          "const": "CSC_HYDRO_4BBF22B"
+        },
+        "relative_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[A-Za-z0-9_-][A-Za-z0-9._-]*(/[A-Za-z0-9_-][A-Za-z0-9._-]*)*$",
+          "description": "Relative safe ASCII segments beneath the trusted root registry entry. No absolute paths, dot segments, globs or shell syntax. Runtime must also reject symlink/root escapes."
+        }
+      }
+    },
+    "checksum_basis": {
+      "type": "string",
+      "enum": [
+        "MEASURED",
+        "REPORTED",
+        "EXPECTED",
+        "UNKNOWN"
+      ],
+      "description": "MEASURED is calculated from the exact bytes read; REPORTED is a source claim; EXPECTED is a comparison target. Reported/expected raster hashes are not freshly measured raster evidence."
+    },
+    "report_storage_ref": {
+      "type": "object",
+      "description": "Read-only small reports and historical job-ID files; no raster reads or execution.",
+      "additionalProperties": false,
+      "required": [
+        "root_id",
+        "relative_path"
+      ],
+      "properties": {
+        "root_id": {
+          "type": "string",
+          "const": "CSC_HYDRO_4BBF22B"
+        },
+        "relative_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\\.(?:log|txt|csv|json|jobid)|jobid|slurm_jobid)$",
+          "description": "Relative safe ASCII segments beneath the trusted root registry entry. No absolute paths, dot segments, globs or shell syntax. Runtime must also reject symlink/root escapes."
+        }
+      }
+    }
+  }
+}
