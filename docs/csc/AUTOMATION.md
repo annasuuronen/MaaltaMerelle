@@ -58,7 +58,7 @@ Tarkistuksessa erotetaan ainakin:
 | Repositorio ja haara | Vain `annasuuronen/MaaltaMerelle`, ID `1407101587`, `baseline-no-structures`. |
 | Lähdecommit | Raporttien tuottamiseen käytetyn hydrologiakoodin tarkka identiteetti. |
 | Manifesti ja tiivisteet | Tarkasteltavan paketin sekä nimettyjen tiedostojen täsmälliset tavut. |
-| Raporttipolut ja kokorajat | Yksilöidyt pienet raportit hyväksytyn hakemistorajan sisällä. |
+| Raporttipolut ja kokorajat | Lukittu juuritunniste, suhteellisten polkujen syntaksirajat ja pienraporttien kokorajat; ei erillistä tiedostokohtaista sallittujen polkujen listaa. |
 | Resurssirajat | Tässä vaiheessa kaikki CSC-töiden ja uusintojen määrät ovat nollia. |
 | Valmiustila | Luonnoksen tila; ei hyväksyntä. |
 | Raportin väitteet | Lähde, työ-ID, havainto, QA ja epävarmuudet erillisinä tietoina. |
@@ -71,10 +71,20 @@ eivät muutu hyväksyttäviksi valmiustilaa vaihtamalla.
 Polkuja käsitellään tietoina. Absoluuttiset siirtokohteet, hakemistorajan
 ylittäminen, `..`-osat, komentotulkille merkitykselliset polut ja
 symbolisten linkkien kautta tapahtuva rajan kierto eivät kuulu sopimukseen.
-Pelkkä `.csv`- tai `.log`-pääte ei riitä: siirrettävän tiedoston on oltava
-nimenomaisella sallittujen raporttien listalla ja kokorajojen sisällä.
-Rastereita, GeoPackageja, tunnustiedostoja, ympäristövedoksia tai kokonaisia
-CSC-hakemistoja ei siirretä tällä toiminnolla GitHubiin.
+Nykyinen tarkistin sallii juuritunnisteen `CSC_HYDRO_4BBF22B`, rajatut
+polkumerkit ja -osat sekä lähderaporteille päätteet `.log`, `.txt`, `.csv`,
+`.json` ja `.jobid` tai tiedostonimet `jobid` ja `slurm_jobid`.
+Se tarkistaa manifestin ja raportin lähdeviitteiden vastaavuuden sekä
+pyydettäessä paikallisten tiedostojen tavut kokorajojen sisällä.
+
+**Vaihe 1 ei toteuta erillistä tiedostokohtaista sallittujen raporttipolkujen
+listaa.** Kutsujan manifestiin kirjoittama polku ei ole riippumaton todiste
+siitä, että tiedosto on hyväksytty luettavaksi tai siirrettäväksi. Pelkkä
+sallittu tiedostopääte, juuritunniste tai sopimuksen läpäisy ei anna tätä
+lupaa. Varsinainen polkukohtainen sallittujen tiedostojen tarkistus on
+toteutettava ennen vaiheen 2 keruuta tai siirtoa jäljempänä kuvatulla tavalla.
+Vaiheessa 1 ei ole keruu- tai siirtotoimintoa; sillä ei siirretä rastereita,
+GeoPackageja, tunnustiedostoja, ympäristövedoksia tai CSC-hakemistoja GitHubiin.
 
 SHA256-tiiviste sitoo tarkastelun tavuihin ja auttaa tunnistamaan muutokset
 sekä siirtovirheet. Samassa paketissa toimitettu tiiviste ei itsessään
@@ -224,7 +234,11 @@ ei uutta esivalmistelutyönkulkua. Yhdelläkään näistä ei ole PR-triggeriä.
 | `test-sulku-11.yml` | `R/**`, `tests/**`, oma tiedosto | Ei |
 | `verify-low-coastline.yml` | Oma tiedosto | Ei |
 
-Vanhoja 15 työnkulkua ei muokata eikä niiden triggereitä heikennetä.
+Tämä automaatiomuutos ei muokkaa vanhoja 15 työnkulkua eikä heikennä niiden
+triggereitä; säilyminen tarkistetaan tämän muutoksen diffistä lähtöcommittiin.
+Pysyvät turvallisuustestit tarkistavat työnkulkujen turvallisuusominaisuuksia,
+eivät lukitse vanhojen työnkulkujen sisältöä SHA256-tiivisteisiin. Myöhempi
+hyväksytty työnkulkumuutos edellyttää sen käynnistysriskien uutta arviota.
 `[skip ci]`-ohitusta ei käytetä. Muutoksen polut ovat `automation/csc/**`,
 `docs/csc/AUTOMATION.md` ja uusi esivalmistelutyönkulku. Myöhempi yhdistäminen
 `baseline-no-structures`-haaraan ei näillä poluilla osu vanhoihin push-suodattimiin.
@@ -285,6 +299,18 @@ tiedostot, tarkka komento, sallitut luku- ja kirjoituspolut, tiivisteet,
 raporttien kokorajat ja palautustapa tarkastettaviksi. Tämä vaihe ei sisälly
 vaiheen 1 toteutukseen. Sen ensisijainen työmäärä on edelleen **0 uutta työtä**:
 kerätään vain jo olemassa olevia raportteja ja sallittuja tilatietoja.
+
+**Ennen ensimmäistäkään vaiheen 2 raportin keruuta tai siirtoa on toteutettava
+erillinen tiedostokohtainen sallittujen polkujen tarkistus.** Sen luotettu
+lista sidotaan hyväksyttyyn pakettiin ja CSC-juurihakemistoon, yksilöi tarkat
+normalisoidut suhteelliset tiedostopolut sekä niiden kokorajat ja
+tarkistussummat ja tulee erikseen hyväksytystä lähteestä. Kutsujan toimittama
+manifesti ei yksin muodosta tätä listaa tai hyväksyntää. Keruu ja siirto
+estetään, jos listaa ei ole, polkua ei ole listattu tai polku ei vastaa
+hyväksyttyä juurta ja tiedostoa. Symbolisten linkkien kautta tapahtuva rajan
+kierto hylätään. Laaja hakemisto- tai glob-haku tai pelkkä tiedostopäätteen
+tarkistus ei korvaa tiedostokohtaista listaa. Nämä ovat vaiheen 2
+toteutusvaatimuksia, eivät nykyisen validaattorin ominaisuuksia.
 
 Hyväksyntä sidotaan vähintään repositorioon ja haaraan, lähdekoodin ja paketin
 tiivisteisiin, yksilölliseen pyyntötunnisteeseen, CSC-projektiin, toimintoon,

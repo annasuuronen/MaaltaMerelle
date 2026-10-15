@@ -1,14 +1,14 @@
 """Static Actions isolation contracts; this module never starts a workflow.
 
-The legacy workflow hashes pin the approved phase-1 baseline, feee323. Any
-intentional future revision needs an explicit review of this preservation test.
+Legacy workflows are discovered from the checkout and checked for event
+isolation. Their bytes, step bodies and inventory are not permanently frozen.
+Preservation in a particular change is checked separately in its Git diff.
 Only the narrow YAML structures used by these workflows are read; no YAML
 loader, subprocess, network connection or hydrology execution is required.
 """
 
 import ast
 import fnmatch
-import hashlib
 from pathlib import Path
 import re
 import unittest
@@ -19,23 +19,15 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 PREFLIGHT = WORKFLOWS / "csc-preflight.yml"
 CHECKOUT_SHA = "11bd71901bbe5b1630ceea73d27597364c9af683"
 # Verified using read-only official refs/tags/v4.2.2 before implementation.
-LEGACY_SHA256 = {
-    "audit-02d8-schema.yml": "68dc453f6ed386321245d9bbe79b4d246cf628e2cebe988576ee96b51ccc0949",
-    "audit-natural-evidence.yml": "b06e33ecc9d38420686d4c41183acd545478597bc784324cfe1f877fe2c667ca",
-    "audit-partial-gradient.yml": "01ce77013293c4c25cf4c053fb6cffbf4d26344fd7e6b3b655b71a3e86e0d60c",
-    "audit-r-source-graph.yml": "b1b60c145fa7cd53537f0e6b2fdeaad7da5803349b88642e8c3102d2807fd421",
-    "audit-r-syntax.yml": "b4ccde01556cdbf538b49a9d64d0c20337af5dd1e6616ecff7cf1d2992be62cb",
-    "audit-validation-fixtures.yml": "fd632eb904399eaf03fd486e9b7a2dae156294d46fa3722ffd0fa94f462455f2",
-    "audit-workflow-safety.yml": "8cf116ece3b318fcde61e9f5100fd6691e071ae3a5cc48afacc9b8a4569943be",
-    "continue-validation-gradient.yml": "bcd3a66f00148b61d24efbf711cf6d96d8403b9678a3273c6bf64cb29e1e1b84",
-    "retry-hydrology-infra.yml": "9fa94a7b5984d8fa9bdd5f2ec9c3824e1bcb075229511c417626080b6027a361",
-    "test-low-transfer.yml": "881e754bd16ea29da88189be07676929f05a452a86bdc69a07b70dbfd719151a",
-    "test-moderate-transfer.yml": "90473d93fc8bda0f0b15e9ab1b87811a10bc39c3b99a3dc43891f47361fe2178",
-    "test-natural-reference.yml": "8d26fb2f63f362af3d63513ee37ba6fe694f95b298f175ce52bda635719366c4",
-    "test-portability-matrix.yml": "fce5f59f936ba6205493cf7603a79ed5fc423055fbf1c8c620182014b85372b3",
-    "test-sulku-11.yml": "e945c699f803371515d85a67777de0a5966a9b8a74a3af5268afd85fb7378aaa",
-    "verify-low-coastline.yml": "70006588da739b89582e75680635e7edb65f14478e97b2f59380573431f0a4b6",
-}
+
+
+def legacy_workflow_sources():
+    """Include current YAML workflows without pinning names, counts or bytes."""
+    return {
+        path.name: path.read_text(encoding="utf-8")
+        for path in sorted(WORKFLOWS.iterdir())
+        if path.is_file() and path.suffix in {".yml", ".yaml"} and path != PREFLIGHT
+    }
 
 
 def block(text, key, indentation=0):
@@ -92,20 +84,31 @@ def path_matches(path, patterns):
     return included
 
 
+def legacy_events(source):
+    """Reject new automatic entry points; unsupported event syntax fails closed."""
+    events = block(source, "on")
+    if events is None:
+        raise ValueError("expected block-style workflow events")
+    names = []
+    for line in events.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if len(line) - len(line.lstrip()) == 2:
+            match = re.fullmatch(r"  ([a-z_]+):", line)
+            if match is None:
+                raise ValueError("unsupported workflow event syntax")
+            names.append(match.group(1))
+    if not names or len(names) != len(set(names)):
+        raise ValueError("missing or duplicate workflow events")
+    if set(names) - {"push", "workflow_dispatch", "workflow_run"}:
+        raise ValueError("legacy workflow has an unsafe automatic trigger")
+    return events
+
+
 class WorkflowIsolationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.workflow = PREFLIGHT.read_text(encoding="utf-8")
-
-    def test_all_fifteen_legacy_workflows_remain_byte_identical(self):
-        files = {path.name for path in WORKFLOWS.iterdir() if path.is_file()}
-        self.assertEqual(files, set(LEGACY_SHA256) | {PREFLIGHT.name})
-        for filename, expected in LEGACY_SHA256.items():
-            with self.subTest(workflow=filename):
-                self.assertEqual(
-                    hashlib.sha256((WORKFLOWS / filename).read_bytes()).hexdigest(),
-                    expected,
-                )
 
     def test_new_paths_cannot_start_existing_push_workflows(self):
         paths = {
@@ -123,27 +126,41 @@ class WorkflowIsolationTests(unittest.TestCase):
             if path.is_file()
         )
         self.assertFalse(any(path.startswith("tests/") for path in paths))
-        push_workflows = 0
-        for filename in LEGACY_SHA256:
-            source = (WORKFLOWS / filename).read_text(encoding="utf-8")
-            push = block(block(source, "on") or "", "push", 2)
+        for filename, source in legacy_workflow_sources().items():
+            push = block(legacy_events(source), "push", 2)
             if push is None:
                 continue
-            push_workflows += 1
             self.assertEqual(list_values(block(push, "branches", 4)), ["baseline-no-structures"])
             patterns = list_values(block(push, "paths", 4))
             self.assertTrue(patterns, "an unrestricted legacy push trigger is unsafe")
             for path in paths:
                 with self.subTest(workflow=filename, path=path):
                     self.assertFalse(path_matches(path, patterns))
-        self.assertEqual(push_workflows, 14)
 
-    def test_no_legacy_workflow_has_a_pull_request_trigger(self):
-        for filename in LEGACY_SHA256:
+    def test_legacy_triggers_cannot_start_or_follow_preflight(self):
+        for filename, source in legacy_workflow_sources().items():
             with self.subTest(workflow=filename):
-                source = (WORKFLOWS / filename).read_text(encoding="utf-8")
-                events = block(source, "on") or ""
-                self.assertNotRegex(events, r"(?m)^  pull_request(?:_target)?:")
+                events = legacy_events(source)
+                followup = block(events, "workflow_run", 2)
+                if followup is not None:
+                    self.assertEqual(list_values(block(followup, "branches", 4)), ["baseline-no-structures"])
+                    watched = list_values(block(followup, "workflows", 4))
+                    self.assertTrue(watched, "unrestricted workflow_run is unsafe")
+                    self.assertFalse(any(fnmatch.fnmatchcase("CSC preflight", name) for name in watched),
+                                     "legacy continuation must not watch preflight")
+
+    def test_benign_legacy_content_edits_do_not_require_new_hashes(self):
+        source = "on:\n  workflow_dispatch:\njobs:\n  audit:\n    name: Original audit\n"
+        edited = "# Approved documentation update\n" + source.replace("Original audit", "Updated audit")
+        self.assertEqual(legacy_events(source), legacy_events(edited))
+
+    def test_unsafe_legacy_event_additions_are_rejected(self):
+        for event in ("pull_request", "pull_request_target", "create", "schedule", "repository_dispatch"):
+            with self.subTest(event=event), self.assertRaises(ValueError):
+                legacy_events("on:\n  workflow_dispatch:\n  " + event + ":\n")
+        for events in ("on: [push]\n", "on:\n  push: {}\n", "on:\n  push:\n  push:\n"):
+            with self.subTest(events=events), self.assertRaises(ValueError):
+                legacy_events(events)
 
     def test_pull_requests_always_report_the_stable_check(self):
         events = block(self.workflow, "on")
