@@ -1,0 +1,475 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:maaltamerelle:csc:phase2a:2a.1",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/candidates"
+    },
+    {
+      "$ref": "#/$defs/inventory"
+    },
+    {
+      "$ref": "#/$defs/allowlist"
+    },
+    {
+      "$ref": "#/$defs/request"
+    }
+  ],
+  "$defs": {
+    "candidates": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2a.1"
+        },
+        "root_id": {
+          "const": "CSC_HYDRO_4BBF22B"
+        },
+        "safety": {
+          "const": {
+            "moderate_lakes": 52,
+            "moderate_status": "REVIEW_REQUIRED",
+            "reason": "POSITIVE_SHORE_THRESHOLD_NO_OBSERVED_RAISE",
+            "national": "LOCKED",
+            "scientific_acceptance": "NOT_GRANTED",
+            "technical_qa": "NOT_EVALUATED",
+            "scheduler_state": "UNKNOWN"
+          }
+        },
+        "kind": {
+          "const": "candidates"
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "relative_path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "purpose": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "relative_path",
+              "purpose"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "root_id",
+        "safety",
+        "kind",
+        "files"
+      ],
+      "additionalProperties": false
+    },
+    "inventory": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2a.1"
+        },
+        "root_id": {
+          "const": "CSC_HYDRO_4BBF22B"
+        },
+        "safety": {
+          "const": {
+            "moderate_lakes": 52,
+            "moderate_status": "REVIEW_REQUIRED",
+            "reason": "POSITIVE_SHORE_THRESHOLD_NO_OBSERVED_RAISE",
+            "national": "LOCKED",
+            "scientific_acceptance": "NOT_GRANTED",
+            "technical_qa": "NOT_EVALUATED",
+            "scheduler_state": "UNKNOWN"
+          }
+        },
+        "kind": {
+          "const": "inventory"
+        },
+        "candidates_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "relative_path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "status": {
+                "enum": [
+                  "NOT_CHECKED",
+                  "MISSING",
+                  "UNREADABLE",
+                  "AVAILABLE",
+                  "OUT_OF_SCOPE"
+                ]
+              },
+              "size_bytes": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5242880
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sha256_measured": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "observed_at_utc": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "evidence_ref": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "relative_path",
+              "status",
+              "size_bytes",
+              "sha256_measured",
+              "observed_at_utc",
+              "evidence_ref"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "root_id",
+        "safety",
+        "kind",
+        "candidates_sha256",
+        "files"
+      ],
+      "additionalProperties": false
+    },
+    "allowlist": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2a.1"
+        },
+        "root_id": {
+          "const": "CSC_HYDRO_4BBF22B"
+        },
+        "safety": {
+          "const": {
+            "moderate_lakes": 52,
+            "moderate_status": "REVIEW_REQUIRED",
+            "reason": "POSITIVE_SHORE_THRESHOLD_NO_OBSERVED_RAISE",
+            "national": "LOCKED",
+            "scientific_acceptance": "NOT_GRANTED",
+            "technical_qa": "NOT_EVALUATED",
+            "scheduler_state": "UNKNOWN"
+          }
+        },
+        "kind": {
+          "const": "allowlist"
+        },
+        "request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "repository": {
+          "const": "annasuuronen/MaaltaMerelle"
+        },
+        "branch": {
+          "const": "baseline-no-structures"
+        },
+        "source_commit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "package_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "csc_root": {
+          "const": "/scratch/project_2004707/pienvedet/csc_validation_4bbf22b/hydro_01_02"
+        },
+        "output_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "operation": {
+          "enum": [
+            "INVENTORY_LOCAL_REPORTS",
+            "VERIFY_LOCAL_REPORTS"
+          ]
+        },
+        "candidates_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "inventory_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "valid_from_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "max_total_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 26214400
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "relative_path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "expected_size_bytes": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5242880
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sha256_expected": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512,
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "max_bytes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5242880
+              },
+              "job_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512,
+                    "pattern": "^[1-9][0-9]*(?:_[0-9]+)?(?:\\.(?:batch|extern|[0-9]+))?$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "relative_path",
+              "expected_size_bytes",
+              "sha256_expected",
+              "max_bytes",
+              "job_id"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "root_id",
+        "safety",
+        "kind",
+        "request_id",
+        "repository",
+        "branch",
+        "source_commit",
+        "package_sha256",
+        "csc_root",
+        "output_path",
+        "operation",
+        "candidates_sha256",
+        "inventory_sha256",
+        "valid_from_utc",
+        "expires_at_utc",
+        "max_total_bytes",
+        "files"
+      ],
+      "additionalProperties": false
+    },
+    "request": {
+      "type": "object",
+      "properties": {
+        "schema_version": {
+          "const": "2a.1"
+        },
+        "root_id": {
+          "const": "CSC_HYDRO_4BBF22B"
+        },
+        "safety": {
+          "const": {
+            "moderate_lakes": 52,
+            "moderate_status": "REVIEW_REQUIRED",
+            "reason": "POSITIVE_SHORE_THRESHOLD_NO_OBSERVED_RAISE",
+            "national": "LOCKED",
+            "scientific_acceptance": "NOT_GRANTED",
+            "technical_qa": "NOT_EVALUATED",
+            "scheduler_state": "UNKNOWN"
+          }
+        },
+        "kind": {
+          "const": "request"
+        },
+        "request_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "repository": {
+          "const": "annasuuronen/MaaltaMerelle"
+        },
+        "branch": {
+          "const": "baseline-no-structures"
+        },
+        "source_commit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "package_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "csc_root": {
+          "const": "/scratch/project_2004707/pienvedet/csc_validation_4bbf22b/hydro_01_02"
+        },
+        "output_path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "operation": {
+          "enum": [
+            "INVENTORY_LOCAL_REPORTS",
+            "VERIFY_LOCAL_REPORTS"
+          ]
+        },
+        "allowlist_sha256": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "properties": {
+              "relative_path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "relative_path"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schema_version",
+        "root_id",
+        "safety",
+        "kind",
+        "request_id",
+        "repository",
+        "branch",
+        "source_commit",
+        "package_sha256",
+        "csc_root",
+        "output_path",
+        "operation",
+        "allowlist_sha256",
+        "files"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

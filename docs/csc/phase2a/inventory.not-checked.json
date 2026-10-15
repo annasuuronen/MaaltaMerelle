@@ -1,0 +1,97 @@
+{
+  "schema_version": "2a.1",
+  "kind": "inventory",
+  "root_id": "CSC_HYDRO_4BBF22B",
+  "candidates_sha256": "680e007613de49f10883cc718f5bc915edc4a310671924e459efa78d6b520a6d",
+  "safety": {
+    "moderate_lakes": 52,
+    "moderate_status": "REVIEW_REQUIRED",
+    "reason": "POSITIVE_SHORE_THRESHOLD_NO_OBSERVED_RAISE",
+    "national": "LOCKED",
+    "scientific_acceptance": "NOT_GRANTED",
+    "technical_qa": "NOT_EVALUATED",
+    "scheduler_state": "UNKNOWN"
+  },
+  "files": [
+    {
+      "relative_path": "d8_value_qa_20261014/qa.jobid",
+      "status": "NOT_CHECKED",
+      "size_bytes": null,
+      "sha256_measured": null,
+      "observed_at_utc": null,
+      "evidence_ref": null
+    },
+    {
+      "relative_path": "d8_value_qa_20261014/results/qa.csv",
+      "status": "NOT_CHECKED",
+      "size_bytes": null,
+      "sha256_measured": null,
+      "observed_at_utc": null,
+      "evidence_ref": null
+    },
+    {
+      "relative_path": "moderate_02d4_audit_20261014/job_id.txt",
+      "status": "NOT_CHECKED",
+      "size_bytes": null,
+      "sha256_measured": null,
+      "observed_at_utc": null,
+      "evidence_ref": null
+    },
+    {
+      "relative_path": "moderate_02d4_audit_20261014/summary.csv",
+      "status": "NOT_CHECKED",
+      "size_bytes": null,
+      "sha256_measured": null,
+      "observed_at_utc": null,
+      "evidence_ref": null
+    },
+    {
+      "relative_path": "moderate_02d4_audit_20261014/lake_audit.csv",
+      "status": "NOT_CHECKED",
+      "size_bytes": null,
+      "sha256_measured": null,
+      "observed_at_utc": null,
+      "evidence_ref": null
+    },
+    {
+      "relative_path": "moderate_resume_20261014_v2/resume.jobid",
+      "status": "NOT_CHECKED",
+      "size_bytes": null,
+      "sha256_measured": null,
+      "observed_at_utc": null,
+      "evidence_ref": null
+    },
+    {
+      "relative_path": "moderate_resume_20261014_v2/validated_d8_report.csv",
+      "status": "NOT_CHECKED",
+      "size_bytes": null,
+      "sha256_measured": null,
+      "observed_at_utc": null,
+      "evidence_ref": null
+    },
+    {
+      "relative_path": "moderate_resume_20261014_v2/run/02_baseline/02D_lake_depression_component_summary.csv",
+      "status": "NOT_CHECKED",
+      "size_bytes": null,
+      "sha256_measured": null,
+      "observed_at_utc": null,
+      "evidence_ref": null
+    },
+    {
+      "relative_path": "moderate_resume_20261014_v2/run/02_baseline/02D_spill_group_diagnostic.csv",
+      "status": "NOT_CHECKED",
+      "size_bytes": null,
+      "sha256_measured": null,
+      "observed_at_utc": null,
+      "evidence_ref": null
+    },
+    {
+      "relative_path": "moderate_resume_20261014_v2/run/02_baseline/02D8_final_spill_evidence.csv",
+      "status": "NOT_CHECKED",
+      "size_bytes": null,
+      "sha256_measured": null,
+      "observed_at_utc": null,
+      "evidence_ref": null
+    }
+  ]
+}
