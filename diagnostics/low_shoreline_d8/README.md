@@ -20,11 +20,9 @@ From anywhere, after extracting the package as `low_shoreline_qa_20261016` in `$
 module load r-env/461
 D="$HOME/low_shoreline_qa_20261016/diagnostics/low_shoreline_d8"
 Rscript --vanilla "$D/test_synthetic.R"
-Rscript --vanilla "$D/run_roihu_low.R" \
-  /scratch/project_2004707/pienvedet/csc_validation_4bbf22b/hydro_01_02/runs/E200000_N6900000/02_baseline \
-  /scratch/project_2004707/pienvedet/csc_validation_4bbf22b/inputs/E200000_N6900000
+Rscript --vanilla "$D/run_roihu_low.R" /scratch/project_2004707/pienvedet/csc_validation_4bbf22b/hydro_01_02/runs/E200000_N6900000/02_baseline /scratch/project_2004707/pienvedet/csc_validation_4bbf22b/inputs/E200000_N6900000
 ```
 
-The real-data script intentionally requires the known LOW **101 routes**, **41 D8_ZERO_INTERIOR** routes, and **7 exact terminal cells** so a later changed run is not silently mistaken for the validated observation. Its expected 10 incoming lake pointers and 1 flat-continuation case are also checked. A mismatch requests review, not data correction.
+Paste the real-data Rscript command as **one physical shell line**. A terminal paste that introduces a blank line after a `\\` may otherwise run each directory as a separate shell command.\n\nThe real-data script intentionally requires the known LOW **101 routes**, **41 D8_ZERO_INTERIOR** routes, and **7 exact terminal cells** so a later changed run is not silently mistaken for the validated observation. Its expected 10 incoming lake pointers and 1 flat-continuation case are also checked. A mismatch requests review, not data correction.
 
 No data is uploaded to GitHub. No sources are written. A separate independent spring dataset validation (including **nonzero D8**) is tracked in [issue #9](https://github.com/annasuuronen/MaaltaMerelle/issues/9); it is **not** introduced into the model here. MODERATE remains `REVIEW_REQUIRED`; NATIONAL remains `LOCKED`.
