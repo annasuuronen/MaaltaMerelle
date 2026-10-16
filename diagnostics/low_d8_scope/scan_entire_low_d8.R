@@ -8,15 +8,26 @@ if (!nzchar(Sys.getenv('SLURM_JOB_ID', ''))) {
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args) != 2L) stop('Usage: Rscript scan_entire_low_d8.R BASELINE_DIR SOURCE_DIR')
 suppressPackageStartupMessages(library(terra))
+script_arg <- grep('^--file=', commandArgs(), value = TRUE)
+stopifnot(length(script_arg) == 1L)
+helper_path <- file.path(dirname(normalizePath(sub('^--file=', '', script_arg))),
+                         'lake_to_land_d8_core.R')
+source(helper_path, local = TRUE)
 base <- normalizePath(args[1], mustWork=TRUE)
 src <- normalizePath(args[2], mustWork=TRUE)
 pfile <- file.path(base, 'd8_pointer_land_water_FLT8S.tif')
 wfile <- file.path(src, 'ranta10_water_class.tif')
-stopifnot(file.exists(pfile), file.exists(wfile))
+ifile <- file.path(src, 'ranta10_lake_id.tif')
+stopifnot(file.exists(pfile), file.exists(wfile), file.exists(ifile),
+          !nzchar(Sys.readlink(pfile)), !nzchar(Sys.readlink(wfile)),
+          !nzchar(Sys.readlink(ifile)))
 p <- rast(pfile)
 w <- rast(wfile)
-stopifnot(nlyr(p)==1L, nlyr(w)==1L,
-          compareGeom(p,w,stopOnError=FALSE), nrow(p)>2, ncol(p)>2)
+id_raster <- rast(ifile)
+stopifnot(nlyr(p)==1L, nlyr(w)==1L, nlyr(id_raster)==1L,
+          compareGeom(p,w,stopOnError=FALSE),
+          compareGeom(p,id_raster,stopOnError=FALSE),
+          nrow(p)>2, ncol(p)>2, ncell(p) < .Machine$integer.max)
 
 # Whitebox pointer code from neighbour at (dr, dc) into center.
 dr <- c(-1L,-1L,-1L, 0L, 0L, 1L, 1L, 1L)
@@ -30,6 +41,9 @@ n_interior_adjacent_lake <- 0L
 n_interior_incoming_lake <- 0L
 n_incoming_lake_edges <- 0L
 sample <- integer(0)
+lake_land_chunks <- vector('list', length(seq.int(1L, nrow(p), by = 64L)))
+lake_land_edge_budget <- 2000000L
+lake_land_edge_count <- 0L
 
 cat('MODE: READ_ONLY BLOCK SCAN OF NON-WATER D8 ZERO VALUES\n')
 cat('INPUT_D8:',pfile,'\nINPUT_WATER_CLASS:',wfile,'\n')
@@ -42,9 +56,21 @@ for (r0 in seq.int(1L,nrow(p),by=block)) {
   nr <- read1-read0+1L
   pv <- as.numeric(values(p,mat=FALSE,row=read0,nrows=nr,col=1,ncols=ncol(p)))
   wv <- as.numeric(values(w,mat=FALSE,row=read0,nrows=nr,col=1,ncols=ncol(p)))
-  stopifnot(length(pv)==nr*ncol(p),length(wv)==length(pv))
+  iv <- as.numeric(values(id_raster,mat=FALSE,row=read0,nrows=nr,
+                          col=1,ncols=ncol(p)))
+  stopifnot(length(pv)==nr*ncol(p),length(wv)==length(pv),
+            length(iv)==length(pv))
   pm <- matrix(pv,nrow=nr,ncol=ncol(p),byrow=TRUE)
   wm <- matrix(wv,nrow=nr,ncol=ncol(p),byrow=TRUE)
+  im <- matrix(iv,nrow=nr,ncol=ncol(p),byrow=TRUE)
+  # Same raster pass and halo also produce the INDEPENDENT denominator:
+  # every mapped-lake D8 pointer whose receiver is a non-water cell.
+  chunk_i <- as.integer((r0 - 1L) %/% block + 1L)
+  lake_land_chunks[[chunk_i]] <-
+    low_d8_lake_to_land_block(pm, wm, im, read0, r0, r1, nrow(p))
+  lake_land_edge_count <- lake_land_edge_count + nrow(lake_land_chunks[[chunk_i]])
+  if (lake_land_edge_count > lake_land_edge_budget)
+    stop('TOO_MANY_LAKE_TO_LAND_EDGES: inspect before raising budget')
   core <- seq.int(r0-read0+1L,length.out=r1-r0+1L)
   candidates <- which(!is.na(pm[core,,drop=FALSE]) &
                       pm[core,,drop=FALSE]==0 &
@@ -93,3 +119,61 @@ cat('SAMPLE_LAKE_TO_ZERO_TERMINALS:',paste(sample,collapse=','),'\n')
 cat('LIMITATION: This is not a full trace of all routes/cycles/other terminal types.\n')
 cat('SCIENTIFIC_STATUS: REVIEW_REQUIRED; NO POINTER OR OUTLET CHANGES\n')
 cat('========== INVENTORY FINISHED ==========' ,'\n')
+
+# A lake may have multiple shoreline pointers, but each source cell has
+# exactly one Whitebox D8 pointer. Never treat a nonzero land destination
+# as a successful downstream hydrologic route.
+all_land_edges <- do.call(rbind, lake_land_chunks)
+if (is.null(all_land_edges)) {
+  all_land_edges <- data.frame(lake_objectid=integer(),source_cell=integer(),
+                               receiver_cell=integer(),receiver_pointer=numeric())
+}
+if (anyDuplicated(all_land_edges$source_cell))
+  stop('DUPLICATE_SOURCE_ACROSS_BLOCK_BOUNDARIES', call. = FALSE)
+all_lake_rates <- low_d8_lake_to_land_summary(all_land_edges)
+# Exactly the 22 source lakes observed with incoming lake-D8 -> zero
+# in the earlier sparse 02C QA; this list is an independent reconciliation
+# of the earlier 1,273 zero pointers, NOT a filter on the raster read.
+known_lake_ids <- c(3181L,1847L,1898L,1832L,1889L,1894L,1849L,
+                    1884L,1887L,1851L,212435L,1905L,212437L,
+                    1945L,1921L,1892L,1943L,1891L,1920L,1895L,
+                    212436L,1853L)
+stopifnot(length(known_lake_ids) == 22L, !anyDuplicated(known_lake_ids))
+known_rates <- low_d8_lake_to_land_summary(all_land_edges, known_lake_ids)
+known_zero <- sum(known_rates$immediate_zero_edges)
+known_receivers <- unique(all_land_edges$receiver_cell[
+  all_land_edges$lake_objectid %in% known_lake_ids &
+  !is.na(all_land_edges$receiver_pointer) &
+  all_land_edges$receiver_pointer == 0])
+cat('========== COMPLETE LOW LAKE TO LAND D8 DENOMINATOR ==========', '\n')
+cat('ALL_LAKES_WITH_OUTGOING_LAND_D8:', nrow(all_lake_rates), '\n')
+cat('ALL_LAKE_TO_LAND_D8_EDGES:', nrow(all_land_edges), '\n')
+cat('ALL_IMMEDIATE_ZERO_EDGES:', sum(all_lake_rates$immediate_zero_edges), '\n')
+cat('KNOWN_22_LAKE_TO_LAND_D8_EDGES:', sum(known_rates$lake_to_land_edges), '\n')
+cat('KNOWN_22_IMMEDIATE_ZERO_EDGES:', known_zero, '\n')
+cat('KNOWN_22_DISTINCT_ZERO_RECEIVERS:', length(known_receivers), '\n')
+cat('KNOWN_22_NONZERO_LAND_POINTER_EDGES:',
+    sum(known_rates$nonzero_land_pointer_edges), '\n')
+cat('KNOWN_22_NA_LAND_POINTER_EDGES:',
+    sum(known_rates$na_land_pointer_edges), '\n')
+cat('========== KNOWN 22 LAKES: COUNTS AND FRACTIONS ==========', '\n')
+print(known_rates[order(-known_rates$immediate_zero_edges,
+                        known_rates$lake_objectid), , drop=FALSE],
+      row.names=FALSE)
+cat('========== ALL SOURCE LAKES: FRACTION RANKING (DENOM >= 20) ==========', '\n')
+eligible <- all_lake_rates[
+  all_lake_rates$lake_to_land_edges >= 20L, , drop=FALSE]
+print(eligible[order(-eligible$immediate_zero_fraction,
+                     -eligible$lake_to_land_edges), , drop=FALSE],
+      row.names=FALSE)
+if (known_zero != 1273L || length(known_receivers) != 535L)
+  stop('KNOWN_02C_LAKE_TO_ZERO_RECONCILIATION_FAILED: inspect raster outputs',
+       call. = FALSE)
+if (n_interior_incoming_lake != length(unique(all_land_edges$receiver_cell[
+        !is.na(all_land_edges$receiver_pointer) &
+        all_land_edges$receiver_pointer == 0])))
+  warning('FULL_INTERIOR_ZERO_VS_LAKE_EDGE_MISMATCH: inspect edge/domain cases')
+cat('PASS: COMPLETE-LAKE-DENOMINATOR RECONCILED WITH 02C 1273/535', '\n')
+cat('LIMITATION: IMMEDIATE D8=0 FRACTION, NOT DOWNSTREAM ROUTE SUCCESS RATE', '\n')
+cat('SCIENTIFIC_STATUS: REVIEW_REQUIRED; ALL RASTERS READ ONLY', '\n')
+
