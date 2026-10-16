@@ -60,6 +60,27 @@ osoittaa pelkällä IoU:lla. Lisätiedot:
 `README_1847.md`, `README_MML_1847_1898.md`,
 `README_touch_replay.md`.
 
+**MML-erotusalueen 1847/1898 02E/02F -QA — CSC Roihu PASS 16.10.2026:**
+korjattu v2-tutkimusajuri vahvistettiin sekä synteettisillä testeillä että
+todellisilla 02E/02F-CSV:illä. Järven **1847** kaikki 88 erillistä
+D8=0-vastaanottajaa ovat `MML 2025 jarvi \\ RANTA10 lakes` -erotusalueella
+(**8 358.843 m²**) ja muodostavat **21** erillistä 8-naapuruusryhmää;
+kuudessa suurimmassa on **67/88** solua. Kontrollijärvellä **1898** on
+**0/26** nollasolua MML-yksinomaisella vesialueella
+(**99.095 m²**) ja **25** naapuruusryhmää.
+
+1847:n **20** 02E-spill-ryhmästä **0** on mukana rinnakkaisehdokkaana
+ja **0** on review-lipullisia; 02E:n mukaan otettuja spill-reunoja ja
+02F:n ehdokasvastaanottajareittejä on **0**. Kontrollijärvellä 1898
+12 02E-ryhmästä **1** on mukana (5 spill-reunaa); 02F:ssä
+**3** erillistä reittiä saa luokan `REACHES_RIVER_AREA`.
+Molemmissa `outlet_selection=UNASSIGNED`. Tämä ei osoita
+1847:n luonnollisen purkuyhteyden puuttumista tai hyväksy
+1898:n purkupistettä. Aiempi v1 pysähtyi uuden tutkimusajurin
+virheelliseen 02F-sarakkeen nimioletukseen; v2 korjasi sen
+`origin_lake_objectid`-kentäksi, ja oikean aineiston PASS vahvistettiin.
+Ks. `README_MML_gap.md`.
+
 **Seuraava rajattu tutkimus:** tutki 1847:n MML:n ja RANTA10:n
 *geometrinen erotus juuri D8=0-vastaanottajien kohdalla* ja
 tarkista mahdollinen riippumaton luonnollisen purkuyhteyden
