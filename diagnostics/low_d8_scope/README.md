@@ -104,6 +104,26 @@ mahdollisesti ongelmallisten järvien määrä. Mahdollinen jatkotehtävä on
 rantaviivan pituudella tai järven reunan solumäärällä normalisoitu vertailu
 siten, että tarkistetaan geometria sekä erilaisten lähdeaineistojen rajaukset.
 
+## 1d. Lähdejärvien rantaviivan pituuteen suhteutettu vertailu (ODOTTAA ROIHIU-TESTIÄ)
+
+[README_shoreline.md](README_shoreline.md) sisältää erillisen read-only
+geometriavertailun lähdejärville 3181, 1847 sekä muille 20 02C:stä
+vahvistetulle lähdejärvelle. Scriptit:
+
+- `lake_shoreline_rates.R` — vektorirantaviivan laskenta rajattuna LOW:n ruutuun;
+  ruuturajan kanssa yhtyvät keinotekoiset viivasegmentit vähennetään.
+- `test_lake_shoreline_rates.R` — synteettinen metri/km-, liittymä-,
+  virhesyöte- ja sf-geometriatesti, jos sf on asennettu.
+- `run_lake_shoreline_rates.R` — käyttää saman 02C:n 22 järven
+  validoidun D8-laskennan, mutta lisää RANTA10:n `lakes`-GPKG-geometrian
+  pinta-alasta riippumattoman rantaviivapituuden (km) sekä suhdeluvut.
+
+Raportoitavat suhdeluvut ovat **02C-rantavyöhykeotoksen D8-katkeamissolut /
+RANTA10-vektorirantakilometri** ja vastaavat osoittimet / km. Ne **eivät**
+ole mallin virheprosentteja, eivätkä oikaise 02C:n otosrajausta.
+Vain raportointia. Koodin rakennetarkistus valmis; tämän uuden geometrisen
+R-ajon PASS odottaa vielä Roihun todellisia tuloksia. **Ei Slurm-ajoa.**
+
 ## 2. Koko LOW-rasterin kattava nollasolujen inventointi — EI VIELÄ AJETTU
 
 scan_entire_low_d8.R lukee 64 rivin lohkoissa jo olemassa olevat D8- ja RANTA10-vesiluokkarasterit, yhden rivin naapurihaalolla. Se laskee kaikki sisäiset ei-vesisolu-D8=0-solut, järven viereiset sisäiset nollat, ja järvestä suoraan nollaan tulevat D8-osoittimet. Se ei vielä kartoita kaikki D8-NA-arvoja, syklejä, domain exittejä eikä koko verkon reittijakaumaa.
