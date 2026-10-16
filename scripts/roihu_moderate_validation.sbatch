@@ -72,29 +72,14 @@ execute() {
   if (( rc != 0 )); then
     echo "ERROR: $label exit=$rc; see $REPORT/$label.log" >&2
   fi
-  # Every diagnostic is independent and read-only. Do not suppress its
-  # failure, but still attempt the next diagnostic and always archive logs.
+  # Keep going to collect independent diagnostic logs.
   return 0
 }
 execute "spill_d8" "scripts/audit_moderate_spill_d8_readonly.R"
 execute "lake_geometry" "scripts/audit_moderate_lake_geometry_readonly.R"
 
 DIAGNOSTIC_TECHNICAL_PASS=true
-if grep -Eq ' exit=[1-9][0-9]*  echo "REPORT_ROOT=$REPORT"
-  cat "$REPORT/steps.txt"
-  grep -E '^(LAKES |MISMATCH_CLASS|MISMATCH_LAKES|SPILL_RAISED|PRODUCTION_02D5_GATE_PASS|RETURN_TO_SOURCE_LAKE|[[:space:]]+159|[[:space:]]+3|TOUCHES_DOMAIN_EDGE|HAS_NODATA_OUTSIDE_SHORE|NONCONSTANT_LAKE_Z|HAS_CHANGED_SOURCE_STORAGE|SCIENTIFIC_STATUS|NATIONAL_LOCKED)' "$REPORT/spill_d8.log" "$REPORT/lake_geometry.log" || true
-  echo "ALL_DIAGNOSTICS_ATTEMPTED=true"
-  echo "DIAGNOSTIC_TECHNICAL_PASS=$DIAGNOSTIC_TECHNICAL_PASS"
-  echo "REAL_DATA_HYDROLOGICAL_APPROVAL=false"
-  echo "SCIENTIFIC_STATUS=REVIEW_REQUIRED"
-  echo "NATIONAL=LOCKED"
-} >"$REPORT/summary.txt"
-cat "$REPORT/summary.txt"
-# Single small, shareable archive; never include source rasters or full lake masks.
-tar -czf "$REPORT/review_bundle.tar.gz" -C "$REPORT" provenance.txt steps.txt spill_d8.log lake_geometry.log summary.txt
-sha256sum "$REPORT/review_bundle.tar.gz" > "$REPORT/review_bundle.sha256"
-echo "UPLOAD_ONCE=$REPORT/review_bundle.tar.gz"
- "$REPORT/steps.txt"; then
+if grep -Eq ' exit=[1-9][0-9]*$' "$REPORT/steps.txt"; then
   DIAGNOSTIC_TECHNICAL_PASS=false
 fi
 
@@ -102,7 +87,9 @@ fi
   echo "REPORT_ROOT=$REPORT"
   cat "$REPORT/steps.txt"
   grep -E '^(LAKES |MISMATCH_CLASS|MISMATCH_LAKES|SPILL_RAISED|PRODUCTION_02D5_GATE_PASS|RETURN_TO_SOURCE_LAKE|[[:space:]]+159|[[:space:]]+3|TOUCHES_DOMAIN_EDGE|HAS_NODATA_OUTSIDE_SHORE|NONCONSTANT_LAKE_Z|HAS_CHANGED_SOURCE_STORAGE|SCIENTIFIC_STATUS|NATIONAL_LOCKED)' "$REPORT/spill_d8.log" "$REPORT/lake_geometry.log" || true
-  echo "VALIDATION_DIAGNOSTICS_COMPLETE=true"
+  echo "ALL_DIAGNOSTICS_ATTEMPTED=true"
+  echo "DIAGNOSTIC_TECHNICAL_PASS=$DIAGNOSTIC_TECHNICAL_PASS"
+  echo "REAL_DATA_HYDROLOGICAL_APPROVAL=false"
   echo "SCIENTIFIC_STATUS=REVIEW_REQUIRED"
   echo "NATIONAL=LOCKED"
 } >"$REPORT/summary.txt"
