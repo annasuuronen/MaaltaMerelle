@@ -1,16 +1,6 @@
 name: MODERATE read-only diagnostic smoke tests
 
 on:
-  push:
-    branches:
-      - codex/moderate-02d4-diagnosis
-    paths:
-      - "scripts/audit_moderate_spill_d8_readonly.R"
-      - "scripts/audit_moderate_lake_geometry_readonly.R"
-      - "tests/moderate_roihu_review_smoke.R"
-      - "scripts/roihu_moderate_validation.sbatch"
-      - "scripts/roihu_launch_moderate_review.sh"
-      - ".github/workflows/moderate_review_smoke.yml"
   workflow_dispatch:
 
 permissions:
