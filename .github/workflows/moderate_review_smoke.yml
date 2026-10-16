@@ -29,6 +29,8 @@ jobs:
           bash -n scripts/roihu_launch_moderate_review.sh
       - name: Parse and run purely synthetic diagnostics
         run: Rscript --vanilla tests/moderate_roihu_review_smoke.R
+      - name: Check production spill/storage semantics on synthetic rasters
+        run: Rscript --vanilla tests/spill_storage_semantics.R
       - name: Confirm no production data paths were written
         run: |
           test ! -e "/scratch/project_2004707"
