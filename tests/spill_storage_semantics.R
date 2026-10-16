@@ -165,8 +165,13 @@ run_tests <- function() {
           identical(fills[[2L]]$fix_flats, FALSE) && is.null(fills[[2L]]$max_depth))
 
   exe <- Sys.getenv("HYDRO_TEST_WHITEBOX_EXE", unset = "")
+  require_binary <- identical(Sys.getenv("HYDRO_TEST_REQUIRE_WHITEBOX", unset = "0"), "1")
+  if (require_binary && !nzchar(exe)) {
+    stop("Mandatory Whitebox integration suite: HYDRO_TEST_WHITEBOX_EXE is unset")
+  }
   if (nzchar(exe)) {
-    stopifnot(file.exists(exe), requireNamespace("whitebox", quietly = TRUE))
+    stopifnot(file.exists(exe), file.access(exe, 1L) == 0L,
+              requireNamespace("whitebox", quietly = TRUE))
     old <- Sys.getenv("R_WHITEBOX_MAX_PROCS", unset = NA_character_)
     on.exit(if (is.na(old)) Sys.unsetenv("R_WHITEBOX_MAX_PROCS") else
               Sys.setenv(R_WHITEBOX_MAX_PROCS = old), add = TRUE)
