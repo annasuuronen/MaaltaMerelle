@@ -55,12 +55,16 @@ jobs:
       - name: Synthetic geometry and D8 diagnostic checks
         id: synthetic_d8
         continue-on-error: true
-        run: Rscript --vanilla tests/moderate_roihu_review_smoke.R
+        run: |
+          Rscript --vanilla tests/moderate_roihu_review_smoke.R 2>&1 | tee synthetic_d8.log
+          exit ${PIPESTATUS[0]}
       - name: Spill/storage production-expression regressions
         id: spill_storage
         if: always()
         continue-on-error: true
-        run: Rscript --vanilla tests/spill_storage_semantics.R
+        run: |
+          Rscript --vanilla tests/spill_storage_semantics.R 2>&1 | tee spill_storage.log
+          exit ${PIPESTATUS[0]}
       - name: Safety and scope
         id: scope
         if: always()
@@ -70,6 +74,16 @@ jobs:
           echo "SYNTHETIC_ONLY=true"
           echo "MODERATE=REVIEW_REQUIRED"
           echo "NATIONAL=LOCKED"
+      - name: Preserve logs from all attempted tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: moderate-synthetic-logs
+          path: |
+            synthetic_d8.log
+            spill_storage.log
+          if-no-files-found: warn
+          retention-days: 30
       - name: Combined diagnostic outcome (fail closed)
         if: always()
         env:
