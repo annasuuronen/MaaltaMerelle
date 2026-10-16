@@ -23,7 +23,7 @@ stopifnot(err(mm_shore_summary(bad,flags,flags,flags,flags,rep(1,3),rep(1,3),
                   rep(1,3),rep(1,3),rep(1,3),rep(1,3))))
 bad <- e; bad$receiver_pointer[3] <- 999
 stopifnot(err(mm_shore_summary(bad,flags,flags,flags,flags,rep(1,3),rep(1,3),
-                  rep(1,3),rep(1,3),rep(1,3))))
+                  rep(1,3),rep(1,3),rep(1,3),rep(1,3))))
 cat('PASS: MML/RANTA10 shoreline center classification, shared receivers, elevations, fail closed\n')
 # In-memory sf geometry semantics used in the independent vector comparison.
 suppressPackageStartupMessages(library(sf))
