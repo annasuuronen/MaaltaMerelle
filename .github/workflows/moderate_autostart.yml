@@ -53,12 +53,41 @@ jobs:
         run: |
           install.packages(c("terra", "whitebox"), repos="https://cloud.r-project.org")
       - name: Synthetic geometry and D8 diagnostic checks
+        id: synthetic_d8
+        continue-on-error: true
         run: Rscript --vanilla tests/moderate_roihu_review_smoke.R
       - name: Spill/storage production-expression regressions
+        id: spill_storage
+        if: always()
+        continue-on-error: true
         run: Rscript --vanilla tests/spill_storage_semantics.R
       - name: Safety and scope
+        id: scope
+        if: always()
+        continue-on-error: true
         run: |
           test ! -e "/scratch/project_2004707"
           echo "SYNTHETIC_ONLY=true"
+          echo "MODERATE=REVIEW_REQUIRED"
+          echo "NATIONAL=LOCKED"
+      - name: Combined diagnostic outcome (fail closed)
+        if: always()
+        env:
+          D8_RESULT: ${{ steps.synthetic_d8.outcome }}
+          STORAGE_RESULT: ${{ steps.spill_storage.outcome }}
+          SCOPE_RESULT: ${{ steps.scope.outcome }}
+        shell: bash
+        run: |
+          echo "D8_TEST=$D8_RESULT"
+          echo "STORAGE_TEST=$STORAGE_RESULT"
+          echo "SCOPE_TEST=$SCOPE_RESULT"
+          for result in "$D8_RESULT" "$STORAGE_RESULT" "$SCOPE_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              echo "::error::At least one required diagnostic failed or was skipped"
+              exit 1
+            fi
+          done
+          echo "SYNTHETIC_DIAGNOSTICS_PASS=true"
+          echo "ROIHU_REAL_DATA_VALIDATED=false"
           echo "MODERATE=REVIEW_REQUIRED"
           echo "NATIONAL=LOCKED"
