@@ -7,6 +7,8 @@ root <- if (length(args)) normalizePath(args[[1]], mustWork=TRUE) else normalize
 file1 <- file.path(root, "scripts", "audit_moderate_spill_d8_readonly.R")
 file2 <- file.path(root, "scripts", "audit_moderate_lake_geometry_readonly.R")
 stopifnot(file.exists(file1), file.exists(file2))
+suite <- Sys.getenv("HYDRO_SYNTHETIC_SUITE", unset="both")
+stopifnot(suite %in% c("both", "d8", "geometry"))
 invisible(parse(file=file1)); invisible(parse(file=file2))
 dir <- tempfile("moderate-review-test-")
 dir.create(dir)
@@ -55,12 +57,16 @@ run <- function(script) {
   if (!is.null(rc) && rc != 0L) stop(paste("FAILED",script,paste(output,collapse="\n")))
   paste(output,collapse="\n")
 }
+if (suite %in% c("both", "d8")) {
 d8 <- run(file1)
 stopifnot(grepl("MISMATCH_CLASS 2", d8, fixed=TRUE),
           grepl("RETURN_TO_SOURCE_LAKE",d8,fixed=TRUE),
           grepl("TERMINAL_0",d8,fixed=TRUE),
           grepl("PRODUCTION_02D5_GATE_PASS FALSE",d8,fixed=TRUE),
           grepl("NATIONAL_LOCKED TRUE",d8,fixed=TRUE))
+cat("PASS: MODERATE D8 read-only diagnostic (synthetic only)\n")
+}
+if (suite %in% c("both", "geometry")) {
 geom <- run(file2)
 stopifnot(grepl("TARGET_LAKES 2",geom,fixed=TRUE),
           grepl("TOUCHES_DOMAIN_EDGE 1",geom,fixed=TRUE),
@@ -69,6 +75,8 @@ stopifnot(grepl("TARGET_LAKES 2",geom,fixed=TRUE),
           grepl("HAS_CHANGED_SOURCE_STORAGE 0",geom,fixed=TRUE),
           grepl("SCIENTIFIC_STATUS REVIEW_REQUIRED",geom,fixed=TRUE),
           grepl("NATIONAL_LOCKED TRUE",geom,fixed=TRUE))
+cat("PASS: MODERATE geometry read-only diagnostic (synthetic only)\n")
+}
 unlink(dir,recursive=TRUE)
-cat("PASS: BOTH MODERATE REVIEW DIAGNOSTICS (synthetic only)\n")
+cat("PASS: selected MODERATE REVIEW DIAGNOSTICS (synthetic only)\n")
 cat("PASS: BOTH SCIENTIFIC LOCKS REMAIN IN FORCE\n")
