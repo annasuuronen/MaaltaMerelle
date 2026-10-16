@@ -37,7 +37,11 @@ make_window <- function(flat = FALSE, wrong_direction = FALSE,
     data[west2, c("dem", "land_raw", "land_fill", "land_water", "storage")] <-
       if (no_downhill) z else 0.382
   }
-  if (corrupted_cell) data$cell[1] <- 9999
+  if (corrupted_cell) {
+    # A deliberately invalid cell ID must occur within the returned 5x5
+    # window (rows/cols 2:6); cell 1 lies outside the diagnostic window.
+    data$cell[data$row == 3L & data$col == 3L] <- 9999
+  }
   function(id, radius) {
     stopifnot(id == 25, radius == 2L)
     data[abs(data$row - 4) <= 2 & abs(data$col - 4) <= 2, , drop = FALSE]
@@ -70,6 +74,8 @@ stopifnot(!wrong_direction$summary$LAKE_D8_TO_INTERIOR_ZERO,
 unmasked <- run_one(make_window(unmasked_lake = TRUE))
 stopifnot(unmasked$summary$LAKE_D8_TO_INTERIOR_ZERO,
           !unmasked$summary$MASKED_SHORE_FILL_UNCHANGED)
+corrupt_window <- make_window(corrupted_cell = TRUE)(25, 2L)
+stopifnot(9999 %in% corrupt_window$cell)
 for (reader in list(make_window(nonzero_terminal = TRUE),
                     make_window(corrupted_cell = TRUE))) {
   err <- tryCatch(run_one(reader), error = identity)
