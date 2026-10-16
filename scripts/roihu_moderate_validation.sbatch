@@ -86,3 +86,7 @@ execute "lake_geometry" "scripts/audit_moderate_lake_geometry_readonly.R"
   echo "NATIONAL=LOCKED"
 } >"$REPORT/summary.txt"
 cat "$REPORT/summary.txt"
+# Single small, shareable archive; never include source rasters or full lake masks.
+tar -czf "$REPORT/review_bundle.tar.gz" -C "$REPORT" provenance.txt steps.txt spill_d8.log lake_geometry.log summary.txt
+sha256sum "$REPORT/review_bundle.tar.gz" > "$REPORT/review_bundle.sha256"
+echo "UPLOAD_ONCE=$REPORT/review_bundle.tar.gz"
