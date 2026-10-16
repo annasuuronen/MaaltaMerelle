@@ -36,4 +36,42 @@ bad <- zeros; bad$cell[1L] <- 29L
 stopifnot(err(low_02c_incoming(bad, water, components, pointers, 8L, 8L)))
 badptr <- pointers; badptr['20'] <- 999
 stopifnot(err(low_02c_incoming(zeros, water, components, badptr, 8L, 8L)))
+# Opt-in details must preserve the original dataframe for existing callers.
+pointers <- stats::setNames(codes, as.character(water_cells))
+original <- low_02c_incoming(zeros, water, components, pointers, 8L, 8L)
+detail <- low_02c_incoming(zeros, water, components, pointers, 8L, 8L,
+                          detail = TRUE)
+stopifnot(identical(detail$zero_cells, original), nrow(detail$lake_edges) == 7L)
+summary <- low_02c_summarize_by_lake(detail)
+stopifnot(summary$n_lakes == 1L, summary$unique_zero_cells == 1L,
+          summary$d8_edges == 7L, summary$per_lake_zero_sum == 1L,
+          summary$zero_cells_with_multiple_lakes == 0L,
+          summary$lakes$lake_objectid == 101L,
+          summary$lakes$zero_cells == 1L,
+          summary$lakes$incoming_lake_cells == 7L,
+          summary$lakes$safe_zero_cells == 1L,
+          summary$lakes$below_water_min_zero_cells == 1L)
+# Two different lakes point into one zero cell. Lake-wise association count
+# is 2, but global unique zero-cell count remains 1.
+water_other <- water
+water_other$lake_objectid[1L] <- 202L
+mix <- low_02c_summarize_by_lake(
+  low_02c_incoming(zeros, water_other, components, pointers, 8L, 8L,
+                   detail = TRUE))
+stopifnot(mix$n_lakes == 2L, mix$d8_edges == 7L,
+          mix$unique_zero_cells == 1L,
+          mix$per_lake_zero_sum == 2L,
+          mix$zero_cells_with_multiple_lakes == 1L,
+          setequal(mix$lakes$lake_objectid, c(101L, 202L)),
+          sum(mix$lakes$d8_edges) == 7L)
+pointers[] <- 0
+empty <- low_02c_summarize_by_lake(
+  low_02c_incoming(zeros, water, components, pointers, 8L, 8L,
+                   detail = TRUE))
+stopifnot(empty$n_lakes == 0L, empty$unique_zero_cells == 0L,
+          empty$d8_edges == 0L, nrow(empty$lakes) == 0L)
+stopifnot(err(low_02c_incoming(zeros, water, components, pointers, 8L, 8L,
+                              detail = NA)))
+stopifnot(err(low_02c_summarize_by_lake(list(zero_cells = z))))
+cat('PASS: source-lake grouping, overlapping terminals and reconciliation\n')
 cat('PASS: all 8 Whitebox D8 directions; no-incoming and invalid inputs fail closed\n')
