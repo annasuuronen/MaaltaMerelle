@@ -26,7 +26,8 @@ gc(verbose = FALSE)
 # Obtain each cell ID in the actual raster cell order (not table-sort order).
 source_ids <- as.integer(extract(lake, source_cells)[[1]])
 stopifnot(length(source_cells) == length(source_ids), all(source_ids %in% ids),
-          identical(as.integer(table(factor(source_ids, levels=ids))),\n                    as.integer(tab[as.character(ids)])))
+          identical(as.integer(table(factor(source_ids, levels=ids))),
+                    as.integer(tab[as.character(ids)])))
 # Each cell's neighboring cells, with 8-connectivity. At most 8 neighbours per
 # selected lake cell, avoiding 36 million cells x 8 materialisation.
 pairs <- adjacent(lake, cells = source_cells, directions = 8,
