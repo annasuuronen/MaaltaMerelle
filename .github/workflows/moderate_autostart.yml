@@ -14,94 +14,109 @@ permissions:
   contents: read
 
 concurrency:
-  group: moderate-automated-validation
+  group: moderate-automated-validation-${{ github.event_name }}-${{ github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
-  synthetic:
+  preflight:
     if: >-
       github.event_name != 'workflow_run' ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_branch == 'codex/moderate-02d4-diagnosis' &&
        github.event.workflow_run.head_repository.full_name == 'annasuuronen/MaaltaMerelle')
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     steps:
-      - name: Check out reviewed diagnostic commit (never run main model)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: annasuuronen/MaaltaMerelle
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'f14e5e7000e7685e012c173238f32d049d3e25f3' }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '89f43d84d1a51d226e9574f47a8bb45e4ee0b677' }}
           persist-credentials: false
-      - name: Pin diagnostic commit and audit boundaries
-        shell: bash
+      - name: Verify exact reviewed commit and script syntax
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '89f43d84d1a51d226e9574f47a8bb45e4ee0b677' }}
         run: |
-          test "$(git rev-parse HEAD)" = "${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'f14e5e7000e7685e012c173238f32d049d3e25f3' }}"
-          test -f scripts/audit_moderate_spill_d8_readonly.R
-          test -f scripts/audit_moderate_lake_geometry_readonly.R
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test -s scripts/audit_moderate_spill_d8_readonly.R
+          test -s scripts/audit_moderate_lake_geometry_readonly.R
+          test -s tests/moderate_roihu_review_smoke.R
+          test -s tests/spill_storage_semantics.R
           bash -n scripts/roihu_moderate_validation.sbatch
           bash -n scripts/roihu_launch_moderate_review.sh
-      - name: Install terra system dependencies
+
+  synthetic:
+    name: "Synthetic: ${{ matrix.suite }}"
+    needs: preflight
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - suite: d8_geometry
+            script: tests/moderate_roihu_review_smoke.R
+          - suite: spill_storage
+            script: tests/spill_storage_semantics.R
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: annasuuronen/MaaltaMerelle
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '89f43d84d1a51d226e9574f47a8bb45e4ee0b677' }}
+          persist-credentials: false
+      - name: Install R spatial system dependencies
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y libgdal-dev libproj-dev libgeos-dev libudunits2-dev
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
-      - name: Install R terra and whitebox dependencies
+      - name: Install R dependencies
         shell: Rscript {0}
         run: |
           install.packages(c("terra", "whitebox"), repos="https://cloud.r-project.org")
-      - name: Synthetic geometry and D8 diagnostic checks
-        id: synthetic_d8
-        continue-on-error: true
+      - name: Run independent synthetic test suite
+        env:
+          TEST_SCRIPT: ${{ matrix.script }}
+        shell: bash
         run: |
-          Rscript --vanilla tests/moderate_roihu_review_smoke.R 2>&1 | tee synthetic_d8.log
-          exit ${PIPESTATUS[0]}
-      - name: Spill/storage production-expression regressions
-        id: spill_storage
+          set -o pipefail
+          Rscript --vanilla "$TEST_SCRIPT" 2>&1 | tee test.log
+      - name: Confirm no CSC data access
         if: always()
-        continue-on-error: true
-        run: |
-          Rscript --vanilla tests/spill_storage_semantics.R 2>&1 | tee spill_storage.log
-          exit ${PIPESTATUS[0]}
-      - name: Safety and scope
-        id: scope
-        if: always()
-        continue-on-error: true
         run: |
           test ! -e "/scratch/project_2004707"
           echo "SYNTHETIC_ONLY=true"
           echo "MODERATE=REVIEW_REQUIRED"
           echo "NATIONAL=LOCKED"
-      - name: Preserve logs from all attempted tests
+      - name: Retain suite logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: moderate-synthetic-logs
-          path: |
-            synthetic_d8.log
-            spill_storage.log
+          name: moderate-${{ matrix.suite }}-logs
+          path: test.log
           if-no-files-found: warn
           retention-days: 30
-      - name: Combined diagnostic outcome (fail closed)
-        if: always()
+
+  summary:
+    name: Combined gate (no hydrological approval)
+    needs: [preflight, synthetic]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Fail if any required job failed, skipped or was cancelled
         env:
-          D8_RESULT: ${{ steps.synthetic_d8.outcome }}
-          STORAGE_RESULT: ${{ steps.spill_storage.outcome }}
-          SCOPE_RESULT: ${{ steps.scope.outcome }}
-        shell: bash
+          PREFLIGHT: ${{ needs.preflight.result }}
+          SYNTHETIC: ${{ needs.synthetic.result }}
         run: |
-          echo "D8_TEST=$D8_RESULT"
-          echo "STORAGE_TEST=$STORAGE_RESULT"
-          echo "SCOPE_TEST=$SCOPE_RESULT"
-          for result in "$D8_RESULT" "$STORAGE_RESULT" "$SCOPE_RESULT"; do
-            if [[ "$result" != "success" ]]; then
-              echo "::error::At least one required diagnostic failed or was skipped"
-              exit 1
-            fi
-          done
-          echo "SYNTHETIC_DIAGNOSTICS_PASS=true"
-          echo "ROIHU_REAL_DATA_VALIDATED=false"
+          echo "PREFLIGHT=$PREFLIGHT"
+          echo "INDEPENDENT_SYNTHETIC_SUITES=$SYNTHETIC"
           echo "MODERATE=REVIEW_REQUIRED"
           echo "NATIONAL=LOCKED"
+          if [[ "$PREFLIGHT" != success || "$SYNTHETIC" != success ]]; then
+            echo "::error::One or more required tests did not pass"
+            exit 1
+          fi
+          echo "GITHUB_SYNTHETIC_PASS=true"
+          echo "ROIHU_REAL_DATA_VALIDATED=false"
