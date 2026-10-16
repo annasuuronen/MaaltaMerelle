@@ -119,3 +119,7 @@ geometry/NoData facts → propose separately reviewed scientific fix →
 Roihu replication of exact approved commit → LOW and MODERATE scientific
 review → national gate. A green CI or Slurm exit status is never alone
 an acceptance criterion.
+
+## CI triggering and limits (2026-10-16)
+
+A default-branch workflow `moderate_autostart.yml` now subscribes to successful `CSC preflight` **completion** events from this diagnostic branch. It uses the completed run's commit SHA for reproducible synthetic R checks and stops at the first failure. Updates to this branch are intended to trigger the preflight through the existing pull-request workflow; the downstream job runs only if the preflight is successful. No automatic Roihu, Whitebox full-area filling, or NATIONAL execution is chained. The hourly ChatGPT task is monitoring, not a substitute for a GitHub runner. GitHub's connector here supports editing workflow definitions and checking results but not a direct workflow_dispatch API action. Until an Actions run is independently observed, treat automatic execution as unverified.
