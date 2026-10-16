@@ -48,3 +48,11 @@ if (requireNamespace('sf', quietly = TRUE)) {
   cat('SKIP: sf geometry test (sf unavailable)', '\n')
 }
 cat('PASS: lake shoreline rate normalization, ID join and fail-closed cases', '\n')
+# Regression for runner variable collision: sourced 02C QA sets d to a seven-column
+# data.frame. The wrapper must retain a separate script-directory variable.
+runner_lines <- readLines(file.path(d, 'run_lake_shoreline_rates.R'), warn = FALSE)
+stopifnot(any(grepl('shoreline_script_dir_02c <- dirname(', runner_lines, fixed = TRUE)),
+          sum(grepl('source(file.path(shoreline_script_dir_02c,', runner_lines,
+                    fixed = TRUE)) == 2L,
+          !any(grepl('source(file.path(d,', runner_lines, fixed = TRUE)))
+cat('PASS: shoreline runner preserves source paths after D8 status loop', '\n')
