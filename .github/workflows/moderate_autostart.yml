@@ -82,8 +82,8 @@ jobs:
           whitebox::install_whitebox()
           exe <- whitebox::wbt_exe_path(shell_quote = FALSE)
           stopifnot(file.exists(exe), file.access(exe, 1) == 0)
-          cat(sprintf("HYDRO_TEST_WHITEBOX_EXE=%s\\n", exe),
-              file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+          write(paste0("HYDRO_TEST_WHITEBOX_EXE=", exe),
+                file = Sys.getenv("GITHUB_ENV"), append = TRUE)
       - name: Record WhiteboxTools binary provenance
         if: matrix.suite == 'whitebox_integration'
         shell: bash
