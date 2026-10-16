@@ -10,7 +10,6 @@ stopifnot(file.exists(file1), file.exists(file2))
 invisible(parse(file=file1)); invisible(parse(file=file2))
 dir <- tempfile("moderate-review-test-")
 dir.create(dir)
-on.exit <- NULL # All temporary files are under a dedicated disposable tempdir.
 baseline <- file.path(dir, "02_baseline")
 dir.create(baseline)
 lake <- rast(nrows=7, ncols=7, xmin=0, xmax=14, ymin=0, ymax=14, crs="EPSG:3067")
