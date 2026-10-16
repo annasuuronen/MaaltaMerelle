@@ -16,6 +16,6 @@ CSC Roihu login-solmulla (rajattu rasteriluku, samat 846 ikkunaa kuin aiemmin):
 
 Käytä lisäksi kolmea samaan hakemistoon paketoitua jo Roihussa validoitua read-only
 `incoming_02c_lake_d8.R`, `run_incoming_02c_lake_d8.R` ja
-`test_incoming_02c_lake_d8.R` -tiedostoa. Varsinaisen geometria-ajon PASS odottaa Roihun tulosta; tässä toteutusympäristössä ei ole R-tulkkia.
+`test_incoming_02c_lake_d8.R` -tiedostoa. Geometrian ja suhdelukujen synteettiset testit läpäisivät Roihussa. Ensimmäinen oikean aineiston normalisointiyritys keskeytyi käynnistysvirheeseen: lähde-D8-ajon status-silmukka muutti `d`-hakemistomuuttujan data.frame-olioksi (`source()`: length 7). Korjattu ajuri käyttää pysyvää `shoreline_script_dir_02c`-hakemistomuuttujaa ja regressiotesti varmistaa tämän. Varsinaisen geometria-ajon PASS odottaa Roihun uutta tulosta; tässä toteutusympäristössä ei ole R-tulkkia.
 
 **Ei DEM-, D8-, outlet- eikä syötetiedostojen muutoksia. NATIONAL LOCKED; MODERATE REVIEW_REQUIRED.**
