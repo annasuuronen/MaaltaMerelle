@@ -1,0 +1,56 @@
+name: MODERATE automated diagnostic validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/moderate_autostart.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: moderate-automated-validation
+  cancel-in-progress: false
+
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out reviewed diagnostic commit (never run main model)
+        uses: actions/checkout@v4
+        with:
+          repository: annasuuronen/MaaltaMerelle
+          ref: f14e5e7000e7685e012c173238f32d049d3e25f3
+          persist-credentials: false
+      - name: Pin diagnostic commit and audit boundaries
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "f14e5e7000e7685e012c173238f32d049d3e25f3"
+          test -f scripts/audit_moderate_spill_d8_readonly.R
+          test -f scripts/audit_moderate_lake_geometry_readonly.R
+          bash -n scripts/roihu_moderate_validation.sbatch
+          bash -n scripts/roihu_launch_moderate_review.sh
+      - name: Install terra system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libgdal-dev libproj-dev libgeos-dev libudunits2-dev
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - name: Install R terra and whitebox dependencies
+        shell: Rscript {0}
+        run: |
+          install.packages(c("terra", "whitebox"), repos="https://cloud.r-project.org")
+      - name: Synthetic geometry and D8 diagnostic checks
+        run: Rscript --vanilla tests/moderate_roihu_review_smoke.R
+      - name: Spill/storage production-expression regressions
+        run: Rscript --vanilla tests/spill_storage_semantics.R
+      - name: Safety and scope
+        run: |
+          test ! -e "/scratch/project_2004707"
+          echo "SYNTHETIC_ONLY=true"
+          echo "MODERATE=REVIEW_REQUIRED"
+          echo "NATIONAL=LOCKED"
