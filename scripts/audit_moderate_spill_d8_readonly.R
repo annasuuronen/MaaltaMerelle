@@ -41,7 +41,7 @@ dirs <- list("1" = c(-1L, 1L), "2" = c(0L, 1L), "4" = c(1L, 1L),
              "8" = c(1L, 0L), "16" = c(1L, -1L), "32" = c(0L, -1L),
              "64" = c(-1L, -1L), "128" = c(-1L, 0L))
 # Read only the requested raster cells. This does not scan all 36 million cells.
-one_value <- function(r, cell) terra::extract(r, as.integer(cell))[[2]][1]
+one_value <- function(r, cell) terra::extract(r, as.integer(cell))[[1]][1]
 trace <- function(start, source_id, cap = 100L) {
   cell <- as.integer(start)
   seen <- integer()
