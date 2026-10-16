@@ -5,11 +5,15 @@ args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 1L) stop('Usage: Rscript run_lake_shoreline_rates.R BASELINE_DIR')
 script_arg <- grep('^--file=', commandArgs(), value = TRUE)
 if (length(script_arg) != 1L) stop('Run using Rscript --vanilla')
-d <- dirname(normalizePath(sub('^--file=', '', script_arg), mustWork = TRUE))
+shoreline_script_dir_02c <- dirname(normalizePath(sub('^--file=', '', script_arg), mustWork = TRUE))
 # Re-use the actual sparse D8 classification, edges and per-lake aggregation;
 # source() in this environment retains per_lake, p, and base variables.
-source(file.path(d, 'run_incoming_02c_lake_d8.R'), local = TRUE)
-source(file.path(d, 'lake_shoreline_rates.R'), local = TRUE)
+# NOTE: the sourced runner assigns d <- by_status[[status]] (a data.frame).
+# Never use d for script paths in this runner; it would become length 7.
+source(file.path(shoreline_script_dir_02c, 'run_incoming_02c_lake_d8.R'), local = TRUE)
+# Preserve the script directory even when the sourced QA rebinds `d`.
+stopifnot(length(shoreline_script_dir_02c) == 1L, dir.exists(shoreline_script_dir_02c))
+source(file.path(shoreline_script_dir_02c, 'lake_shoreline_rates.R'), local = TRUE)
 suppressPackageStartupMessages(library(sf))
 # The locked study structure is root/hydro_01_02/runs/TILE/02_baseline.
 tile_id <- basename(dirname(base))
