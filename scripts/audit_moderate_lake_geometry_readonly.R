@@ -24,7 +24,7 @@ stopifnot(setequal(ids, as.integer(names(tab))))
 rm(all_ids)
 gc(verbose = FALSE)
 # Obtain each cell ID in the actual raster cell order (not table-sort order).
-source_ids <- as.integer(extract(lake, source_cells)[[2]])
+source_ids <- as.integer(extract(lake, source_cells)[[1]])
 stopifnot(length(source_cells) == length(source_ids), all(source_ids %in% ids),
           identical(as.integer(table(factor(source_ids, levels=ids))),\n                    as.integer(tab[as.character(ids)])))
 # Each cell's neighboring cells, with 8-connectivity. At most 8 neighbours per
@@ -34,17 +34,17 @@ pairs <- adjacent(lake, cells = source_cells, directions = 8,
 stopifnot(ncol(pairs) == 2L)
 pair_id <- source_ids[match(pairs[,1], source_cells)]
 stopifnot(!anyNA(pair_id))
-neighbor_id <- as.integer(extract(lake, pairs[,2])[[2]])
+neighbor_id <- as.integer(extract(lake, pairs[,2])[[1]])
 outside <- is.na(neighbor_id) | neighbor_id != pair_id
 rim <- pairs[outside,,drop = FALSE]
 rim_id <- pair_id[outside]
 rm(pairs, pair_id, neighbor_id, outside)
 gc(verbose = FALSE)
 # Query the original and stored surfaces only at rim and target lake cells.
-rim_w <- extract(w, rim[,2])[[2]]
-rim_s <- extract(s, rim[,2])[[2]]
-source_w <- extract(w, source_cells)[[2]]
-source_s <- extract(s, source_cells)[[2]]
+rim_w <- extract(w, rim[,2])[[1]]
+rim_s <- extract(s, rim[,2])[[1]]
+source_w <- extract(w, source_cells)[[1]]
+source_s <- extract(s, source_cells)[[1]]
 rc <- rowColFromCell(lake, source_cells)
 edge <- rc[,1] == 1L | rc[,1] == nrow(lake) |
         rc[,2] == 1L | rc[,2] == ncol(lake)
