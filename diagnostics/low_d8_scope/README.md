@@ -69,6 +69,41 @@ todellisen aineiston järvikohtainen ajo odottavat Roihun tuloksia.
 Edellisen 02C-aggregaatin tekninen PASS ei yksin todista uusia
 järvikohtaisia laskureita oikeiksi.
 
+## 1c. Lähdejärvittäin ryhmitetty katkeava D8 (Roihu PASS)
+
+Laajennettu `incoming_02c_lake_d8.R` sekä `run_incoming_02c_lake_d8.R`
+laskevat järvitunnuskohtaiset **erilliset D8=0-maasolut**, järvestä tulevat
+**osoitinreunat** ja mahdolliset useasta järvestä vastaanottavat maasolut.
+Ne käyttävät osion 1b **täsmälleen samaa rajattua lukua**; tämä ei ole uusi
+koko rasterin käsittely.
+
+Todellisen LOW Roihu-testin PASS (16.10.2026; synteettiset ryhmittely-,
+päällekkäisyys-, summatarkistus- ja virhesyötetestit PASS):
+
+- **22 lähdejärveä**; **535 eri maasolua**, joihin tulee D8-osoitin
+  RANTA10-järvestä; **1 273 järvi-D8-osoitinreunaa**.
+- Järvikohtaisten nollasolujen summa 535; **0** nollasolua, joihin tulisi
+  osoittimia kahdesta eri järvestä.
+- Järvitunnus `3181`: **317 solua / 785 reunaa** (noin 59,3 % ja 61,7 %
+  otoksen kokonaismääristä). Järvi `1847`: **88 / 197**.
+  Yhdessä **405/535 = 75,7 % soluista** ja **982/1 273 = 77,1 % reunoista**.
+- Seuraavat `1898` (**26 / 55**) ja `1832` (**15 / 32**);
+  alkuperäiset 02F-lähdejärvet `1892` (**3 / 8**),
+  `1894` (**10 / 19**) sekä `3181` (**317 / 785**).
+- Järviä, joilla on 1 / 2–4 / 5–9 / vähintään 10 tällaista maasolua:
+  **1 / 9 / 6 / 6**.
+- Näissä tuloksissa ei ole tehty järven kokoon, rantaviivan pituuteen,
+  maastotyyppiin tai järven todelliseen purkupisteeseen perustuvaa
+  normalisointia. **Pelkkä määrällinen keskittyminen ei todista järvien
+  3181 tai 1847 olevan suhteellisesti hydrologisesti huonompia.**
+
+**Tieteellinen status pysyy REVIEW_REQUIRED.** Tuloksella ei hyväksytä eikä
+muuteta purkuyhteyttä, D8:aa tai DEM:iä. 22 järveä on **02C-otoksen
+osoitinreunoissa esiintyvien järvien määrä**, ei koko LOW:n kaikkien
+mahdollisesti ongelmallisten järvien määrä. Mahdollinen jatkotehtävä on
+rantaviivan pituudella tai järven reunan solumäärällä normalisoitu vertailu
+siten, että tarkistetaan geometria sekä erilaisten lähdeaineistojen rajaukset.
+
 ## 2. Koko LOW-rasterin kattava nollasolujen inventointi — EI VIELÄ AJETTU
 
 scan_entire_low_d8.R lukee 64 rivin lohkoissa jo olemassa olevat D8- ja RANTA10-vesiluokkarasterit, yhden rivin naapurihaalolla. Se laskee kaikki sisäiset ei-vesisolu-D8=0-solut, järven viereiset sisäiset nollat, ja järvestä suoraan nollaan tulevat D8-osoittimet. Se ei vielä kartoita kaikki D8-NA-arvoja, syklejä, domain exittejä eikä koko verkon reittijakaumaa.
