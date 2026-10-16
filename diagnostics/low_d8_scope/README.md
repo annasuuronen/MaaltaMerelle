@@ -124,9 +124,53 @@ ole mallin virheprosentteja, eivätkä oikaise 02C:n otosrajausta.
 Vain raportointia. Koodin rakennetarkistus valmis; tämän uuden geometrisen
 R-ajon PASS odottaa vielä Roihun todellisia tuloksia. **Ei Slurm-ajoa.**
 
+## 1d. Riippumaton nimittäjä: kaikki järven D8 → maasolu -osoittimet
+
+**Tätä koko LOW:n laskentasolmuvaihetta EI OLE AJETTU.** Aiemmissa 02C- ja
+rantaviivatesteissä tunnistettiin 535 välitöntä järvi-D8 → maasolu D8=0
+-katkoskohtaa, 1 273 osoitinta, 22 lähdejärveä. Niiden osuutta **kaikista**
+järvestä maalle osoittavista D8-reunoista ei voi laskea 02C:n
+`02C_zero_pointer_water_neighbors.csv`-tiedostosta: se on otos, joka on
+poimittu **nollasolujen kautta**, joten sen käyttö nimittäjänä aiheuttaisi
+valikoitumisharhan.
+
+`lake_to_land_d8_core.R` ja `test_lake_to_land_d8.R` toteuttavat
+pienen riippumattoman base-R-kernelin ja synteettiset regressiotestit
+(lohkorajan yli osoittava D8, saman maasolun useampi järviosoittimen tulo,
+toisen järven vastaanotin, ulos tileltä, D8=NA, D8>0 ja puuttuvan
+yhden rivin haloikkunan suljettu käsittely). Synteettinen testi:
+
+    Rscript --vanilla diagnostics/low_d8_scope/test_lake_to_land_d8.R
+
+`scan_entire_low_d8.R` käyttää **samaa tulevaa 64 rivin lohkoskannausta**
+sekä alkuperäistä `d8_pointer_land_water_FLT8S.tif`,
+`ranta10_water_class.tif`- ja `ranta10_lake_id.tif`-rasteria
+molempiin tehtäviin: koko LOW:n nollasolujen inventointiin ja kaikkien
+järvi-D8 → maa-osoittimien laskentaan. Ei toista raskasta skannausta.
+Järville raportoidaan (1) kaikki järvi→maa-osoittimet, (2) välittömästi
+D8=0-vastaanottajaan johtavat osoittimet, (3) positiiviseen D8-osoittimeen
+johtavat osoittimet, (4) D8-NA-vastaanottajat, (5) erilliset zero-kohdesolut
+sekä (6) välitön nollapääteosuus (2)/(1). Nimittäjässä ovat vain
+**ruudun sisäiset**, kartoitetusta järvestä **maa-vesiluokkaan (NA)** johtavat
+kelvolliset Whitebox D8 -osoittimet. Ei esimerkiksi veteen tai ruudun
+ulkopuolelle johtavia osoittimia. Jos nimittäjä on 0, osuus jää puuttuvaksi
+eikä muutu 0:ksi.
+
+`scan_entire_low_d8.R` vaatii `SLURM_JOB_ID`-ympäristömuuttujan;
+raskasta ajoa **ei** saa suorittaa Roihun kirjautumissolmulla.
+Ennen laskentasolmuajoa käyttäjän tulee hyväksyä resurssit ja laskentatyö.
+Raportti vertaa aiemman 22 järven 1 273 välitöntä nollaan johtavaa
+osoitinreunaa / 535 erillistä nollavastaanottajaa; ristiriita
+pysäyttää ajon tieteelliseen REVIEW_REQUIRED-tarkasteluun. Ensimmäisiä
+nimittäjätuloksia ei ole vielä olemassa.
+
+**Tärkeä tulkinta:** vastaanottavan maasolun D8≠0 ei takaa
+katkeamatonta jatkoreittiä. Näin mitattu osuus on **välitön D8-nollaan
+päättymisosuus**, ei koko virtausverkon toimivuusprosentti.
+
 ## 2. Koko LOW-rasterin kattava nollasolujen inventointi — EI VIELÄ AJETTU
 
-scan_entire_low_d8.R lukee 64 rivin lohkoissa jo olemassa olevat D8- ja RANTA10-vesiluokkarasterit, yhden rivin naapurihaalolla. Se laskee kaikki sisäiset ei-vesisolu-D8=0-solut, järven viereiset sisäiset nollat, ja järvestä suoraan nollaan tulevat D8-osoittimet. Se ei vielä kartoita kaikki D8-NA-arvoja, syklejä, domain exittejä eikä koko verkon reittijakaumaa.
+scan_entire_low_d8.R lukee 64 rivin lohkoissa jo olemassa olevat D8-, RANTA10-vesiluokka- ja RANTA10-järvitunnusrasterit, yhden rivin naapurihaalolla. Se laskee kaikki sisäiset ei-vesisolu-D8=0-solut, järven viereiset sisäiset nollat ja järvestä suoraan nollaan tulevat D8-osoittimet sekä samassa lukukierroksessa täydellisen järvi-D8 → maasolu -nimittäjän. Se ei vielä kartoita kaikki D8-NA-arvoja, syklejä, domain exittejä eikä koko verkon reittijakaumaa.
 
 **Ajo kielletty Roihun login-solmulla.** Ohjelma pysähtyy, ellei SLURM_JOB_ID ole asetettu oikeassa laskentatyössä. R/terra-toteutusta ei vielä ole ajettu todellisella CSC-R-ympäristöllä. Laskentatyön resurssit ja hyväksyntä sovitaan ennen Slurm-käynnistystä; älä kierrä laskentasolmusuojia. Ohjelma ei kirjoita rastereita, ja tulostaa vain aggregaattiluvut.
 
