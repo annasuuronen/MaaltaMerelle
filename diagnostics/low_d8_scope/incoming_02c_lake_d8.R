@@ -7,7 +7,9 @@ low_d8_stop <- function(condition, message) {
 }
 
 low_02c_incoming <- function(zeros, neighbors, components, water_ptr,
-                             nrow_raster, ncol_raster, tol = 1e-7) {
+                             nrow_raster, ncol_raster, tol = 1e-7, detail = FALSE) {
+  low_d8_stop(is.logical(detail) && length(detail) == 1L && !is.na(detail),
+              'BAD_DETAIL_FLAG')
   required <- list(
     zeros = c('cell', 'component_id', 'z_m'),
     neighbors = c('component_id', 'source_cell', 'water_cell', 'water_class',
@@ -98,7 +100,7 @@ low_02c_incoming <- function(zeros, neighbors, components, water_ptr,
   dz <- zval - water_min
   elev <- ifelse(dz < -tol, 'BELOW', ifelse(dz > tol, 'ABOVE', 'SAME'))
   status <- as.character(components$connector_status[match(zcomp, ci)])
-  data.frame(
+  out <- data.frame(
     cell = zc, component_id = zcomp, connector_status = status,
     elevation_class = elev,
     n_incoming_lake_edges = lake_edges,
@@ -106,4 +108,78 @@ low_02c_incoming <- function(zeros, neighbors, components, water_ptr,
     has_incoming_lake_D8 = lake_edges > 0L,
     stringsAsFactors = FALSE
   )
+  if (!detail) return(out)  # original interface remains unchanged
+  # Only actual incoming water_class=1 pointers; no hypothetical shoreline links.
+  li <- which(lake_in)
+  edges <- data.frame(
+    lake_objectid = lkid[li],
+    lake_cell = water[li],
+    zero_cell = src[li],
+    component_id = zcomp[source_index[li]],
+    connector_status = status[source_index[li]],
+    elevation_class = elev[source_index[li]],
+    stringsAsFactors = FALSE
+  )
+  low_d8_stop(nrow(edges) == sum(out$n_incoming_lake_edges) &&
+                !anyDuplicated(paste(edges$zero_cell, edges$lake_cell, sep = ':')),
+              'INCOMING_EDGE_RECONCILIATION_FAILED')
+  list(zero_cells = out, lake_edges = edges)
+}
+
+# Zero cells receiving D8 from several lakes are counted once globally
+# but once for each source lake; the overlap is reported explicitly.
+low_02c_summarize_by_lake <- function(detail_result) {
+  low_d8_stop(is.list(detail_result) &&
+                all(c('zero_cells', 'lake_edges') %in% names(detail_result)),
+              'BAD_DETAILED_RESULT')
+  z <- detail_result$zero_cells
+  e <- detail_result$lake_edges
+  low_d8_stop(is.data.frame(z) && is.data.frame(e) &&
+                all(c('cell', 'n_incoming_lake_edges') %in% names(z)) &&
+                all(c('lake_objectid', 'lake_cell', 'zero_cell',
+                      'connector_status', 'elevation_class') %in% names(e)),
+              'BAD_LAKE_EDGE_SCHEMA')
+  low_d8_stop(nrow(e) == sum(z$n_incoming_lake_edges) &&
+                all(e$zero_cell %in% z$cell) &&
+                !anyNA(e$lake_objectid) && all(e$lake_objectid > 0L) &&
+                !anyDuplicated(paste(e$lake_cell, e$zero_cell, sep = ':')),
+              'BAD_LAKE_EDGE_COUNTS')
+  make_empty <- function() data.frame(
+    lake_objectid = integer(), zero_cells = integer(), d8_edges = integer(),
+    incoming_lake_cells = integer(), safe_zero_cells = integer(),
+    below_water_min_zero_cells = integer(), stringsAsFactors = FALSE)
+  if (nrow(e) == 0L) {
+    return(list(lakes = make_empty(), edges = e,
+                n_lakes = 0L, unique_zero_cells = 0L,
+                d8_edges = 0L, zero_cells_with_multiple_lakes = 0L,
+                per_lake_zero_sum = 0L))
+  }
+  lids <- sort(unique(e$lake_objectid))
+  rows <- lapply(lids, function(id) {
+    a <- e[e$lake_objectid == id, , drop = FALSE]
+    data.frame(
+      lake_objectid = as.integer(id),
+      zero_cells = as.integer(length(unique(a$zero_cell))),
+      d8_edges = as.integer(nrow(a)),
+      incoming_lake_cells = as.integer(length(unique(a$lake_cell))),
+      safe_zero_cells = as.integer(length(unique(a$zero_cell[
+        a$connector_status == 'SAFE_LAKE_CONNECTOR']))),
+      below_water_min_zero_cells = as.integer(length(unique(a$zero_cell[
+        a$elevation_class == 'BELOW']))),
+      stringsAsFactors = FALSE
+    )
+  })
+  lakes <- do.call(rbind, rows)
+  rownames(lakes) <- NULL
+  pairs <- unique(e[, c('lake_objectid', 'zero_cell'), drop = FALSE])
+  lake_count_per_zero <- table(pairs$zero_cell)
+  n_multi <- sum(lake_count_per_zero > 1L)
+  low_d8_stop(sum(lakes$d8_edges) == nrow(e) &&
+                sum(lakes$zero_cells) == nrow(pairs) &&
+                length(lake_count_per_zero) == sum(z$n_incoming_lake_edges > 0L),
+              'LAKE_SUMMARY_RECONCILIATION_FAILED')
+  list(lakes = lakes, edges = e,
+       n_lakes = length(lids), unique_zero_cells = length(lake_count_per_zero),
+       d8_edges = nrow(e), zero_cells_with_multiple_lakes = as.integer(n_multi),
+       per_lake_zero_sum = nrow(pairs))
 }
