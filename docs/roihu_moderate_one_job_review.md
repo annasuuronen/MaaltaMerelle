@@ -81,3 +81,41 @@ checks simply to let 02D.5 run.
 
 This review script is a **necessary next empirical discriminator**, not the
 final nationally validated implementation.
+
+## Reduced-manual-work protocol (added 2026-10-16)
+
+To avoid accidentally changing `/projappl/project_2004707/MaaltaMerelle`,
+[`scripts/roihu_launch_moderate_review.sh`](../scripts/roihu_launch_moderate_review.sh)
+creates a **separate shallow checkout** of the dedicated diagnostic branch
+inside scratch and submits **one** Slurm job. It never resets the shared
+production checkout and never starts the national hydrology model. Do not
+start that launcher until the diagnostic scripts pass synthetic checks and
+the user decides a Roihu run is warranted.
+
+The new
+[`tests/moderate_roihu_review_smoke.R`](../tests/moderate_roihu_review_smoke.R)
+creates disposable 7×7 DEM, storage, lake-ID and D8 fixtures to test the
+aggregation and failure gates. GitHub Actions
+[`moderate_review_smoke.yml`](../.github/workflows/moderate_review_smoke.yml)
+runs this synthetic test when the branch's relevant scripts change.
+GitHub CI is **not equivalent** to the Roihu module, storage files, or
+scientific validity; its status must be checked before relying on it.
+
+The Roihu job creates **one small archive**:
+`review_bundle.tar.gz` containing the existing detailed logs and
+`provenance.txt`. No GeoTIFFs are included. The user should need to
+transfer this bundle only **once per justified Roihu job**, not paste
+individual console outputs. The assistant can then update the GitHub
+diagnostics, tests and evidence notes from that archive, making the
+next proposed run different and purposeful. There is no configured
+automatic upload from CSC scratch to GitHub; such an upload would need
+user-approved credentials/permissions and a review of public repository
+data exposure. Until that exists, do not claim GitHub has received
+Roihu results automatically.
+
+**Acceptance sequence:** GitHub synthetic smoke checks → isolated
+read-only Roihu diagnostic → interpret only newly measured
+geometry/NoData facts → propose separately reviewed scientific fix →
+Roihu replication of exact approved commit → LOW and MODERATE scientific
+review → national gate. A green CI or Slurm exit status is never alone
+an acceptance criterion.
