@@ -222,6 +222,12 @@ build_water_connected_candidate_edges <- function(
   ]
   row.names(edges) <- NULL
 
+  # Rebind the group lookup AFTER sorting rows. The pre-sort evidence_index
+  # above correctly validates each edge on input, but cannot be reused for
+  # QA comparisons after lake-based ordering changes the edge row positions.
+  evidence_index <- match(edges$spill_group_id, candidate_evidence$spill_group_id)
+  if (anyNA(evidence_index)) stop("02E QA cannot match sorted edges to evidence.")
+
   included_counts <- table(factor(
     edges$spill_group_id,
     levels = selected_groups
