@@ -1,10 +1,6 @@
 name: MODERATE automated diagnostic validation
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/moderate_autostart.yml"
   workflow_dispatch:
   workflow_run:
     workflows: ["CSC preflight"]
@@ -30,11 +26,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: annasuuronen/MaaltaMerelle
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '89f43d84d1a51d226e9574f47a8bb45e4ee0b677' }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '8dd5aed899cdf50e4886c7656fe5cefc759ef128' }}
           persist-credentials: false
       - name: Verify exact reviewed commit and script syntax
         env:
-          EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '89f43d84d1a51d226e9574f47a8bb45e4ee0b677' }}
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '8dd5aed899cdf50e4886c7656fe5cefc759ef128' }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
           test -s scripts/audit_moderate_spill_d8_readonly.R
@@ -49,10 +45,12 @@ jobs:
     needs: preflight
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 3
       matrix:
         include:
-          - suite: d8_geometry
+          - suite: d8
+            script: tests/moderate_roihu_review_smoke.R
+          - suite: geometry
             script: tests/moderate_roihu_review_smoke.R
           - suite: spill_storage
             script: tests/spill_storage_semantics.R
@@ -62,7 +60,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: annasuuronen/MaaltaMerelle
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '89f43d84d1a51d226e9574f47a8bb45e4ee0b677' }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '8dd5aed899cdf50e4886c7656fe5cefc759ef128' }}
           persist-credentials: false
       - name: Install R spatial system dependencies
         run: |
@@ -78,6 +76,7 @@ jobs:
       - name: Run independent synthetic test suite
         env:
           TEST_SCRIPT: ${{ matrix.script }}
+          HYDRO_SYNTHETIC_SUITE: ${{ matrix.suite }}
         shell: bash
         run: |
           set -o pipefail
@@ -105,6 +104,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
+      - name: Fetch all independent test logs for immediate triage
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          pattern: moderate-*-logs
+          path: suite-logs
+          merge-multiple: false
+      - name: Summarize errors without re-running passed tests
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## MODERATE synthetic test diagnostics"
+            echo "This is technical synthetic evidence only. No real CSC data was accessed."
+            echo ""
+            for log in suite-logs/*/test.log; do
+              if [[ -f "$log" ]]; then
+                echo "### $(basename "$(dirname "$log")")"
+                grep -Ein 'Error|FAIL|unexpected|Execution halted|Warning' "$log" | tail -n 20 || echo "No error markers found"
+              fi
+            done
+            echo ""
+            echo "MODERATE=REVIEW_REQUIRED; NATIONAL=LOCKED"
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Fail if any required job failed, skipped or was cancelled
         env:
           PREFLIGHT: ${{ needs.preflight.result }}
