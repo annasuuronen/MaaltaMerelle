@@ -45,7 +45,7 @@ jobs:
     needs: preflight
     strategy:
       fail-fast: false
-      max-parallel: 3
+      max-parallel: 4
       matrix:
         include:
           - suite: d8
@@ -53,6 +53,8 @@ jobs:
           - suite: geometry
             script: tests/moderate_roihu_review_smoke.R
           - suite: spill_storage
+            script: tests/spill_storage_semantics.R
+          - suite: whitebox_integration
             script: tests/spill_storage_semantics.R
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -73,10 +75,27 @@ jobs:
         shell: Rscript {0}
         run: |
           install.packages(c("terra", "whitebox"), repos="https://cloud.r-project.org")
+      - name: Install matching WhiteboxTools executable for integration suite
+        if: matrix.suite == 'whitebox_integration'
+        shell: Rscript {0}
+        run: |
+          whitebox::install_whitebox()
+          exe <- whitebox::wbt_exe_path(shell_quote = FALSE)
+          stopifnot(file.exists(exe), file.access(exe, 1) == 0)
+          cat(sprintf("HYDRO_TEST_WHITEBOX_EXE=%s\\n", exe),
+              file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+      - name: Record WhiteboxTools binary provenance
+        if: matrix.suite == 'whitebox_integration'
+        shell: bash
+        run: |
+          test -x "$HYDRO_TEST_WHITEBOX_EXE"
+          sha256sum "$HYDRO_TEST_WHITEBOX_EXE"
+          "$HYDRO_TEST_WHITEBOX_EXE" --version
       - name: Run independent synthetic test suite
         env:
           TEST_SCRIPT: ${{ matrix.script }}
           HYDRO_SYNTHETIC_SUITE: ${{ matrix.suite }}
+          HYDRO_TEST_REQUIRE_WHITEBOX: ${{ matrix.suite == 'whitebox_integration' && '1' || '0' }}
         shell: bash
         run: |
           set -o pipefail
