@@ -211,3 +211,11 @@ run_tests <- function() {
 }
 
 run_tests()
+
+# The existing default-branch MODERATE workflow runs this entrypoint for the
+# spill_storage suite. Add the independent base-R classifier without changing
+# CSC preflight or repeating it in the separate Whitebox integration job.
+if (Sys.getenv("HYDRO_SYNTHETIC_SUITE", unset = "spill_storage") %in%
+    c("spill_storage", "both")) {
+  source("tests/readiness_02d5.R", local = new.env(parent = globalenv()))
+}

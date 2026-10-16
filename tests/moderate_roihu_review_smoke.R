@@ -76,6 +76,14 @@ stopifnot(grepl("TARGET_LAKES 2",geom,fixed=TRUE),
           grepl("SCIENTIFIC_STATUS REVIEW_REQUIRED",geom,fixed=TRUE),
           grepl("NATIONAL_LOCKED TRUE",geom,fixed=TRUE))
 cat("PASS: MODERATE geometry read-only diagnostic (synthetic only)\n")
+# Keep this in the existing independent geometry job; the D8 suite does not
+# repeat it and the default-branch fail-closed combined gate remains intact.
+(function() {
+  old <- getwd()
+  on.exit(setwd(old))
+  setwd(root)
+  source("tests/fill_hypothesis_probe.R", local = new.env(parent = globalenv()))
+})()
 }
 unlink(dir,recursive=TRUE)
 cat("PASS: selected MODERATE REVIEW DIAGNOSTICS (synthetic only)\n")
