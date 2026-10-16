@@ -39,6 +39,36 @@ katkokset. `SAFE_LAKE_CONNECTOR` ei osoita toimivaa virtausjatkumoa.
 Kaikkien 535 solun todellinen järvikohtainen jakauma tai mahdollisten
 korjausvaihtoehtojen hyväksyntä on erillinen tieteellinen jatkotehtävä.
 
+## 1c. LOW 02C: lähdejärvet, joihin liittyy järvestä D8=0-soluun tulevia osoittimia
+
+Laajennettu `incoming_02c_lake_d8.R` tukee valinnaista `detail=TRUE`-tulosta:
+todellisten järvestä nollasoluun tulevien osoitinreunojen lähdejärvitunnukset
+(`lake_objectid`), rasterin järvisolut ja vastaanottavat maasolut. Vanha
+`detail=FALSE`-dataframe-rajapinta ja kaikki aiemmat 02C-laskurit säilyvät.
+
+`run_incoming_02c_lake_d8.R` raportoi lisäksi **erillisten lähdejärvien**
+määrän, globaaleina yksilöllisten vastaanottavien nollasolujen määrän,
+osoitinreunojen määrän ja **20 eniten erillisiä nollasoluja saavaa järveä**.
+Samalla nollasolulla voi olla osoitinreunoja kahdesta eri järvestä: järvittäisten
+nollasolujen summa ei silloin ole globaalisti yksilöllisten solujen lukumäärä,
+ja päällekkäisten solujen määrä näytetään erikseen.
+
+Roihussa paketti voidaan purkaa omaksi hakemistokseen ja ajaa yhdellä
+komentorivillä (ei tuotantohaaran checkoutia):
+
+    unzip -oq "$HOME/MaaltaMerelle_LOW_02C_jarvikohtainen_D8_20261016.zip" -d "$HOME"
+    D="$HOME/low_d8_lakes_20261016/diagnostics/low_d8_scope"
+    B="/scratch/project_2004707/pienvedet/csc_validation_4bbf22b/hydro_01_02/runs/E200000_N6900000/02_baseline"
+    Rscript --vanilla "$D/test_incoming_02c_lake_d8.R" && Rscript --vanilla "$D/run_incoming_02c_lake_d8.R" "$B"
+
+Tässä uudessa ajossa odotetaan aiempien LOW-tulosten 535 yksilöllistä
+nollasolua ja 1 273 järvestä tulevaa osoitinta; seitsemän 02F-päätesolun
+välittömät lähdejärvitunnukset 3181, 1892, 1894 varmistetaan. **Järvien
+kokonaislukumäärää ei arvata etukäteen.** Uudet synteettiset R-testit ja
+todellisen aineiston järvikohtainen ajo odottavat Roihun tuloksia.
+Edellisen 02C-aggregaatin tekninen PASS ei yksin todista uusia
+järvikohtaisia laskureita oikeiksi.
+
 ## 2. Koko LOW-rasterin kattava nollasolujen inventointi — EI VIELÄ AJETTU
 
 scan_entire_low_d8.R lukee 64 rivin lohkoissa jo olemassa olevat D8- ja RANTA10-vesiluokkarasterit, yhden rivin naapurihaalolla. Se laskee kaikki sisäiset ei-vesisolu-D8=0-solut, järven viereiset sisäiset nollat, ja järvestä suoraan nollaan tulevat D8-osoittimet. Se ei vielä kartoita kaikki D8-NA-arvoja, syklejä, domain exittejä eikä koko verkon reittijakaumaa.
