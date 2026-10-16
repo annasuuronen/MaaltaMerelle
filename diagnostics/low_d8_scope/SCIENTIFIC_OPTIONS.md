@@ -30,6 +30,42 @@ MML 2025:n maastoluokista neljä keskisolua on niittyä, kaksi muuta avointa alu
 
 **02C**: valmiit 02C_zero_pointer_cells.csv ja 02C_shore_component_classification.csv koskevat vain vesistöjen vieressä olevia ei-vesisoluja ja niiden nollakomponentteja. Pythonin scope_existing_02c.py vertailee 02C- ja 02F-raportit vain lukien, ei väitä koko LOW:n kattavuutta.
 
-**Koko rasterin nollasolut**: scan_entire_low_d8.R lukee D8:n ja RANTA10-vesiluokan 64 rivin lohkoina laskentasolmulla. Se laskee ei-vesisolujen sisäiset D8-nollat, järven vieressä olevat nollat sekä järven D8-osoittimien vastaanottavat nollat. Se ei havaitse kaikkia D8-syklejä, NA-päätteitä tai muita reittiongelmia. Skanneri on vasta valmisteltu, ei ajettu tai R-tulkilla validoitu. Suoritus vaatii erillisen laskenta-ajon hyväksynnän. Ei koko rasterin käsittelyä login-solmulla.
+**Koko rasterin nollasolut — CSC Roihu PASS 16.10.2026:** hyväksytty kertaluonteinen
+Slurm-työ `2345102` (`COMPLETED 0:0`, 15 s) kävi 64 rivin lohkoissa läpi
+lukitun LOW:n. Ei-vesialueen D8=0-soluja **1 481**, näistä sisäisiä
+**719** ja sisäisiä järven vieressä **641**. Järvestä D8=0-soluun tulevia
+osoitinreunoja **1 273**, joiden erillisiä vastaanottajia **535**.
+Kaikkia järvestä maalle osoittavia Whitebox-D8-reunoja **2 998**
+(22 järveltä), joten välitön nollapääteosuus **42,46 %**.
+Aiempi 02C-suppea QA ja koko LOW-skannaus täsmäävät samoihin
+1 273 reunaan / 535 vastaanottajaan. Koko alueen reittien tai
+syklien täydellistä seurantaa tämä ei tee.
+
+**RANTA10–MML 2025 ja rasterointi — CSC Roihu PASS 16.10.2026:**
+tarkastelujärvet 1847 ja 1898. Alkuperäinen RANTA10-järvi-ID-rasteri
+vastaa molemmissa paikallisissa ikkunoissa **täsmälleen**
+`touches=TRUE`-vektorirasterointia: 1847 **24 344/24 344**
+ja 1898 **2 059/2 059** järvisolua, kummassakin nolla
+kahdensuuntaista poikkeamaa. Alkuperäinen `00A_validation_fixture_QA.csv`
+raportoi `rasterization_touches=TRUE`. Lähdesolukeskukset RANTA10:n
+vektorijärven ulkopuolella eivät siis yksin osoita rasterointivirhettä.
+Sen sijaan järven 1847 **88/88** erillistä D8=0-maavastaanottajaa
+sijaitsee MML 2025 `jarvi`-polygonissa mutta yksikään niiden
+rasterisoluruuduista ei kosketa RANTA10:n järvipolygonia.
+Kontrollijärvellä 1898 MML:n sisään sijoittuu **0/26** nollasoluista.
+RANTA10/MML-aluerajojen todellinen IoU on 1847:llä **0.852107**
+ja 1898:lla **0.560888**; geometriat ovat paikallisesti
+päällekkäisiä, mutta vastaavuutta tai oikeaa outletia ei voi
+osoittaa pelkällä IoU:lla. Lisätiedot:
+`README_1847.md`, `README_MML_1847_1898.md`,
+`README_touch_replay.md`.
+
+**Seuraava rajattu tutkimus:** tutki 1847:n MML:n ja RANTA10:n
+*geometrinen erotus juuri D8=0-vastaanottajien kohdalla* ja
+tarkista mahdollinen riippumaton luonnollisen purkuyhteyden
+todiste ennen hydrologisen reititysratkaisun suunnittelua.
+Johtopäätös on rajausepäsuhdan paikallinen ristivarmistus,
+ei automaattinen maskin vaihto, ei MML:n määrääminen oikeaksi
+rannaksi eikä uusi outlet. `SCIENTIFIC_STATUS: REVIEW_REQUIRED`.
 
 Lähteikkövalidointi säilyy issue #9:ssä D8-arvosta riippumatta, eikä maa-ainesta tai turpeen paksuutta lisätä malliin.
