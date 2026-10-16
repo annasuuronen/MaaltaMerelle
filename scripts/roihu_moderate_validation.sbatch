@@ -29,6 +29,15 @@ if [[ -e "$REPORT" ]]; then
 fi
 mkdir -p "$REPORT"
 cd "$CODE"
+# Never silently execute the shared production checkout or unreviewed edits.
+EXPECTED_BRANCH="codex/moderate-02d4-diagnosis"
+if [[ "$(git branch --show-current)" != "$EXPECTED_BRANCH" ]] || ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "STOP: expected clean checkout of $EXPECTED_BRANCH; no diagnostics executed" >&2
+  exit 2
+fi
+for file in scripts/audit_moderate_spill_d8_readonly.R scripts/audit_moderate_lake_geometry_readonly.R; do
+  [[ -s "$file" ]] || { echo "STOP: missing script $file" >&2; exit 2; }
+done
 
 module load r-env/461
 export R_LIBS="/projappl/project_2004707/project_rpackages_461"
