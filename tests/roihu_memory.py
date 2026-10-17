@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -120,6 +121,32 @@ class MemorySafety(unittest.TestCase):
         r = self.context['observations'][-1]
         self.assertEqual(r['status'], 'BLOCKED'); self.assertNotIn('available_bytes', r)
 
+    def test_missing_reservation_env_requires_controller_evidence(self):
+        with patch.dict(os.environ):
+            os.environ.pop('SLURM_MEM_PER_NODE', None)
+            r = self.measured()
+        self.assertEqual(r['allocation']['reserved_bytes'], 32 * GIB)
+        self.assertEqual(r['allocation']['declared_reservation_status'], 'NOT_SUPPLIED')
+        self.assertIsNone(r['allocation']['slurm_mem_per_node_mib'])
+        self.assertEqual(r['slurm_allocation_verification'], 'VERIFIED')
+        self.query.assert_called_once_with('2357699')
+
+    def test_no_container_verifier_never_accepts_declared_reservation(self):
+        self.query.side_effect = bundle.AllocationVerificationUnavailable('Synthetic scontrol absent')
+        with self.assertRaises(bundle.AllocationVerificationUnavailable): self.measured()
+        r = self.context['observations'][-1]
+        self.assertEqual(r['slurm_allocation_verification'], 'UNAVAILABLE')
+        self.assertEqual(r['blocker'], 'NO_LIVE_ALLOCATION_VERIFIER')
+        self.assertNotIn('available_bytes', r)
+        self.assertNotIn('allocation', r)
+
+    def test_host_preflight_needs_live_verification_even_with_readable_quota(self):
+        self.current_pair(32 * GIB, 5 * GIB); self.missing_other_job_files()
+        self.context['require_slurm_verification'] = True
+        self.query.side_effect = bundle.AllocationVerificationUnavailable('Synthetic scontrol absent')
+        with self.assertRaises(bundle.AllocationVerificationUnavailable): self.measured()
+        self.assertEqual(self.context['observations'][-1]['observed_cgroup_headroom_bytes'], 27 * GIB)
+
     def test_slurm_identity_state_node_and_memory_must_all_agree(self):
         for old, new in [('2357699', '2357700'), ('fixture(777)', 'fixture(778)'),
                          ('RUNNING', 'COMPLETED'), ('r01', 'r02'), ('NumNodes=1', 'NumNodes=2'),
@@ -215,7 +242,81 @@ class MemorySafety(unittest.TestCase):
             self.assertEqual(r['historical_provenance'], 'NOT_CHECKED')
             self.assertEqual(r['memory_checks'][0]['method'], 'SLURM_VERIFIED_NODE_BOUND')
             self.assertEqual(r['memory_checks'][0]['available_bytes'], 0)
+            self.assertEqual(r['memory'], r['memory_checks'][-1])
             self.assertEqual(r['MODERATE'], 'REVIEW_REQUIRED'); self.assertEqual(r['NATIONAL'], 'LOCKED')
+
+    def memory_only_package(self):
+        with tempfile.TemporaryDirectory(prefix='host-memory-only-') as name:
+            d = Path(name); code = d / 'code'; code.mkdir(); out = d / 'reports'; out.mkdir(mode=0o700)
+            subprocess.run(['git', '-C', str(code), 'init', '-q'], check=True)
+            (code / 'fixture.txt').write_text('Synthetic reviewed fixture\n')
+            subprocess.run(['git', '-C', str(code), 'add', 'fixture.txt'], check=True)
+            subprocess.run(['git', '-C', str(code), '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                            '-c', 'commit.gpgsign=false', 'commit', '-qm', 'Synthetic host fixture'], check=True)
+            sha = subprocess.check_output(['git', '-C', str(code), 'rev-parse', 'HEAD'], text=True).strip()
+            inputs = d / 'MUST_NOT_OPEN'
+            original = bundle.safe_path
+            def safe(p):
+                self.assertNotEqual(p, inputs, 'Memory preflight must not inspect input root')
+                return original(p)
+            argv = ['bundle', '--expected-commit', sha, '--output-parent', str(out), '--memory-preflight-only']
+            with patch.object(bundle, 'CODE', code), patch.object(bundle, 'ROOT', inputs), \
+                    patch.object(bundle.sys, 'argv', argv), patch.object(bundle, 'safe_path', side_effect=safe), \
+                    patch.object(bundle, 'execute') as execute, \
+                    patch.object(bundle.shutil, 'which', side_effect=AssertionError('R/package lookup forbidden')):
+                rc = bundle.main()
+                execute.assert_not_called()
+            import tarfile
+            archive = next(out.glob('fill_probe_*/review_bundle.tar.gz'))
+            with tarfile.open(archive, 'r:gz') as tar:
+                r = json.load(tar.extractfile('summary.json'))
+                self.assertEqual(set(tar.getnames()), {'summary.json', 'README.txt'})
+            self.assertFalse(r['observations_valid']); self.assertFalse(r['continuation_authorized'])
+            self.assertEqual(r['execution_scope'], 'MEMORY_PREFLIGHT_ONLY')
+            self.assertEqual(r['historical_provenance'], 'NOT_CHECKED')
+            return rc, r
+
+    def test_host_memory_only_package_never_reads_lake_inputs_or_runs_r(self):
+        rc, r = self.memory_only_package()
+        self.assertEqual(rc, 0)
+        self.assertEqual(r['technical_status'], 'MEMORY_PREFLIGHT_COMPLETE')
+        self.assertEqual(r['memory']['slurm_allocation_verification'], 'VERIFIED')
+
+    def test_report_for_missing_scontrol_keeps_memory_at_top_level(self):
+        self.query.side_effect = bundle.AllocationVerificationUnavailable('Synthetic scontrol absent')
+        rc, r = self.memory_only_package()
+        self.assertEqual(rc, 2); self.assertEqual(r['technical_status'], 'BLOCKED')
+        self.assertEqual(r['memory'], r['memory_checks'][-1])
+        self.assertEqual(r['memory']['slurm_allocation_verification'], 'UNAVAILABLE')
+        self.assertEqual(r['memory']['proc_available_bytes'], self.available)
+
+    def test_existing_job_wrapper_only_attaches_pinned_memory_step(self):
+        with tempfile.TemporaryDirectory(prefix='existing-job-wrapper-') as name:
+            d = Path(name); code = d / 'code'; (code / 'scripts').mkdir(parents=True)
+            script = code / 'scripts/roihu_existing_job_memory_check.sh'
+            shutil.copyfile(ROOT / 'scripts/roihu_existing_job_memory_check.sh', script)
+            subprocess.run(['git', '-C', str(code), 'init', '-q'], check=True)
+            subprocess.run(['git', '-C', str(code), 'add', 'scripts'], check=True)
+            subprocess.run(['git', '-C', str(code), '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid',
+                            '-c', 'commit.gpgsign=false', 'commit', '-qm', 'Synthetic wrapper fixture'], check=True)
+            sha = subprocess.check_output(['git', '-C', str(code), 'rev-parse', 'HEAD'], text=True).strip()
+            fakebin = d / 'bin'; fakebin.mkdir(); capture = d / 'args.txt'
+            srun = fakebin / 'srun'; srun.write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$MM_CAPTURE"\n'); srun.chmod(0o700)
+            env = dict(os.environ, PATH=str(fakebin) + ':' + os.environ['PATH'], MM_CAPTURE=str(capture))
+            argv = ['bash', str(script), '2357699', sha, str(d / 'reports')]
+            p = subprocess.run(argv, env=env, capture_output=True, text=True)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            args = capture.read_text().splitlines()
+            self.assertIn('--jobid=2357699', args); self.assertIn('--overlap', args)
+            self.assertIn('--memory-preflight-only', args); self.assertIn(sha, args)
+            self.assertFalse(any(x.startswith(('--mem=', '--account=', '--partition=')) for x in args))
+            for bad in ('../2357699', '2357699;invalid'):
+                capture.unlink(missing_ok=True)
+                p = subprocess.run(['bash', str(script), bad, sha, str(d / 'reports')], env=env, capture_output=True)
+                self.assertEqual(p.returncode, 2); self.assertFalse(capture.exists())
+            (code / 'untracked.txt').write_text('unreviewed')
+            p = subprocess.run(argv, env=env, capture_output=True)
+            self.assertEqual(p.returncode, 2); self.assertFalse(capture.exists())
 
     def test_query_uses_bounded_structured_read_only_command(self):
         def process(argv, **kwargs):

@@ -8,6 +8,13 @@ pysähtyi ennen järvikoetinta piilotettuihin cgroup-muistitiedostoihin.
 Raporttipaketti muodostui; hydrologisia havaintoja ei syntynyt. Alla oleva
 muistintarkistuksen korjaus on valmisteltu synteettisesti, ei ajettu Roihussa.
 
+**Päivitys 17.10.:** myös commitin `dfafea61...` yritys estyi, koska
+RStudio-ympäristöstä puuttui scontrol. Siellä ei nyt ole osoitettua turvallista
+varauksen todennuskanavaa. Älä toista aiempaa järvikoettimen komentoa samassa
+kontekstissa. Katso [CSC:n dokumentaatioon perustuva host-esitarkistus ja
+täsmällinen este](roihu_rstudio_allocation_verification.md). Uusi valmisteltu
+komento tarkistaa vain muistia ja varausta olemassa olevan työn host-kontekstissa.
+
 `scripts/roihu_probe_rstudio.sh` käynnistetään **jo varatun RStudio-laskentasolmun
 Terminalissa**. Se käyttää istunnon PATHista löytyviä Python 3:a, Gitiä ja
 Rscriptiä sekä R:n terra-pakettia. Se ei asenna paketteja, lataa moduuleja,
@@ -113,9 +120,11 @@ muistiheadroomia. Menetelmä ja kaikki arvot kirjataan `summary.json`-tiedoston
    juuritason pari ei korvaa piilotettua job-rajaa oikeassa Slurm-profiilissa.
 2. **`SLURM_VERIFIED_NODE_BOUND`:** jos jobkohtainen muistikirjanpito ei ole
    luettavissa, vaaditaan job-ID:n vastaavuus kernelin `job_ID`-jäsenyyteen,
-   numeerinen `SLURM_MEM_PER_NODE` ja Slurm-ohjaimen vahvistama oma RUNNING-
+   Slurm-ohjaimen vahvistama oma RUNNING-
    varaus samalla yhdellä laskentasolmulla. UID:n, job-ID:n, solmun ja
-   `AllocTRES mem` -varauksen on täsmättävä. Ympäristömuuttujat eivät yksin
+   `AllocTRES mem` -varauksen on täsmättävä. Jos `SLURM_MEM_PER_NODE` on
+   asetettu, myös sen on täsmättävä; puuttuessa varaus saadaan vain samasta
+   varmennetusta ohjainvastauksesta. Ympäristömuuttujat eivät yksin
    valtuuta ajoa. Kyselyä rajoittavat 5 s ja tulosteen kokorajat; siitä
    tallennetaan vain tarvittavat valitut arvot. Varmennustieto kelpaa enintään
    30 s; solmun muistihavainto luetaan aina uudelleen.
@@ -148,6 +157,10 @@ Varauksen numeerinen `SLURM_JOB_ID` vaaditaan; mitään uutta varausta ei tehdä
 ## Käynnistys ja raportti
 
 Käytä PR:n valmistumisen yhteydessä annettua yhtä commit-pinnattua komentoa.
+Nykyisessä todetusti estyneessä RStudio-kontekstissa käytetään ensin edellä
+linkitettyä hostin **pelkkää varaus-/muistiesitarkistusta**. Alla oleva
+vanha täyden koettimen kutsu on vain sen rajapinnan kuvaus, ei nykyisen
+ympäristöesteen ohittava käynnistysohje.
 Se luo uuden yksityisen hakemiston `/scratch/project_2004707/pienvedet/` alle,
 kloonaa erillisen koodikopion, checkouttaa täsmällisen SHA:n ja kutsuu:
 
@@ -173,6 +186,10 @@ Exit 2 tarkoittaa estettyä/osittaista havaintoketjua; jos turvallinen uusi
 raporttihakemisto voitiin luoda, myös epäonnistumisesta jää raporttipaketti.
 Väärä tai turvaton tulostusjuuri hylätään ennen minkään syötteen lukemista.
 `summary.json` kertoo osittaiset, estetyt ja virheelliset havainnot erikseen.
+Viimeisin estynytkin muistihavainto näkyy sekä `memory`-kentässä että
+`memory_checks`-historiassa. `--memory-preflight-only` palauttaa onnistuttuaan
+`MEMORY_PREFLIGHT_COMPLETE`; se ei tarkoita R-ympäristön, syötteiden tai
+järvitutkimuksen valmistumista eikä käynnistä niitä.
 Molemmissa tapauksissa paketin päätöstila on `NEEDS_EVIDENCE`,
 `hydrological_success=NOT_ASSESSED`, `continuation_authorized=false`.
 

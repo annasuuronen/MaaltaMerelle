@@ -54,6 +54,10 @@ class Blocked(Exception):
     pass
 
 
+class AllocationVerificationUnavailable(Blocked):
+    pass
+
+
 def safe_path(value):
     """Reject traversal and symlinks in every existing component; no globbing."""
     p = Path(value)
@@ -120,7 +124,9 @@ def query_slurm_job(job_id):
     """One read-only RPC, 5 s / 128 KiB bounds; never export raw job output."""
     exe = shutil.which('scontrol')
     if not exe:
-        raise Blocked('Slurm fallback requires scontrol to verify the current allocation')
+        raise AllocationVerificationUnavailable(
+            'Slurm fallback requires scontrol to verify the current allocation; '
+            'use a CSC host compute shell, not an unverified RStudio-container fallback')
     env = os.environ.copy()
     env.pop('SLURM_CLUSTERS', None)  # Do not silently query a different cluster.
     with tempfile.TemporaryFile() as out:
@@ -142,9 +148,10 @@ def query_slurm_job(job_id):
 
 def verified_slurm_allocation(v2, context):
     job_id = os.getenv('SLURM_JOB_ID', '')
-    declared = os.getenv('SLURM_MEM_PER_NODE', '')
-    if not re.fullmatch('[1-9][0-9]{0,19}', job_id) or not re.fullmatch('[1-9][0-9]{0,15}', declared):
-        raise Blocked('Slurm fallback requires numeric job ID and per-node reservation')
+    declared = os.getenv('SLURM_MEM_PER_NODE')
+    if not re.fullmatch('[1-9][0-9]{0,19}', job_id) or (declared is not None and
+            not re.fullmatch('[1-9][0-9]{0,15}', declared)):
+        raise Blocked('Slurm fallback requires numeric job ID and a valid reservation if supplied')
     jobs = re.findall(r'(?:^|/)job_([0-9]+)(?=/|$)', v2)
     if jobs != [job_id] or '..' in Path(v2).parts:
         raise Blocked('Slurm job ID does not match the current kernel cgroup')
@@ -171,11 +178,13 @@ def verified_slurm_allocation(v2, context):
     if not m:
         raise Blocked('Slurm allocated memory missing or unsupported units')
     reserved = int(m[1]) * {'K': 1024, 'M': 1024**2, 'G': GIB, 'T': 1024**4, '': 1024**2}[m[2]]
-    if reserved != int(declared) * 1024**2 or reserved > 1024**5:
+    if (declared is not None and reserved != int(declared) * 1024**2) or reserved > 1024**5:
         raise Blocked('Slurm environment reservation disagrees with allocated TRES')
     allocation = {'job_id': job_id, 'uid': int(uid[1]), 'job_state': 'RUNNING',
                   'node': node, 'nodes': 1, 'reserved_bytes': reserved,
-                  'slurm_mem_per_node_mib': int(declared), 'source': 'scontrol show job',
+                  'slurm_mem_per_node_mib': int(declared) if declared is not None else None,
+                  'declared_reservation_status': 'MATCHED' if declared is not None else 'NOT_SUPPLIED',
+                  'source': 'scontrol show job',
                   'verified_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'cached': False}
     context['_allocation'] = ((job_id, declared), time.monotonic(), allocation)
     return allocation
@@ -191,6 +200,7 @@ def available_memory(context=None):
     """
     context = {} if context is None else context
     observations = {'method': 'NOT_CHECKED', 'status': 'BLOCKED', 'cgroup_limits': [],
+                    'slurm_allocation_verification': 'NOT_CHECKED',
                     'cgroup_checks': [], 'checked_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
     context.setdefault('observations', []).append(observations)
     try:
@@ -250,6 +260,12 @@ def available_memory(context=None):
             p = p.parent
         # In a real Slurm session, a mount-root observation alone does not show
         # the unreadable job quota. It must not accidentally authorize the job.
+        if readable_pairs:
+            observations['observed_cgroup_headroom_bytes'] = available
+        if context.get('require_slurm_verification'):
+            observations['slurm_allocation_verification'] = 'REQUIRED'
+            observations['allocation'] = verified_slurm_allocation(v2, context)
+            observations['slurm_allocation_verification'] = 'VERIFIED'
         if readable_pairs and (not context.get('allow_slurm') or (job_finite_limit and not job_unreadable)):
             observations.update(method='CGROUP_V2', available_bytes=available,
                                 limitations=['Snapshot; unreadable ancestor limits are not observed'])
@@ -257,7 +273,9 @@ def available_memory(context=None):
             observations['method'] = 'SLURM_VERIFIED_NODE_BOUND'
             if not context.get('allow_slurm'):
                 raise Blocked('Cgroup memory limit/usage unreadable; Slurm fallback not enabled')
+            observations['slurm_allocation_verification'] = 'REQUIRED'
             allocation = verified_slurm_allocation(v2, context)
+            observations['slurm_allocation_verification'] = 'VERIFIED'
             observations['allocation'] = allocation
             if allocation['reserved_bytes'] > values['MemTotal']:
                 raise Blocked('Slurm reservation exceeds observed physical node memory')
@@ -277,6 +295,13 @@ def available_memory(context=None):
         return observations
     except Exception as exc:
         observations['reason'] = str(exc)
+        if isinstance(exc, AllocationVerificationUnavailable):
+            observations.update(slurm_allocation_verification='UNAVAILABLE',
+                                blocker='NO_LIVE_ALLOCATION_VERIFIER',
+                                supported_next_context='CSC host compute shell attached to the existing job',
+                                guidance='https://docs.csc.fi/computing/running/interactive-usage/#connecting-to-a-compute-node-of-a-running-job')
+        elif observations['slurm_allocation_verification'] == 'REQUIRED':
+            observations['slurm_allocation_verification'] = 'FAILED'
         raise
 
 
@@ -380,15 +405,22 @@ def run(args, report, state):
         if re.search(r'(?i)login|^roihu-login', socket.gethostname()):
             raise Blocked('Login node refused')
         state['allocation_id'] = os.environ['SLURM_JOB_ID']
-    safe_path(root)
-    if root == report or root in report.parents or report in root.parents:
-        raise Blocked('Reports and data root must be separate')
     state['profile'] = profile['mode']
-    memory_context = {'allow_slurm': profile['mode'] == 'real', 'observations': []}
+    memory_only = getattr(args, 'memory_preflight_only', False)
+    if memory_only and profile['mode'] != 'real':
+        raise Blocked('Host allocation preflight requires the real, verified Slurm context')
+    memory_context = {'allow_slurm': profile['mode'] == 'real',
+                      'require_slurm_verification': memory_only, 'observations': []}
     state['memory_checks'] = memory_context['observations']
     state['memory'] = available_memory(memory_context)
     if state['memory']['available_bytes'] < 3 * GIB:
         raise Blocked('Less than 3 GiB of verified memory headroom')
+    if memory_only:
+        state['technical_status'] = 'MEMORY_PREFLIGHT_COMPLETE'
+        return
+    safe_path(root)
+    if root == report or root in report.parents or report in root.parents:
+        raise Blocked('Reports and data root must be separate')
     if shutil.disk_usage(report).free < GIB:
         raise Blocked('Less than 1 GiB report/temp space')
     rscript = shutil.which('Rscript')
@@ -527,6 +559,8 @@ def main():
     parser.add_argument('--expected-commit', required=True)
     parser.add_argument('--output-parent', required=True, help='Existing private output directory, outside data and checkout')
     parser.add_argument('--synthetic-fixture', help='CI only; temporary-directory synthetic inputs')
+    parser.add_argument('--memory-preflight-only', action='store_true',
+                        help='Verify live host allocation and memory only; never read hydrology inputs or run R')
     args = parser.parse_args()
     os.umask(0o077)
     try:
@@ -545,6 +579,7 @@ def main():
              'MODERATE': 'REVIEW_REQUIRED', 'NATIONAL': 'LOCKED', 'continuation_authorized': False,
              'historical_provenance': 'NOT_CHECKED', 'historical_attribution_authorized': False,
              'observations_valid': False, 'python_version': sys.version.split()[0],
+             'execution_scope': 'MEMORY_PREFLIGHT_ONLY' if args.memory_preflight_only else 'BOUNDED_LAKE_PROBE',
              'started_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
              'expected_commit': args.expected_commit, 'host': socket.gethostname(),
              'limits': {'window_cells': 250000, 'total_surface_cells': 4000000, 'id_block_cells': 65536,
@@ -555,12 +590,17 @@ def main():
         run(args, report, state)
     except Exception as exc:
         state.update(technical_status='BLOCKED', reason=str(exc), observations_valid=False)
+    if state.get('memory_checks'):
+        # Assignment from a failed available_memory() never completed. Preserve
+        # its latest partial observation at the top level as well as in history.
+        state['memory'] = state['memory_checks'][-1]
     state['finished_utc'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
     state['package_status'] = 'NEEDS_EVIDENCE'  # Never a hydrological PASS.
     write_json(report / 'summary.json', state)
     (report / 'README.txt').write_text(
         'Read summary.json first. COMPLETE means bounded observations executed, not scientific approval.\n'
-        'Historical provenance remains INCOMPLETE; tokens and timestamps are not execution receipts.\n'
+        'MEMORY_PREFLIGHT_COMPLETE verifies allocation/memory only; R and lake inputs are NOT_CHECKED.\n'
+        'Historical provenance is NOT_CHECKED or INCOMPLETE; see summary.json. Tokens/timestamps are not receipts.\n'
         'Window edges, visit caps and nonfinite contacts censor conclusions; no outlet absence is proven.\n'
         'No Whitebox, D8 retrace, production gate, job submission or raster writes were invoked.\n'
         'MODERATE=REVIEW_REQUIRED; NATIONAL=LOCKED; continuation_authorized=false.\n')
@@ -579,7 +619,7 @@ def main():
     print('REPORT=' + str(archive))
     print('TECHNICAL_STATUS=' + state['technical_status'] + ' HISTORICAL_PROVENANCE=' + state['historical_provenance'])
     print('MODERATE=REVIEW_REQUIRED NATIONAL=LOCKED HYDROLOGICAL_SUCCESS=NOT_ASSESSED')
-    return 0 if state['technical_status'] == 'COMPLETE' else 2
+    return 0 if state['technical_status'] in ('COMPLETE', 'MEMORY_PREFLIGHT_COMPLETE') else 2
 
 
 if __name__ == '__main__':
