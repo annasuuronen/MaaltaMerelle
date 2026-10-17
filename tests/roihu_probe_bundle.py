@@ -119,6 +119,9 @@ class BundleChain(unittest.TestCase):
         p, state, files = self.chain()
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr + str(state))
         self.assertEqual(state['technical_status'], 'COMPLETE')
+        self.assertEqual(len(state['memory_checks']), 3)  # Initial + two windows.
+        self.assertTrue(all(x['method'] == 'CGROUP_V2' and x['sufficient_for_bounded_child']
+                            for x in state['memory_checks']))
         plan = list(csv.DictReader(files['windows.csv'].decode().splitlines()))
         self.assertEqual([x['lake_objectid'] for x in plan], ['101', '105'])
         self.assertTrue(all(int(x['cells']) <= 250000 for x in plan))
@@ -281,8 +284,12 @@ class BundleChain(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(BundleChain)
-    if suite.countTestCases() == 0:
+    spec = importlib.util.spec_from_file_location('memory_tests', ROOT / 'tests/roihu_memory.py')
+    memory = importlib.util.module_from_spec(spec); spec.loader.exec_module(memory)
+    memory_suite = unittest.defaultTestLoader.loadTestsFromTestCase(memory.MemorySafety)
+    chain_suite = unittest.defaultTestLoader.loadTestsFromTestCase(BundleChain)
+    if not memory_suite.countTestCases() or not chain_suite.countTestCases():
         raise SystemExit('FAIL: no Roihu chain tests discovered')
+    suite = unittest.TestSuite([memory_suite, chain_suite])
     result = unittest.TextTestRunner(verbosity=2).run(suite)
     raise SystemExit(0 if result.wasSuccessful() else 1)

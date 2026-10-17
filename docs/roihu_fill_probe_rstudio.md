@@ -3,12 +3,16 @@
 Lähtöversio: PR #7, `50f7d5a80c52dde020594ca84c724a7c27adf020`.
 Mittausnäyttö: `docs/moderate_roihu_readonly_review_20261016.md`
 commitissa `de3d3808bd657c680134b578524ce4ddd4863a0c`.
-Tätä uutta kokonaisuutta ei ole vielä ajettu Roihussa.
+Käyttäjän raportoima Roihu-käynnistys 17.10.2026 jobissa `2357699`
+pysähtyi ennen järvikoetinta piilotettuihin cgroup-muistitiedostoihin.
+Raporttipaketti muodostui; hydrologisia havaintoja ei syntynyt. Alla oleva
+muistintarkistuksen korjaus on valmisteltu synteettisesti, ei ajettu Roihussa.
 
 `scripts/roihu_probe_rstudio.sh` käynnistetään **jo varatun RStudio-laskentasolmun
 Terminalissa**. Se käyttää istunnon PATHista löytyviä Python 3:a, Gitiä ja
 Rscriptiä sekä R:n terra-pakettia. Se ei asenna paketteja, lataa moduuleja,
-käytä sbatchia, kysy Slurm-tilaa tai kutsu Whiteboxia. Alkuperäinen
+käytä sbatchia tai kutsu Whiteboxia. Muistivaramenetelmä saa tehdä vain oman
+varauksen rajatun read-only `scontrol --oneliner show job ID` -kyselyn. Alkuperäinen
 `roihu_moderate_validation.sbatch` ja historialliset CSC-skriptit säilyvät.
 
 ## Mitä uusi mittaus erottaa
@@ -97,9 +101,44 @@ polkukomponentit tarkistetaan symlinkkien ja polkukierron varalta. Syötepuut
 oletetaan luotettujen ylläpitäjien hallitsemiksi; näitä read-only-tarkistuksia
 ei esitetä suojana vihamielistä samanaikaista hakemistovaihtoa vastaan.
 
-Ennen ajoa ja joka ikkunaa vaaditaan vähintään 3 GiB vapaata muistia sekä
-fyysisen saatavuuden että näkyvän cgroup-v2-hierarkian rajojen puitteissa.
-Tuntematon muistikirjanpito pysäyttää ajon. R-aliprosessin osoiteavaruus on
+Ennen ajoa ja joka ikkunaa vaaditaan vähintään 3 GiB varmennettua
+muistiheadroomia. Menetelmä ja kaikki arvot kirjataan `summary.json`-tiedoston
+`memory_checks`-listaan, myös estyneessä tarkistuksessa:
+
+1. **`CGROUP_V2`:** `/proc/self/cgroup`-tiedoston todellinen job-/task-polku
+   luetaan ensin `/sys/fs/cgroup`-liitoksen alta. Sitten tarkistetaan rajat ja
+   käyttö vanhemmista liitoksen juureen asti. Polkukierron tai symlinkin kautta
+   ei avata tiedostoja. Puuttuva ja lukukelvoton tiedosto kirjataan erikseen.
+   Virheellinen numeerinen tieto pysäyttää ajon. Pelkkä luettava liitoksen
+   juuritason pari ei korvaa piilotettua job-rajaa oikeassa Slurm-profiilissa.
+2. **`SLURM_VERIFIED_NODE_BOUND`:** jos jobkohtainen muistikirjanpito ei ole
+   luettavissa, vaaditaan job-ID:n vastaavuus kernelin `job_ID`-jäsenyyteen,
+   numeerinen `SLURM_MEM_PER_NODE` ja Slurm-ohjaimen vahvistama oma RUNNING-
+   varaus samalla yhdellä laskentasolmulla. UID:n, job-ID:n, solmun ja
+   `AllocTRES mem` -varauksen on täsmättävä. Ympäristömuuttujat eivät yksin
+   valtuuta ajoa. Kyselyä rajoittavat 5 s ja tulosteen kokorajat; siitä
+   tallennetaan vain tarvittavat valitut arvot. Varmennustieto kelpaa enintään
+   30 s; solmun muistihavainto luetaan aina uudelleen.
+3. Piilotetun job-käytön tilalle ei keksitä lukua. Konservatiivinen yläraja
+   on **koko solmun käytetty fyysinen muisti** `MemTotal - MemFree`.
+   Se sisältää myös muiden jobien muistin, kernelin ja välimuistin.
+   Headroomin alaraja on
+   `max(0, min(varaus, luettavat cgroup-maksimit) - solmun_käyttö - 2 GiB)`.
+   Lopullinen hyväksyttävä määrä on pienempi tästä ja `/proc/meminfo`-
+   tiedoston `MemAvailable`-arvosta sekä luettavista cgroup-headroomeista.
+   **32 GiB:n varaus ei siten tarkoita 32 GiB vapaata muistia.**
+
+Varamenetelmä on tarkoituksella tiukka: kuormitettu solmu tai suuri
+välimuisti voi estää ajon, vaikka jobilla todellisuudessa olisi riittävästi
+tilaa. Esimerkiksi 32 GiB:n varaus ja solmun 8 GiB käyttö antavat enintään
+22 GiB headroomia; 31 GiB käyttö antaa nollan. Nämä ovat synteettisiä
+esimerkkejä, eivät Roihulta mitattuja arvoja. Jobin todellista cgroup-käyttöä
+tai piilotettua kernelin rajaa ei väitetä mitatuksi. Mikään hetkellinen
+mittaus tai turvavara ei takaa tulevaa saatavuutta. Riittämätön näyttö,
+puuttuva scontrol tai ristiriitainen varaus pysäyttää ajon ennen rasterilukua
+ja säilyttää puutteet raportissa; per-CPU- ja monisolmuvarauksia ei arvata.
+
+R-aliprosessin osoiteavaruus on edelleen
 enintään 2 GiB, CPU-aika 120 s ja seinäkelloaika 180 s/vaihe;
 koko ketjun työbudjetti 900 s. Jokaisen R-tulos-/lokitiedoston kirjoitusraja
 on 128 KiB. Tulostilaa vaaditaan 1 GiB; terra-väliaikaistiedostot ohjataan
@@ -117,8 +156,9 @@ bash "$MM_RUN/code/scripts/roihu_probe_rstudio.sh" \
   --expected-commit "$MM_PIN" --output-parent "$MM_RUN/reports"
 ```
 
-GitHubista kloonaaminen kuuluu bootstrap-komentoon; itse diagnostiikka ei
-käytä verkkoa. Tuotannon `/projappl`-checkoutia ei muuteta. Polut tai
+GitHubista kloonaaminen kuuluu bootstrap-komentoon. Diagnostiikan Slurm-
+varamenetelmä voi tehdä oman varauksen read-only ohjainkyselyn; se ei luo
+varausta tai käynnistä CSC-työtä. Tuotannon `/projappl`-checkoutia ei muuteta. Polut tai
 syötetiivisteet eivät ole komentoriviltä vaihdettavissa oikeassa profiilissa.
 `--synthetic-fixture` on vain CI:n tilapäisaineistoille: se hylkää CSC-juuret.
 
@@ -140,7 +180,13 @@ Molemmissa tapauksissa paketin päätöstila on `NEEDS_EVIDENCE`,
 
 ## Kevyt tarkistus
 
-`python3 -I -B tests/roihu_probe_bundle.py` suorittaa uuden ketjun oikeilla
+`python3 -I -B tests/roihu_memory.py` tarkistaa muistimekanismin itsenäisesti
+ilman R:ää tai oikeita Slurm-/CSC-kyselyitä. Roihu-regressiossa job-ID,
+32768 MiB:n varaustieto ja kernelin cgroup-merkkijono vastaavat täsmälleen
+käyttäjän havaintoa; lisäarvot ja ohjainvastaukset ovat synteettisiä.
+
+`python3 -I -B tests/roihu_probe_bundle.py` suorittaa myös nämä muistiregressiot
+ja koko ketjun oikeilla
 pienillä terra-rasteilla ja tilapäisillä Git-checkouteilla. Ajuri epäonnistuu
 myös nollalla löydetyllä testillä. CI suorittaa sen kerran olemassa olevan
 geometry-jobin kautta. Vanhoja workflowita ei muuteta eikä vanhoja 64/22/WBT-

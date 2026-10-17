@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline orchestration: exact inputs, bounded reads, no WBT/Slurm/network calls."""
+"""Read-only orchestration; bounded allocation queries, never job submissions."""
 import argparse
 import csv
 import hashlib
@@ -107,41 +107,177 @@ def digest(p, deadline):
     return h.hexdigest()
 
 
-def available_memory():
-    """Physical availability plus all visible cgroup-v2 ancestor limits."""
-    mem = Path('/proc/meminfo').read_text()
-    match = re.search(r'^MemAvailable:\s+(\d+) kB$', mem, re.M)
-    if not match:
-        raise Blocked('Memory availability unknown')
-    available = int(match[1]) * 1024
-    observations = {'proc_available_bytes': available, 'cgroup_limits': []}
-    groups = Path('/proc/self/cgroup').read_text().splitlines()
-    v2 = next((x[3:] for x in groups if x.startswith('0::')), None)
-    if v2 is None:
-        raise Blocked('Cgroup-v2 memory accounting unavailable; allocation cannot be checked')
-    # /proc may present an ancestor outside the cgroup namespace: root still
-    # supplies the namespace's actual limit; never follow traversal components.
-    base = Path('/sys/fs/cgroup')
-    p = base / v2.lstrip('/') if '..' not in Path(v2).parts else base
-    if not p.exists():
-        p = base
-    found = False
-    while p == base or base in p.parents:
-        limit_file = p / 'memory.max'
-        usage_file = p / 'memory.current'
-        if limit_file.is_file() and usage_file.is_file():
-            found = True
-            limit, usage = limit_file.read_text().strip(), int(usage_file.read_text())
-            observations['cgroup_limits'].append({'limit': limit, 'usage_bytes': usage})
-            if limit != 'max':
-                available = min(available, int(limit) - usage)
-        if p == base:
-            break
-        p = p.parent
-    if not found:
-        raise Blocked('Cgroup memory limit/usage unreadable')
-    observations['available_bytes'] = available
-    return observations
+def kernel_text(path, cap=65536):
+    # Fixed proc paths or cgroup paths checked below, never a user-supplied file.
+    with path.open() as f:
+        text = f.read(cap + 1)
+    if len(text) > cap:
+        raise Blocked('Kernel observation exceeds size bound')
+    return text
+
+
+def query_slurm_job(job_id):
+    """One read-only RPC, 5 s / 128 KiB bounds; never export raw job output."""
+    exe = shutil.which('scontrol')
+    if not exe:
+        raise Blocked('Slurm fallback requires scontrol to verify the current allocation')
+    env = os.environ.copy()
+    env.pop('SLURM_CLUSTERS', None)  # Do not silently query a different cluster.
+    with tempfile.TemporaryFile() as out:
+        p = subprocess.Popen([exe, '--oneliner', 'show', 'job', job_id], stdout=out,
+                             stderr=subprocess.DEVNULL, env=env, start_new_session=True,
+                             preexec_fn=child_limits)
+        try:
+            rc = p.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            import signal
+            os.killpg(p.pid, signal.SIGKILL); p.wait()
+            raise Blocked('Slurm allocation query timed out')
+        out.seek(0)
+        text = out.read(65537)
+    if rc or len(text) > 65536:
+        raise Blocked('Slurm allocation query failed or exceeded output bound')
+    return text.decode('utf-8', errors='strict')
+
+
+def verified_slurm_allocation(v2, context):
+    job_id = os.getenv('SLURM_JOB_ID', '')
+    declared = os.getenv('SLURM_MEM_PER_NODE', '')
+    if not re.fullmatch('[1-9][0-9]{0,19}', job_id) or not re.fullmatch('[1-9][0-9]{0,15}', declared):
+        raise Blocked('Slurm fallback requires numeric job ID and per-node reservation')
+    jobs = re.findall(r'(?:^|/)job_([0-9]+)(?=/|$)', v2)
+    if jobs != [job_id] or '..' in Path(v2).parts:
+        raise Blocked('Slurm job ID does not match the current kernel cgroup')
+    cached = context.get('_allocation')
+    if cached and cached[0] == (job_id, declared) and time.monotonic() - cached[1] < 30:
+        return dict(cached[2], cached=True)
+    text = query_slurm_job(job_id)
+    pairs = re.findall(r'(?:^|\s)(JobId|UserId|JobState|NodeList|NumNodes|AllocTRES)=([^\s]+)', text)
+    fields = dict(pairs)
+    if len(pairs) != 6 or len(fields) != 6:
+        raise Blocked('Slurm allocation fields missing or duplicated')
+    uid = re.fullmatch(r'[^()\s]+\(([0-9]+)\)', fields['UserId'])
+    node = fields['NodeList']
+    if (fields['JobId'] != job_id or fields['JobState'] != 'RUNNING' or
+            fields['NumNodes'] != '1' or not uid or int(uid[1]) != os.getuid() or
+            not re.fullmatch(r'[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*', node) or
+            node.split('.')[0] != socket.gethostname().split('.')[0]):
+        raise Blocked('Slurm allocation ID/state/owner/single compute node mismatch')
+    tres_pairs = [x.split('=', 1) for x in fields['AllocTRES'].split(',')]
+    if any(len(x) != 2 for x in tres_pairs) or len(dict(tres_pairs)) != len(tres_pairs):
+        raise Blocked('Invalid allocated TRES')
+    value = dict(tres_pairs).get('mem', '')
+    m = re.fullmatch(r'([1-9][0-9]{0,15})([KMGT]?)', value)
+    if not m:
+        raise Blocked('Slurm allocated memory missing or unsupported units')
+    reserved = int(m[1]) * {'K': 1024, 'M': 1024**2, 'G': GIB, 'T': 1024**4, '': 1024**2}[m[2]]
+    if reserved != int(declared) * 1024**2 or reserved > 1024**5:
+        raise Blocked('Slurm environment reservation disagrees with allocated TRES')
+    allocation = {'job_id': job_id, 'uid': int(uid[1]), 'job_state': 'RUNNING',
+                  'node': node, 'nodes': 1, 'reserved_bytes': reserved,
+                  'slurm_mem_per_node_mib': int(declared), 'source': 'scontrol show job',
+                  'verified_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'cached': False}
+    context['_allocation'] = ((job_id, declared), time.monotonic(), allocation)
+    return allocation
+
+
+def available_memory(context=None):
+    """Prefer the actual cgroup; otherwise use a verified, conservative node bound.
+
+    Reservation is NOT free memory. All physical memory used on this node is
+    an upper bound on this job's resident use, including other jobs and cache.
+    Subtract that upper bound and 2 GiB from the verified one-node reservation.
+    This deliberately blocks busy nodes when job-specific accounting is hidden.
+    """
+    context = {} if context is None else context
+    observations = {'method': 'NOT_CHECKED', 'status': 'BLOCKED', 'cgroup_limits': [],
+                    'cgroup_checks': [], 'checked_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
+    context.setdefault('observations', []).append(observations)
+    try:
+        mem = kernel_text(Path('/proc/meminfo'))
+        values = {}
+        for name in ('MemTotal', 'MemFree', 'MemAvailable'):
+            matches = re.findall(r'^' + name + r':\s+([0-9]+) kB$', mem, re.M)
+            if len(matches) != 1:
+                raise Blocked('Physical memory values missing or duplicated')
+            values[name] = int(matches[0]) * 1024
+        if not (values['MemTotal'] > 0 and 0 <= values['MemAvailable'] <= values['MemTotal'] and
+                0 <= values['MemFree'] <= values['MemTotal']):
+            raise Blocked('Invalid physical memory values')
+        observations.update(proc_total_bytes=values['MemTotal'], proc_free_bytes=values['MemFree'],
+                            proc_available_bytes=values['MemAvailable'])
+        available = values['MemAvailable']
+        groups = kernel_text(Path('/proc/self/cgroup')).splitlines()
+        paths = [x[3:] for x in groups if x.startswith('0::')]
+        if len(paths) != 1 or not paths[0].startswith('/') or len(Path(paths[0]).parts) > 32:
+            raise Blocked('Unique bounded cgroup-v2 membership required')
+        v2 = paths[0]; observations['cgroup_membership'] = v2
+        base = Path('/sys/fs/cgroup')
+        # Never traverse out of the mount. A namespace-relative kernel path can
+        # still expose a root limit, but cannot authorize a Slurm fallback.
+        p = base if '..' in Path(v2).parts else base / v2.lstrip('/')
+        readable_pairs = 0; job_finite_limit = False; job_unreadable = False
+        observed_caps = []
+        job_id = os.getenv('SLURM_JOB_ID', '')
+        while True:
+            pair = {}
+            for name in ('memory.max', 'memory.current'):
+                path = p / name
+                check = {'path': str(path), 'state': 'NOT_CHECKED'}
+                observations['cgroup_checks'].append(check)
+                try:
+                    safe_path(path)
+                    value = kernel_text(path, 128).strip()
+                    if not re.fullmatch('max' if name == 'memory.max' and value == 'max' else '[0-9]+', value):
+                        raise Blocked('Invalid cgroup memory value')
+                    pair[name] = value; check.update(state='AVAILABLE', value=value)
+                except FileNotFoundError:
+                    check['state'] = 'MISSING'
+                except OSError:
+                    check['state'] = 'UNREADABLE'
+                    job_unreadable |= ('job_' + job_id) in p.parts and bool(job_id)
+            if pair.get('memory.max', 'max') != 'max':
+                observed_caps.append(int(pair['memory.max']))
+            if len(pair) == 2:
+                readable_pairs += 1
+                limit, usage = pair['memory.max'], int(pair['memory.current'])
+                observations['cgroup_limits'].append({'path': str(p), 'limit': limit, 'usage_bytes': usage})
+                if limit != 'max':
+                    available = min(available, max(0, int(limit) - usage))
+                    job_finite_limit |= ('job_' + job_id) in p.parts and bool(job_id)
+            if p == base:
+                break
+            p = p.parent
+        # In a real Slurm session, a mount-root observation alone does not show
+        # the unreadable job quota. It must not accidentally authorize the job.
+        if readable_pairs and (not context.get('allow_slurm') or (job_finite_limit and not job_unreadable)):
+            observations.update(method='CGROUP_V2', available_bytes=available,
+                                limitations=['Snapshot; unreadable ancestor limits are not observed'])
+        else:
+            observations['method'] = 'SLURM_VERIFIED_NODE_BOUND'
+            if not context.get('allow_slurm'):
+                raise Blocked('Cgroup memory limit/usage unreadable; Slurm fallback not enabled')
+            allocation = verified_slurm_allocation(v2, context)
+            observations['allocation'] = allocation
+            if allocation['reserved_bytes'] > values['MemTotal']:
+                raise Blocked('Slurm reservation exceeds observed physical node memory')
+            used_upper = values['MemTotal'] - values['MemFree']
+            guard = 2 * GIB
+            budget = min([allocation['reserved_bytes'], *observed_caps])
+            headroom = max(0, budget - used_upper - guard)
+            observations.update(allocation=allocation, node_used_upper_bytes=used_upper,
+                                safety_reserve_bytes=guard, allocation_headroom_lower_bytes=headroom,
+                                budget_limit_bytes=budget,
+                                job_usage_measured=False, available_bytes=min(available, headroom),
+                                limitations=['Actual cgroup limit/current remain unknown',
+                                             'Whole-node used RAM includes other jobs, kernel and cache; may block a busy node',
+                                             'Reservation verified by Slurm, not a measurement of free job memory',
+                                             'Snapshot and 2 GiB guard cannot guarantee future availability'])
+        observations.update(status='MEASURED', sufficient_for_bounded_child=observations['available_bytes'] >= 3 * GIB)
+        return observations
+    except Exception as exc:
+        observations['reason'] = str(exc)
+        raise
 
 
 def write_json(p, value):
@@ -248,9 +384,11 @@ def run(args, report, state):
     if root == report or root in report.parents or report in root.parents:
         raise Blocked('Reports and data root must be separate')
     state['profile'] = profile['mode']
-    state['memory'] = available_memory()
+    memory_context = {'allow_slurm': profile['mode'] == 'real', 'observations': []}
+    state['memory_checks'] = memory_context['observations']
+    state['memory'] = available_memory(memory_context)
     if state['memory']['available_bytes'] < 3 * GIB:
-        raise Blocked('Less than 3 GiB available within physical/cgroup limits')
+        raise Blocked('Less than 3 GiB of verified memory headroom')
     if shutil.disk_usage(report).free < GIB:
         raise Blocked('Less than 1 GiB report/temp space')
     rscript = shutil.which('Rscript')
@@ -354,7 +492,8 @@ def run(args, report, state):
         total += cells
         if not (1 <= a <= b and 1 <= c <= d and 9 <= cells <= 250000 and total <= 4000000):
             raise Blocked('Window or cumulative cell budget violated')
-        if available_memory()['available_bytes'] < 3 * GIB:
+        state['memory'] = available_memory(memory_context)
+        if state['memory']['available_bytes'] < 3 * GIB:
             raise Blocked('Memory headroom lost before window')
         label = 'lake_' + row['lake_objectid']
         try:
