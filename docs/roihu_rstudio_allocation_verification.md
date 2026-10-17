@@ -1,5 +1,44 @@
 # Roihu RStudio: puuttuva varauksen todennus 17.10.2026
 
+## Uusi vahvistettu käyttöyhteyden este (17.10.2026)
+
+**CSC:n Roihu-CPU webissä Tools → Login node shell (Roihu-CPU) päättyi
+tunnistautumisvirheeseen** `Permission denied (publickey,hostbased)`, jonka
+jälkeen yhteys katkesi. Kirjautumissolmun shell-promptia ei saatu. Tämä on
+**eri este kuin RStudio-kontin puuttuva scontrol**. Kyseinen selainyhteyden
+epäonnistuminen ei osoita, että RStudio-sovellus olisi estetty: erillinen
+RStudio-istunto `2358119` oli käyttäjän havainnossa RUNNING laskentasolmulla
+`rc4183`. Sen nykyistä tilaa ei oleteta eikä vanhaa job-ID:tä käytetä
+myöhemmässä ajossa.
+
+**Hostin muistiesitarkistusta ei näin ollen saatu käynnistettyä Roihussa.**
+Sen synteettinen GitHub-CI-läpäisy ei poista SSH-estoa. Käyttäjä kertoi
+saaneensa CSC:ltä ilmoituksen yhteyden suunnitellusta korjaamisesta seuraavan
+viikon alussa; korjauksen onnistumista ei ole vahvistettu.
+
+**Muuttunut turvallinen toimintajärjestys yhteyden palautumisen jälkeen:**
+
+1. Varmista ensin, että **Tools → Login node shell (Roihu-CPU)** todella avaa
+   komentokehotteen, **ilman uuden RStudio-/32 GiB-varauksen tekemistä**.
+   Jos SSH-tunnistautuminen edelleen epäonnistuu, pysähdy ja jatka jo
+   aloitettua CSC-tukiasiaa. Älä yritä kiertotietä, älä kopioi SSH-avaimia
+   eikä arvaa hostin autentikointia.
+2. Vasta toimivan kirjautumisyhteyden jälkeen käynnistä tarvittaessa uusi,
+   sopivan lyhyt RStudio-istunto. Ota **uusi** työnumero sen RUNNING-kortilta;
+   aiemmat `2357699` ja `2358119` eivät ole oletuksia uudesta työstä.
+3. Suorita alempana kuvattu **vain varauksen ja muistin** host-esitarkistus
+   `scripts/roihu_existing_job_memory_check.sh` uudelleen tarkistetulla,
+   täsmälleen kiinnitetyllä commitilla. Jos hostin `srun`, `scontrol` tai
+   muistin riittävä live-todistus puuttuu, tulos on `BLOCKED`.
+4. `MEMORY_PREFLIGHT_COMPLETE` ei käynnistä R:ää, terraa tai
+   49 järven koetinta. Varsinaiseen read-only-mittaukseen tarvitaan
+   edelleen **erillinen, testattu ja hyväksytty** host-R/terra-käynnistystapa;
+   02D.5-porttia tai tuotantoreititystä ei muuteta.
+
+Seuranta ja hyväksymisehdot: [issue #14](https://github.com/annasuuronen/MaaltaMerelle/issues/14).
+Tämä dokumenttimuutos koskee vain estettä ja toimintaohjetta; se ei väitä
+uutta hydrologista tulosta. `MODERATE=REVIEW_REQUIRED`; `NATIONAL=LOCKED`.
+
 ## Todettu este ja päätös
 
 Käyttäjän todellinen yritys commitilla
