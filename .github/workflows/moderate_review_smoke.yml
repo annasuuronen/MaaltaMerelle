@@ -1,0 +1,37 @@
+name: MODERATE read-only diagnostic smoke tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-roihu-diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: System libraries for terra
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgdal-dev libproj-dev libgeos-dev libudunits2-dev
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - name: Install terra
+        shell: Rscript {0}
+        run: |
+          install.packages("terra", repos="https://cloud.r-project.org")
+      - name: Validate Bash launcher and Slurm syntax
+        run: |
+          bash -n scripts/roihu_moderate_validation.sbatch
+          bash -n scripts/roihu_launch_moderate_review.sh
+      - name: Parse and run purely synthetic diagnostics
+        run: Rscript --vanilla tests/moderate_roihu_review_smoke.R
+      - name: Check production spill/storage semantics on synthetic rasters
+        run: Rscript --vanilla tests/spill_storage_semantics.R
+      - name: Confirm no production data paths were written
+        run: |
+          test ! -e "/scratch/project_2004707"
+          echo "PASS: synthetic GitHub tests only; NATIONAL remains LOCKED"
