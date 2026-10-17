@@ -83,6 +83,9 @@ cat("PASS: MODERATE geometry read-only diagnostic (synthetic only)\n")
   on.exit(setwd(old))
   setwd(root)
   source("tests/fill_hypothesis_probe.R", local = new.env(parent = globalenv()))
+  # One new end-to-end synthetic chain in the existing geometry job only.
+  # Python's runner fails on zero tests and preserves shell/R/archive failures.
+  stopifnot(system2("python3", c("-I", "-B", shQuote("tests/roihu_probe_bundle.py"))) == 0L)
 })()
 }
 unlink(dir,recursive=TRUE)
