@@ -57,7 +57,8 @@ Inventaario erottaa `NOT_CHECKED`, `MISSING`, `UNREADABLE` ja `AVAILABLE`.
 Yli 5 MiB:n vanhasta lokista luetaan vain metadata ja kirjataan `NOT_CHECKED` /
 `SIZE_LIMIT`. Pienistä lokeista tallennetaan SHA256 sekä rajattu määrä
 tyyppitunnisteita ja rivinumeroita; raakalokeja, komentorivejä tai ympäristön
-arvoja ei kopioida. WATER_STORAGE-rastereista kerätään vain metadata,
+arvoja ei kopioida. WATER_STORAGE-rastereista kerätään vain metadata
+(`NOT_CHECKED`, `METADATA_ONLY`),
 ei uutta arvovertailua. Alkuperäisen ja V2:n kopioiden samuus ei todista
 riippumatonta täyttöajoa. Pelkkä lokitunniste, mtime tai binääritiivisteen
 esiintyminen tekstissä ei todista toteutunutta käskyä ja onnistunutta loppua.

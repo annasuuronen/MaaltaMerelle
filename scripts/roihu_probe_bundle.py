@@ -264,7 +264,7 @@ def run(args, report, state):
             p = safe_path(root / name); s = p.stat()
             if not stat.S_ISREG(s.st_mode):
                 raise Blocked('Not regular')
-            entry.update(state='AVAILABLE', bytes=s.st_size, mtime_ns=s.st_mtime_ns)
+            entry.update(bytes=s.st_size, mtime_ns=s.st_mtime_ns, reason='METADATA_ONLY')
         except FileNotFoundError:
             entry['state'] = 'MISSING'
         except (OSError, Blocked):
@@ -302,13 +302,18 @@ def run(args, report, state):
             binding['state'] = 'UNREADABLE'
             write_json(report / 'input_bindings.json', bindings)
             raise Blocked('Required raster unreadable or unsafe')
-        binding.update(state='AVAILABLE', stat_binding=before, hash_status='NOT_CHECKED')
+        binding.update(stat_binding=before, hash_status='NOT_CHECKED')
         write_json(report / 'input_bindings.json', bindings)
         for suffix in ('.aux.xml', '.ovr', '.msk'):
             if os.path.lexists(str(p) + suffix):
                 raise Blocked('Unpinned raster sidecar refused')
-        got = digest(p, deadline)
-        binding.update(observed_sha256=got, matched=got == expected, hash_status='CHECKED')
+        try:
+            got = digest(p, deadline)
+        except (OSError, Blocked):
+            binding['state'] = 'UNREADABLE'
+            write_json(report / 'input_bindings.json', bindings)
+            raise
+        binding.update(state='AVAILABLE', observed_sha256=got, matched=got == expected, hash_status='CHECKED')
         write_json(report / 'input_bindings.json', bindings)
         if not re.fullmatch('[0-9a-f]{64}', expected) or got != expected:
             raise Blocked('Current raster hash does not match independent prior report')

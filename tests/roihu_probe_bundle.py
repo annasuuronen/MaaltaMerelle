@@ -200,6 +200,20 @@ class BundleChain(unittest.TestCase):
         self.assertEqual(json.loads(files['input_bindings.json'])[-1]['state'], 'UNREADABLE')
         self.assertNotIn('planner.log', files)
 
+    def test_open_failure_is_unreadable_not_available_from_stat(self):
+        args = argparse.Namespace(expected_commit=self.sha, synthetic_fixture=str(self.config))
+        digest = bundle.digest
+        def inaccessible(p, deadline):
+            if p == self.data / bundle.LAKE:
+                raise PermissionError('Synthetic read denied')
+            return digest(p, deadline)
+        with patch.object(bundle, 'CODE', self.code), patch.object(bundle, 'digest', inaccessible):
+            with self.assertRaises(PermissionError):
+                bundle.run(args, self.out, {})
+        binding = json.loads((self.out / 'input_bindings.json').read_text())[-1]
+        self.assertEqual(binding['state'], 'UNREADABLE')
+        self.assertEqual(binding['hash_status'], 'NOT_CHECKED')
+
     def test_unpinned_sidecar_is_blocked(self):
         Path(str(self.data / bundle.WATER) + '.aux.xml').write_text('<untrusted/>')
         p, state, files = self.chain()
