@@ -54,11 +54,27 @@ class RoihuSlurmBatchContract(unittest.TestCase):
         self.assertNotRegex(self.body, r'(?m)^\s*(rm|mv|cp|rsync|git push)\b')
         self.assertNotRegex(self.body, r'(?m)^\s*Rscript\b.+(02_build_baseline|FillDepressions)')
 
+    def test_private_report_mode_accepts_setgid_but_rejects_group_access(self):
+        # Execute the Bash function from the launcher itself, not a Python copy.
+        match = re.search(r'(?ms)^mm_private_report_mode\(\) \{\n.*?^\}', self.body)
+        self.assertIsNotNone(match)
+        implementation = match.group(0)
+        for mode in ('700', '2700'):
+            with self.subTest(mode=mode):
+                p = subprocess.run(['bash', '-c', implementation + '\nmm_private_report_mode "$1"',
+                                    '_', mode], capture_output=True, text=True, timeout=5)
+                self.assertEqual(p.returncode, 0, p.stderr)
+        for mode in ('770', '2770', '750', '2750', '701', '2701', '1777', '3700', '0'):
+            with self.subTest(mode=mode):
+                p = subprocess.run(['bash', '-c', implementation + '\nmm_private_report_mode "$1"',
+                                    '_', mode], capture_output=True, text=True, timeout=5)
+                self.assertNotEqual(p.returncode, 0)
+
     def test_report_and_data_separation(self):
         self.assertIn('/scratch/project_2004707/pienvedet/mm_mod_probe.', self.body)
         self.assertIn('/code', self.body)
         self.assertIn('/reports', self.body)
-        self.assertIn('must be mode 0700', self.body)
+        self.assertIn('must be owner-only mode 0700 or 2700', self.body)
         self.assertNotIn('/users/asuurone', self.body)
         self.assertNotIn('mkdir -p "$HOME', self.body)
 

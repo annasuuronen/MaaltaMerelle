@@ -44,8 +44,17 @@ trap finish EXIT
 [[ "$(stat -c '%u' -- "$MM_REPORT_PARENT")" == "$(id -u)" ]] || {
   echo 'STOP: report parent owner mismatch' >&2; exit 2;
 }
-[[ "$(stat -c '%a' -- "$MM_REPORT_PARENT")" == 700 ]] || {
-  echo 'STOP: report parent must be mode 0700' >&2; exit 2;
+# Roihu project scratch inherits setgid (2700) even with umask 077.
+# Admit ONLY owner-rwx modes: 0700 or 2700. The setgid bit grants no
+# directory traversal/read/write permission to group or others.
+mm_private_report_mode() {
+  case "$1" in
+    700|2700) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+mm_private_report_mode "$(stat -c '%a' -- "$MM_REPORT_PARENT")" || {
+  echo 'STOP: report parent must be owner-only mode 0700 or 2700' >&2; exit 2;
 }
 [[ "$(git -C "$MM_CODE_DIR" rev-parse --show-toplevel)" == "$MM_CODE_DIR" &&
    "$(git -C "$MM_CODE_DIR" rev-parse HEAD)" == "$MM_EXPECTED_COMMIT" &&
