@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""Offline contract checks for a NEW Slurm launcher. Never calls Slurm/CSC."""
+from pathlib import Path
+import re
+import subprocess
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = ROOT / 'scripts/roihu_moderate_bounded_batch.sbatch'
+
+
+class RoihuSlurmBatchContract(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.body = SCRIPT.read_text(encoding='utf-8')
+        cls.sb = dict(re.findall(r'^#SBATCH --([a-z-]+)=(\S+)', cls.body, re.M))
+
+    def test_valid_bash_syntax(self):
+        subprocess.run(['bash', '-n', str(SCRIPT)], check=True, timeout=10)
+
+    def test_single_node_bounded_resource_request(self):
+        self.assertEqual(self.sb['account'], 'project_2004707')
+        self.assertEqual(self.sb['partition'], 'small')
+        for key in ('nodes', 'ntasks', 'cpus-per-task'):
+            self.assertEqual(self.sb[key], '1')
+        self.assertEqual(self.sb['mem'], '32G')
+        self.assertEqual(self.sb['time'], '00:30:00')
+        self.assertNotIn('array', self.sb)
+        self.assertNotIn('requeue', self.sb)
+        # sbatch --output and --error are supplied from the submitter scratch dir.
+        self.assertNotIn('output', self.sb)
+        self.assertNotIn('error', self.sb)
+
+    def test_memory_verified_before_r_or_hydrology_read(self):
+        markers = ['PHASE=ALLOCATION_AND_MEMORY_PREFLIGHT',
+                   '--memory-preflight-only', 'PHASE=R_TERRA_ENVIRONMENT',
+                   'module load r-env/461', 'PHASE=BOUNDED_49_LAKE_READONLY_PROBE']
+        offsets = [self.body.index(marker) for marker in markers]
+        self.assertEqual(offsets, sorted(offsets))
+        self.assertEqual(self.body.count('bash scripts/roihu_probe_rstudio.sh'), 2)
+        self.assertIn('scripts/roihu_probe_rstudio.sh', self.body)
+        self.assertNotIn('--synthetic-fixture', self.body)
+        self.assertNotIn('--overwrite', self.body)
+
+    def test_fails_closed_and_runs_only_in_existing_batch_allocation(self):
+        for text in ('set -euo pipefail', 'umask 077',
+                     'SLURM_JOB_ID', 'MM_EXPECTED_COMMIT',
+                     'rev-parse HEAD', 'status --porcelain --untracked-files=all',
+                     'MM_REPORT_PARENT', 'PHASE=FINISHED',
+                     'SCIENTIFIC_STATUS=REVIEW_REQUIRED NATIONAL=LOCKED',
+                     'HYDROLOGICAL_APPROVAL=false'):
+            self.assertIn(text, self.body)
+        self.assertNotRegex(self.body, r'(?m)^\s*(sbatch|scancel|salloc|srun)\b')
+        self.assertNotRegex(self.body, r'(?m)^\s*(rm|mv|cp|rsync|git push)\b')
+        self.assertNotRegex(self.body, r'(?m)^\s*Rscript\b.+(02_build_baseline|FillDepressions)')
+
+    def test_report_and_data_separation(self):
+        self.assertIn('/scratch/project_2004707/pienvedet/mm_mod_probe.', self.body)
+        self.assertIn('/code', self.body)
+        self.assertIn('/reports', self.body)
+        self.assertIn('must be mode 0700', self.body)
+        self.assertNotIn('/users/asuurone', self.body)
+        self.assertNotIn('mkdir -p "$HOME', self.body)
+
+
+if __name__ == '__main__':
+    unittest.main()

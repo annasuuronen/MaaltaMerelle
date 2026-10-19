@@ -1,0 +1,32 @@
+name: Roihu MODERATE Slurm batch contract (offline)
+
+on:
+  pull_request:
+    branches: [baseline-no-structures]
+    paths:
+      - 'scripts/roihu_moderate_bounded_batch.sbatch'
+      - 'tests/test_roihu_moderate_batch_contract.py'
+      - '.github/workflows/roihu-moderate-batch-contract.yml'
+      - 'docs/roihu_moderate_slurm_batch_20261019.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          submodules: false
+          lfs: false
+      - name: Check static syntax and fail-closed batch contract
+        run: |
+          bash -n scripts/roihu_moderate_bounded_batch.sbatch
+          python3 -I -B tests/test_roihu_moderate_batch_contract.py
+      - name: Confirm no CSC job submitted
+        run: echo 'PASS - static offline tests only; no Slurm allocation or real hydrology data'
