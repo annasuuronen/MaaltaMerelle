@@ -73,6 +73,23 @@ command -v timeout >/dev/null && command -v scontrol >/dev/null &&
     echo 'STOP: missing host preflight tools' >&2; exit 2;
   }
 
+# Keep the host Slurm PATH observed before the R module changes PATH.
+# The Python coordinator still independently verifies the live job allocation.
+MM_HOST_PATH=$PATH
+MM_HOST_SCONTROL=$(command -v scontrol)
+[[ "$MM_HOST_SCONTROL" == /* && -x "$MM_HOST_SCONTROL" ]] || {
+  echo 'STOP: no absolute executable host scontrol before R module' >&2; exit 2;
+}
+mm_probe_path_for_slurm() {
+  local host_path="$1" module_path="$2" expected="$3"
+  [[ "$expected" == /* && -x "$expected" ]] || return 1
+  # Keep r-env's Rscript ahead of the host paths.
+  local combined="$module_path:$host_path" observed
+  observed=$(PATH="$combined" command -v scontrol 2>/dev/null) || return 1
+  [[ "$observed" == "$expected" ]] || return 1
+  printf '%s\n' "$combined"
+}
+
 cd -- "$MM_CODE_DIR"
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
 export R_WHITEBOX_MAX_PROCS=1
@@ -101,11 +118,21 @@ timeout --signal=TERM --kill-after=5s 90s Rscript --vanilla -e '
       " terra=", as.character(packageVersion("terra")), "\n", sep="")
 '
 
+# r-env may hide host Slurm commands. Restore only the previously checked
+# host search path for the bounded probe. Do not replace job/memory verification.
+MM_RSCRIPT_AFTER_MODULE=$(command -v Rscript)
+MM_PROBE_PATH=$(mm_probe_path_for_slurm "$MM_HOST_PATH" "$PATH" "$MM_HOST_SCONTROL") || {
+  echo 'STOP: original host scontrol unavailable or shadowed after r-env load' >&2; exit 2;
+}
+[[ "$(PATH="$MM_PROBE_PATH" command -v Rscript)" == "$MM_RSCRIPT_AFTER_MODULE" ]] || {
+  echo 'STOP: Slurm PATH restoration would change Rscript interpreter' >&2; exit 2;
+}
+
 printf 'PHASE=BOUNDED_49_LAKE_READONLY_PROBE\n'
 # Existing probe enforces: two SHA256 input pins, 49 targets, <=250000 cells
 # per window, <=4000000 total cells, <=2000 visits/lake, 2 GiB R-process
 # address-space cap and explicit fail-closed memory rechecks. NO Whitebox fill.
-timeout --signal=TERM --kill-after=5s 1080s \
+PATH="$MM_PROBE_PATH" timeout --signal=TERM --kill-after=5s 1080s \
   bash scripts/roihu_probe_rstudio.sh \
     --expected-commit "$MM_EXPECTED_COMMIT" \
     --output-parent "$MM_REPORT_PARENT"

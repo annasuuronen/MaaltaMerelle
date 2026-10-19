@@ -70,6 +70,64 @@ class RoihuSlurmBatchContract(unittest.TestCase):
                                     '_', mode], capture_output=True, text=True, timeout=5)
                 self.assertNotEqual(p.returncode, 0)
 
+    def test_host_slurm_path_restoration_is_fail_closed(self):
+        # Extract and execute the exact Bash helper, with synthetic binaries.
+        import tempfile
+        match = re.search(r'(?ms)^mm_probe_path_for_slurm\(\) \{\n.*?^\}', self.body)
+        self.assertIsNotNone(match)
+        helper = match.group(0)
+        with tempfile.TemporaryDirectory(prefix='mm-batch-path-') as temp:
+            host, module = Path(temp) / 'host', Path(temp) / 'module'
+            host.mkdir(); module.mkdir()
+            host_client = host / 'scontrol'
+            rscript = module / 'Rscript'
+            for executable in (host_client, rscript):
+                executable.write_text('#!/bin/sh\nexit 0\n')
+                executable.chmod(0o700)
+
+            def probe():
+                return subprocess.run(
+                    ['/bin/bash', '-c',
+                     helper + '\nmm_probe_path_for_slurm "$1" "$2" "$3"',
+                     '_', str(host), str(module), str(host_client)],
+                    capture_output=True, text=True, timeout=5)
+
+            good = probe()
+            self.assertEqual(good.returncode, 0, good.stderr)
+            combined = good.stdout.strip()
+            self.assertEqual(combined, str(module) + ':' + str(host))
+            for name, expected in (('scontrol', host_client), ('Rscript', rscript)):
+                p = subprocess.run(
+                    ['/bin/bash', '-c', 'PATH="$1"; command -v "$2"',
+                     '_', combined, name], capture_output=True, text=True, timeout=5)
+                self.assertEqual(p.returncode, 0)
+                self.assertEqual(p.stdout.strip(), str(expected))
+
+            shadow = module / 'scontrol'
+            shadow.write_text('#!/bin/sh\nexit 0\n')
+            shadow.chmod(0o700)
+            self.assertNotEqual(probe().returncode, 0)
+            shadow.unlink()
+            host_client.unlink()
+            self.assertNotEqual(probe().returncode, 0)
+
+    def test_slurm_path_restored_only_after_real_module_validation(self):
+        checkpoints = [
+            'MM_HOST_PATH=$PATH',
+            'PHASE=ALLOCATION_AND_MEMORY_PREFLIGHT',
+            'module load r-env/461',
+            'R_TERRA_READY R=',
+            'MM_PROBE_PATH=$(mm_probe_path_for_slurm',
+            'PHASE=BOUNDED_49_LAKE_READONLY_PROBE',
+            'PATH="$MM_PROBE_PATH" timeout'
+        ]
+        positions = [self.body.index(x) for x in checkpoints]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn('STOP: original host scontrol unavailable or shadowed', self.body)
+        self.assertIn('STOP: Slurm PATH restoration would change Rscript interpreter', self.body)
+        self.assertEqual(self.body.count('--memory-preflight-only'), 1)
+        self.assertEqual(self.body.count('PATH="$MM_PROBE_PATH" timeout'), 1)
+
     def test_report_and_data_separation(self):
         self.assertIn('/scratch/project_2004707/pienvedet/mm_mod_probe.', self.body)
         self.assertIn('/code', self.body)
