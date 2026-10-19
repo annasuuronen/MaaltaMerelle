@@ -1,13 +1,7 @@
-name: Roihu MODERATE Slurm batch contract (offline)
+name: Roihu MODERATE Slurm batch contract (offline, manual)
 
+# Manual-only: existing CSC preflight explicitly forbids new PR-triggered workflows.
 on:
-  pull_request:
-    branches: [baseline-no-structures]
-    paths:
-      - 'scripts/roihu_moderate_bounded_batch.sbatch'
-      - 'tests/test_roihu_moderate_batch_contract.py'
-      - '.github/workflows/roihu-moderate-batch-contract.yml'
-      - 'docs/roihu_moderate_slurm_batch_20261019.md'
   workflow_dispatch:
 
 permissions:
