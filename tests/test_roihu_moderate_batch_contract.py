@@ -37,8 +37,9 @@ class RoihuSlurmBatchContract(unittest.TestCase):
                    'module load r-env/461', 'PHASE=BOUNDED_49_LAKE_READONLY_PROBE']
         offsets = [self.body.index(marker) for marker in markers]
         self.assertEqual(offsets, sorted(offsets))
-        self.assertEqual(self.body.count('bash scripts/roihu_probe_rstudio.sh'), 2)
+        self.assertEqual(self.body.count('bash scripts/roihu_probe_rstudio.sh'), 1)
         self.assertIn('scripts/roihu_probe_rstudio.sh', self.body)
+        self.assertIn('"$MM_HOST_PYTHON" -I -B scripts/roihu_probe_bundle.py', self.body)
         self.assertNotIn('--synthetic-fixture', self.body)
         self.assertNotIn('--overwrite', self.body)
 
@@ -103,6 +104,26 @@ class RoihuSlurmBatchContract(unittest.TestCase):
                 self.assertEqual(p.returncode, 0)
                 self.assertEqual(p.stdout.strip(), str(expected))
 
+            # Real host-Python discovery must survive a module-injected python3
+            # shim that cannot inspect the real Slurm host environment.
+            import os
+            import sys
+            bad_python = module / 'python3'
+            bad_python.write_text('#!/bin/sh\nexit 77\n')
+            bad_python.chmod(0o700)
+            env = dict(os.environ, PATH=combined)
+            code = ('import shutil; '
+                    'print(shutil.which("scontrol") or ""); '
+                    'print(shutil.which("Rscript") or "")')
+            observed = subprocess.run([sys.executable, '-I', '-B', '-c', code],
+                                      env=env, capture_output=True, text=True, timeout=5)
+            self.assertEqual(observed.returncode, 0, observed.stderr)
+            self.assertEqual(observed.stdout.splitlines(),
+                             [str(host_client), str(rscript)])
+            wrong_interpreter = subprocess.run([str(bad_python), '-I', '-B', '-c', code],
+                                               env=env, capture_output=True, timeout=5)
+            self.assertEqual(wrong_interpreter.returncode, 77)
+
             shadow = module / 'scontrol'
             shadow.write_text('#!/bin/sh\nexit 0\n')
             shadow.chmod(0o700)
@@ -114,11 +135,13 @@ class RoihuSlurmBatchContract(unittest.TestCase):
     def test_slurm_path_restored_only_after_real_module_validation(self):
         checkpoints = [
             'MM_HOST_PATH=$PATH',
+            'MM_HOST_PYTHON=$(command -v python3)',
             'PHASE=ALLOCATION_AND_MEMORY_PREFLIGHT',
             'module load r-env/461',
             'R_TERRA_READY R=',
             'MM_PROBE_PATH=$(mm_probe_path_for_slurm',
             'PHASE=BOUNDED_49_LAKE_READONLY_PROBE',
+            'MM_PY_SCONTROL=$(PATH="$MM_PROBE_PATH" "$MM_HOST_PYTHON" -I -B',
             'PATH="$MM_PROBE_PATH" timeout'
         ]
         positions = [self.body.index(x) for x in checkpoints]
@@ -127,6 +150,9 @@ class RoihuSlurmBatchContract(unittest.TestCase):
         self.assertIn('STOP: Slurm PATH restoration would change Rscript interpreter', self.body)
         self.assertEqual(self.body.count('--memory-preflight-only'), 1)
         self.assertEqual(self.body.count('PATH="$MM_PROBE_PATH" timeout'), 1)
+        self.assertIn('STOP: host Python cannot resolve the verified scontrol', self.body)
+        self.assertIn('STOP: host Python cannot resolve the verified Rscript', self.body)
+        self.assertIn('"$MM_HOST_PYTHON" -I -B scripts/roihu_probe_bundle.py', self.body)
 
     def test_report_and_data_separation(self):
         self.assertIn('/scratch/project_2004707/pienvedet/mm_mod_probe.', self.body)

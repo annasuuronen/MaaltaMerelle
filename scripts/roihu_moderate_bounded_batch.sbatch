@@ -77,8 +77,12 @@ command -v timeout >/dev/null && command -v scontrol >/dev/null &&
 # The Python coordinator still independently verifies the live job allocation.
 MM_HOST_PATH=$PATH
 MM_HOST_SCONTROL=$(command -v scontrol)
+MM_HOST_PYTHON=$(command -v python3)
 [[ "$MM_HOST_SCONTROL" == /* && -x "$MM_HOST_SCONTROL" ]] || {
   echo 'STOP: no absolute executable host scontrol before R module' >&2; exit 2;
+}
+[[ "$MM_HOST_PYTHON" == /* && -x "$MM_HOST_PYTHON" ]] || {
+  echo 'STOP: no absolute executable host Python before R module' >&2; exit 2;
 }
 mm_probe_path_for_slurm() {
   local host_path="$1" module_path="$2" expected="$3"
@@ -128,12 +132,28 @@ MM_PROBE_PATH=$(mm_probe_path_for_slurm "$MM_HOST_PATH" "$PATH" "$MM_HOST_SCONTR
   echo 'STOP: Slurm PATH restoration would change Rscript interpreter' >&2; exit 2;
 }
 
+# A module may replace python3 with a container shim. Check the *actual*
+# preserved host Python interpreter's Slurm/R discovery before reading inputs.
+# The later Python coordinator still does its own live job/UID/node/memory check.
+MM_PY_SCONTROL=$(PATH="$MM_PROBE_PATH" "$MM_HOST_PYTHON" -I -B -c 'import shutil; print(shutil.which("scontrol") or "")') || {
+  echo 'STOP: preserved host Python cannot inspect Slurm PATH after R module' >&2; exit 2;
+}
+[[ "$MM_PY_SCONTROL" == "$MM_HOST_SCONTROL" ]] || {
+  echo 'STOP: host Python cannot resolve the verified scontrol' >&2; exit 2;
+}
+MM_PY_RSCRIPT=$(PATH="$MM_PROBE_PATH" "$MM_HOST_PYTHON" -I -B -c 'import shutil; print(shutil.which("Rscript") or "")') || {
+  echo 'STOP: preserved host Python cannot inspect Rscript PATH' >&2; exit 2;
+}
+[[ "$MM_PY_RSCRIPT" == "$MM_RSCRIPT_AFTER_MODULE" ]] || {
+  echo 'STOP: host Python cannot resolve the verified Rscript' >&2; exit 2;
+}
+
 printf 'PHASE=BOUNDED_49_LAKE_READONLY_PROBE\n'
 # Existing probe enforces: two SHA256 input pins, 49 targets, <=250000 cells
 # per window, <=4000000 total cells, <=2000 visits/lake, 2 GiB R-process
 # address-space cap and explicit fail-closed memory rechecks. NO Whitebox fill.
 PATH="$MM_PROBE_PATH" timeout --signal=TERM --kill-after=5s 1080s \
-  bash scripts/roihu_probe_rstudio.sh \
+  "$MM_HOST_PYTHON" -I -B scripts/roihu_probe_bundle.py \
     --expected-commit "$MM_EXPECTED_COMMIT" \
     --output-parent "$MM_REPORT_PARENT"
 
