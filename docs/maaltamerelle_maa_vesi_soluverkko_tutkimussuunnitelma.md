@@ -1,7 +1,8 @@
 # MaaltaMerelle: maa-alueiden virtausverkon, ojitusten ja pienvesien tutkimussuunnitelma
 
 Laadittu 19.10.2026, päivitetty 20.10.2026 käyttäjän hyväksymän ojitus- ja
-pienvesipainotuksen mukaisesti. **Suunnitelma tieteelliseen katselmointiin.**
+pienvesipainotuksen sekä DEM-lähdekorjauksen mukaisesti.
+**Suunnitelma tieteelliseen katselmointiin.**
 Tämä dokumentti ei osoita alla ehdotettujen menetelmien toteutusta tai
 hyväksyntää. Päivitys muuttaa vain tätä tiedostoa suunnitteluhaarassa,
 jonka lähtöcommit on
@@ -150,19 +151,32 @@ käyttäjän ajonäyttöä vanhempi. Muistio säilytetään historiallisena.
 
 ### 2.4 DEM:n lähtötilanne ja pintojen käsittelyhistoria
 
-**Käyttäjän ilmoittama lähtötilanne:** tutkimuksen 2 m DEM:iin on poltettu
-rumpuyhteyksiä, ojituksia ja salaojituksia. Sitä käsitellään hydrologisesti
-muokattuna syötteenä, ei alkuperäisenä muuttamattomana Paituli-DEM:nä.
-Konfiguraatio lukee valmiin `dem_12km_rumpukorjattu.tif`-tiedoston [S1C].
-Tarkistetusta lähdekoodista ja dokumentaatiosta ei löytynyt sen valmistavaa
-polttomenetelmää tai näiden kolmen polttotyypin tarkkoja lähdetietoja.
-Ilmoitettu esikäsittely ja riippumattomasti varmennettu valmistushistoria
-ovat eri näyttöä.
+**Käyttäjän vahvistama DEM-lähdekorjaus:** MaaltaMerellen syöte-DEM muodostuu
+vain kahdesta aineistosta:
+
+1. MML:n alkuperäinen Korkeusmalli 2 m (KM2), hankittu Paitulista.
+2. SYKEn julkaistu uomakorjaus- ja rumpujen kaiverrusaineisto [S11].
+
+MaaltaMerellessä tähän DEM:iin ei ole yhdistetty kolmansia erillisiä oja-,
+rumpu- tai salaoja-aineistoja. Aiempi kuvaus erillisistä salaojapoltoista
+korvataan tällä täsmennyksellä. SYKE-tuotteen nimestä ei päätellä sen
+sisältävän erillisiä salaojaverkkoja tai tiettyjä sisäisiä lähtöaineistoja.
+Julkaisulinkki on käyttäjän toimittama; alkuperäisen aineistokuvauksen
+sisältöä ei voitu lukea tässä tarkistuksessa.
+
+Syötettä käsitellään edelleen hydrologisesti muokattuna DEM:nä, ei
+muuttamattomana MML:n KM2:na. Konfiguraatio lukee valmiin
+`dem_12km_rumpukorjattu.tif`-tiedoston [S1C]. Tarkistetuista lähteistä ei
+löytynyt näiden kahden aineiston yhdistämistä toteuttavaa menetelmää,
+tarkkoja aineistoversioita tai paikallisia parametreja. Käyttäjän vahvistama
+lähdepari, dokumentoitu valmistusmenetelmä ja numeerisesti varmennettu
+muutos ovat eri näyttöä. RANTA10:n myöhempi käyttö maskeihin ja
+järvikorkeuksiin kuuluu jäljempänä erotettuihin laskentavaiheisiin.
 
 | Pinta | Koodista tai lähdekuvauksesta tiedetty | Mahdollinen vaikutus kuivatusyhteyteen |
 | --- | --- | --- |
-| Alkuperäinen Paitulin 2 m DEM | Ennen polttoja käytetty aineisto pitää yksilöidä; sen versio ja vertailukopio eivät ole tässä varmennettuja. | Vertailuperusta polton vaikutukselle, ei sama asia kuin nykyinen syöte. |
-| Hydrologisesti muokattu DEM | Valmis syötetiedosto; rummut, ojitukset ja salaojitukset käyttäjän ilmoittamia. | Sisältää ennakkoon kuvattuja kuivatusyhteyksiä, joiden geometria, korkeudet ja menetelmä on sidottava lähteeseen. |
+| MML:n alkuperäinen KM2 Paitulista | MML on tuottaja, Paituli jakelukanava. Käytetty versio, ruudut ja vertailukopio pitää yksilöidä. | Vertailuperusta SYKEn korjausaineiston soveltamiselle, ei sama asia kuin nykyinen syöte. |
+| Hydrologisesti muokattu DEM | Käyttäjän vahvistamat lähteet ovat MML:n KM2 ja SYKEn korjausaineisto [S11]; paikallinen yhdistämismenetelmä on vahvistamatta. | Korjausten sijainti, korkeudet ja soveltamistapa pitää sitoa käytettyyn SYKE-versioon; kolmansia paikallisia aineistoja ei oleteta. |
 | LAND_RAW | `ifel(is.na(lake_id), dem, NA)` [S1R]. | Järvi-ID-solut poistetaan; niihin osuva polttojälki voi poistua reititysesityksestä. Muu pinta periytyy muokatusta DEM:stä. |
 | LAND_FILL | `FillDepressions(LAND_RAW, fix_flats=TRUE)` [S1R]. | Täyttö voi korottaa poltettua uraa ja tasanteiden käsittely muuttaa paikallista kaltevuutta. Jatkuva poltettu yhteys ei välttämättä muutu; säilyminen pitää osoittaa. |
 | LAND_WATER | `cover(land_fill, lake_z)` [S1R]; järvikorkeudet sidotaan RANTA10-kohteisiin [S9]. | Säilyttää kelvollisen LAND_FILLin ja täydentää puuttuvia soluja järvikorkeuksilla. Ei palauta järvialueen alkuperäistä polttotopografiaa. |
@@ -350,9 +364,11 @@ yläpuolisten alueiden vesikontaktit ja katkokset pitää säilyttää.
 4 ha ei ole pienveden olemassaolon tai riippumattoman vahvistuksen raja,
 eikä sen alittaminen ole pienvesiehdokkaan poistoperuste.
 
-Yllä oleva kertymä- ja tasemääritelmä koskee pintamaagraafia. Salaojien
-maanalaiset yhteydet kuvataan erikseen lähde-, liittymä- ja purkupisteineen.
-DEM:iin poltettu salaojalinja on laskennallinen esitys, ei havaittu pintauoma.
+Yllä oleva kertymä- ja tasemääritelmä koskee pintamaagraafia. Jos salaojien
+maanalaisia yhteyksiä tutkitaan myöhemmin, ne kuvataan erikseen lähde-,
+liittymä- ja purkupisteineen. Nykyiseen DEM:iin ei ole yhdistetty erillistä
+salaoja-aineistoa, eikä SYKE-tuotteen salaojasisältöä ole tässä vahvistettu.
+Mahdollinen maanalaisen yhteyden laskennallinen esitys ei ole havaittu pintauoma.
 Pinta- ja salaojareitin yhdistäminen edellyttäisi erikseen hyväksyttyä
 siirto-/jakautumissopimusta: samaa vettä ei lasketa molempiin. Pelkkä
 topologinen yhteys ei osoita putken kapasiteettia, painekorkeuksia tai
@@ -415,7 +431,10 @@ mutta ei samalla toimia riippumattomana validointina. Myös eri julkaisuissa
 esiintyvien aineistojen yhteinen alkuperä ja havainnointiajankohta tarkistetaan.
 Vertailun pitää erottaa uoman olemassaolo, sijainti, virtaussuunta ja veden
 esiintyminen eri vuodenaikoina. Aineistojen saatavuutta tai tätä vertailua
-ei ole tässä varmennettu.
+ei ole tässä varmennettu. Nämä ovat mahdollisia vertailulähteitä, eivät
+nykyiseen DEM:iin yhdistettyjä kolmansia aineistoja. SYKEn korjausaineiston
+käyttö sekä DEM:n valmistamiseen että vertailuun ei muodosta kahta
+riippumatonta todistetta.
 
 Issue #9:n SYKE-aineisto sisältää metatiedon mukaan lähteikköjen
 **50 m lähialueen puskuripolygoneja**, ei 2 m tarkkoja lähdepisteitä.
@@ -474,21 +493,25 @@ koskee myös niiden hydrologista vaikutusaluetta tiilineliön ulkopuolella.
 Tuntematon rakennevaikutus ei muutu luonnontilaisuuden todisteeksi.
 
 Baselineen ei lisätä rakenteiden perusteella uusia reititysohituksia.
-Käyttäjän ilmoittamat aikaisemmat rumpu-, ojitus- ja salaojapoltot kirjataan
-syötedatan käsittelyhistoriaan: rakenteita käyttämätön ajokoodi ei osoita
-syötedatan olevan rakenteista riippumatonta. Tarkat valmistusmenetelmät
-säilyvät vahvistamattomina, kunnes lähdenäyttö löytyy. Tunnelin/rummun
+Käyttäjän vahvistama lähdeketju on MML:n KM2 Paitulista ja SYKEn
+uomakorjaus-/rumpukaiverrusaineisto [S11], ilman kolmansia MaaltaMerellessä
+yhdistettyjä oja-, rumpu- tai salaoja-aineistoja. Tämä kirjataan syötedatan
+käsittelyhistoriaan: rakenteita käyttämätön ajokoodi ei osoita syötedatan
+olevan rakenteista riippumatonta. SYKE-tuotteen sisäinen valmistus ja sen
+paikallinen soveltamistapa säilyvät vahvistamattomina, kunnes lähdenäyttö
+löytyy. Erillisiä salaojaverkkoja ei oleteta tuotteen sisällöksi. Tunnelin/rummun
 todellinen yhteys voi jäädä pintamallin ulkopuolelle. Tällainen poikkeama säilytetään mallirajauksena tai
 epävarmuutena, ei automaattisena pointerikorjauksena.
 
-Polttojen provenienssivaatimukset ovat:
+Kahden DEM-lähteen ja niiden soveltamisen provenienssivaatimukset ovat:
 
-- alkuperäisen Paituli-DEM:n ja käsitellyn DEM:n yksilöivät lähdeviitteet,
+- MML:n alkuperäisen KM2:n, käytetyn SYKE-tuotteen ja käsitellyn DEM:n lähdeviitteet,
   versiot/ajankohdat, ruudukot, NoData ja korkeusjärjestelmät;
-- erikseen rumpu-, oja- ja salaojageometrioiden alkuperä, versio,
-  kohdetunnukset, sijaintitarkkuus sekä käytetyt korkeus- ja suuntatiedot;
-- menetelmä, ohjelmisto/koodiversio, syvyys, leveys, kaltevuuden muodostus,
-  kohdistus/rasterointi ja päällekkäisten polttojen käsittelyjärjestys;
+- SYKEn julkaisun resurssi-/ruututunnukset sekä mahdolliset sen mukana
+  dokumentoidut kohdetunnukset, sijainnit, korkeus- ja suuntatiedot;
+- SYKE-tuotteen dokumentoitu valmistus ja siitä erikseen MaaltaMerellen
+  yhdistämis-/soveltamissääntö, ohjelmisto/koodiversio, kohdistus ja NoData-käsittely;
+  kaiverrussyvyyttä, leveyttä tai kaltevuusmenetelmää ei päätellä tuotteen nimestä;
 - käytettävissä oleva ennen–jälkeen-näyttö: muutosraportti tai tallennettu
   erotus/polttomaski sekä niiden sidonta samoihin lähtötiedostoihin;
 - myöhempien pintojen ja D8:n ajokohtaiset lähteet, parametrit,
@@ -506,13 +529,15 @@ jota verrataan muuttumattomaan baselineen vaikutusalueineen ja taseineen.
 
 ## 7. Avoimet tutkimuskysymykset
 
-- Mikä on LOW:n yhden yksilöidyn oja–rumpuyhteyden alkuperä, miten se on
-  kuvattu muokattuun DEM:iin ja mikä myöhempi vaihe säilyttää tai muuttaa sitä?
+- Löytyykö LOW:sta yksi SYKEn korjausaineistoon sidottu yksilöity
+  oja–rumpuyhteys, miten sen korjaus on yhdistetty MML:n KM2:een ja mikä
+  myöhempi vaihe säilyttää tai muuttaa sitä?
 - Mitkä RANTA10:n ulkopuoliset reitit ovat dokumentoituja ojia, mitkä vain
   laskennallisia uomaehdokkaita ja millä riippumattomalla näytöllä niistä
   voidaan erottaa mahdollisia puuttuvia pienvesiä?
-- Miten pintavalunta ja salaojasiirrot erotetaan niin, että yhtymät,
-  vedenjakajien tulkinta ja lähteiden kertalaskenta säilyvät oikein?
+- Jos salaojia tutkitaan erikseen myöhemmin, miten pintavalunta ja
+  maanalaiset siirrot erotetaan niin, että yhtymät, vedenjakajien tulkinta
+  ja lähteiden kertalaskenta säilyvät oikein?
 - Mitkä LOW:n tunnetut nollat ja rajaerot muuttavat maalta saapuvan veden
   **ensimmäistä** kontaktia, ja mitkä koskevat vasta järvestä poistumista?
   Nykyiset järvilähtöiset 02F-reitit eivät anna koko maajoukon vastausta.
@@ -536,9 +561,10 @@ jota verrataan muuttumattomaan baselineen vaikutusalueineen ja taseineen.
 
 ### 1. Yhden dokumentoidun LOW:n oja–rumpuyhteyden provenienssiauditointi
 
-**Ensimmäinen seuraava tutkimustehtävä.** Tämän päivityksen toimitus on
-auditoinnin määrittely; itse auditointia ei suoriteta tässä. Tarkastelu
-rajataan yhteen jo dokumentoituun oja–rumpuyhteyteen LOW-alueella
+**Ensimmäinen seuraava tutkimustehtävä.** Auditointi aloitetaan GitHubin ja
+olemassa olevien dokumenttien lähdeselvityksellä. Kohdekohtaista jäljitystä
+CSC-raporteista ei väitetä tämän perusteella valmistuneeksi. Tarkastelu
+rajataan yhteen SYKEn korjausaineistoon sidottuun dokumentoituun oja–rumpuyhteyteen LOW-alueella
 `E200000_N6900000`. Käytetään vain olemassa olevia lähdekuvauksia,
 esikäsittelymuistioita, kohdeviitteitä, manifesteja ja pieniä raportteja.
 Ei uusia CSC-töitä, rasterilukuja, rasterien sisältötiivisteiden laskentaa,
@@ -554,13 +580,19 @@ Tarkistus etenee seuraavasti:
    raporttiehdokkaita; lähdepolut eivät osoita
    tiedostojen olemassaoloa. Tästä Codex-ympäristöstä CSC:n `/scratch` ei ollut
    luettavissa. Se ei osoita tiedostojen puuttuvan Roihulta.
-2. Selvitetään olemassa olevasta poltto-/kohdekuvauksesta yksi yksilöity
-   yhteys: ojan ja rummun lähdekohteet/tunnukset, sijainti ja niiden välisen
-   yhteyden dokumentointi. Valintaperuste, lähdetiedosto, versio ja saatavilla
-   oleva tarkistussumma kirjataan. Mielivaltaista D8-reittiä, nollasolua tai
-   suurta kertymää ei nimetä ojaksi tai rummuksi.
-3. Jäljitetään geometrian ja polttotoimenpiteen alkuperä sekä alkuperäisen
-   Paituli-DEM:n ja käsitellyn DEM:n identiteetit. Selvitetään, onko jo
+2. Selvitetään SYKEn korjausaineiston olemassa olevasta kuvauksesta tai
+   käyttödokumentaatiosta yksi yksilöity yhteys. Kohdetunnusta ei oleteta
+   olevan: myös aineistoversioon ja resurssi-/ruututunnukseen sidottu
+   dokumentoitu sijainti voi yksilöidä tarkastelukohdan. Ojan ja rummun
+   välisen yhteyden pitää silti perustua lähdenäyttöön. Valintaperuste,
+   lähdetiedosto, versio ja saatavilla oleva tarkistussumma kirjataan.
+   Mielivaltaista D8-reittiä, nollasolua tai suurta kertymää ei nimetä ojaksi
+   tai rummuksi.
+3. Jäljitetään MML:n alkuperäisen KM2:n (Paitulista), käytetyn SYKE-tuotteen
+   ja käsitellyn DEM:n identiteetit sekä näiden kahden lähteen paikallinen
+   yhdistämis-/soveltamismenetelmä. Tuotteen mahdolliset geometrialähteet
+   selvitetään alkuperäisestä aineistokuvauksesta; kolmansia MaaltaMerellessä
+   yhdistettyjä aineistoja ei oleteta. Selvitetään, onko jo
    olemassa kohteeseen sidottu ennen–jälkeen-raportti, polttomaski tai muu
    vertailunäyttö. Rasterin tai maskin sisältöä ei lueta tällä rajauksella;
    pelkkä tiedostoviite ei osoita muutoksen suuruutta tai oikeellisuutta.
@@ -570,9 +602,9 @@ Tarkistus etenee seuraavasti:
    `comparisons.csv` ovat olemassaololtaan tarkistettavia raporttiehdokkaita.
    Koko pinnan summat tai regressiovastaavuus eivät todista juuri valitun
    kuivatusyhteyden säilymistä. Raportoimaton kohdekohtainen muutos jää tuntemattomaksi.
-5. Toimitetaan yksi jäljitettävyystaulu: kohde ja valintaperuste,
-   geometrialähde, polttomenetelmän saatavilla olevat tiedot, alkuperäinen
-   ja käsitelty DEM, ennen–jälkeen-näyttö, myöhemmät pinnat/ajot sekä kunkin
+5. Toimitetaan yksi jäljitettävyystaulu: kohde/sijainti ja valintaperuste,
+   SYKE-lähdeviite ja dokumentoitu menetelmä, MML:n KM2, lähteiden paikallinen
+   yhdistäminen, käsitelty DEM, ennen–jälkeen-näyttö, myöhemmät pinnat/ajot sekä kunkin
    tiedon lähde ja puuttuvat alkuperäisaineistot. Käyttäjän ilmoitus,
    dokumentoitu valmistus ja numeerinen vertailuhavainto erotetaan toisistaan.
 
@@ -652,8 +684,8 @@ säilyvät. Tarkistus kohdistuu lähdeviitteisiin, toteutuksen ja suunnitelman
 erotteluun, dokumentointidiffiin ja Actions-triggerien rajauksiin.
 Raskaita tai jo onnistuneita hydrologisia testejä ei tarvita tämän
 dokumentin tarkistamiseen. PR #7:ää, #12:ta tai #16:ta ei muuteta tai yhdistetä.
-Auditointia, ohjelmointia tai uusia CSC-rasterilukuja ei suoriteta tällä
-dokumentaatiopäivityksellä.
+Dokumentaatiokorjaus ja GitHubin lähdeselvitys eivät sisällä CSC:n
+kohdekohtaista auditointia, ohjelmointia tai uusia rasterilukuja.
 
 Kaikki seuraavan tehtävän ohjelmointi ja mahdolliset CSC-mittaukset
 odottavat erillistä hyväksyntää. **MODERATE=REVIEW_REQUIRED; NATIONAL=LOCKED.**
@@ -678,6 +710,9 @@ odottavat erillistä hyväksyntää. **MODERATE=REVIEW_REQUIRED; NATIONAL=LOCKED
   `7050b582edab3195669529f366b4f5a2915488c6`.
 - [S10: erillinen ensikontaktiprototyyppi ja dokumentoidut synteettiset tarkistukset][S10],
   commit `24b81af244c867d7a3f7c36594589acc8d9c01f9`, draft PR #16.
+- [S11: SYKEn uomakorjaus- ja rumpujen kaiverrusaineiston julkaisulinkki][S11],
+  käyttäjän vahvistama toinen DEM-lähde. Aineistokuvauksen sisältöä,
+  käytettyä versiota tai paikallista soveltamista ei ole tässä varmennettu.
 
 [S1]: https://github.com/annasuuronen/MaaltaMerelle/blob/7050b582edab3195669529f366b4f5a2915488c6/README.md
 [S1R]: https://github.com/annasuuronen/MaaltaMerelle/blob/7050b582edab3195669529f366b4f5a2915488c6/R/02_build_baseline_hydrology.R
@@ -697,3 +732,4 @@ odottavat erillistä hyväksyntää. **MODERATE=REVIEW_REQUIRED; NATIONAL=LOCKED
 [S8]: https://github.com/annasuuronen/MaaltaMerelle/blob/7050b582edab3195669529f366b4f5a2915488c6/docs/validation_gradient.md
 [S9]: https://github.com/annasuuronen/MaaltaMerelle/blob/7050b582edab3195669529f366b4f5a2915488c6/R/01_prepare_hydrology_inputs.R
 [S10]: https://github.com/annasuuronen/MaaltaMerelle/blob/24b81af244c867d7a3f7c36594589acc8d9c01f9/diagnostics/land_first_water/README.md
+[S11]: https://ckan.ymparisto.fi/dataset/uomakorjaus-rumpujen-kaiverrus-korkeusmalli-2m
