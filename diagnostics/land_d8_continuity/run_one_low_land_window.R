@@ -38,7 +38,7 @@ files <- list(
 )
 csv <- required_file(file.path(base, "02B_land_to_first_water_entries.csv"), 64 * 1024^2)
 rasters <- lapply(files, terra::rast)
-if (any(vapply(rasters, terra::nlyr, integer(1)) != 1L) ||
+if (!all(vapply(rasters, function(r) terra::nlyr(r) == 1, logical(1))) ||
     any(!vapply(rasters[-1L], function(r)
       terra::compareGeom(rasters$pointer, r, stopOnError = FALSE), logical(1))) ||
     !isTRUE(terra::same.crs(rasters$pointer, "EPSG:3067")) ||
