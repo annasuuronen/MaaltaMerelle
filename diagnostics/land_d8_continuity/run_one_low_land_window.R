@@ -22,10 +22,10 @@ required_file <- function(p, max_bytes = Inf) {
 }
 man_path <- required_file(file.path(dirname(base), "01_inputs", "01_input_manifest.csv"), 65536)
 man <- read.csv(man_path, stringsAsFactors = FALSE)
-if (!all(c("item", "value") %in% names(man)) || anyDuplicated(man$item))
-  stop("BAD_MANIFEST_SCHEMA")
+if (!all(c("key", "value") %in% names(man)) || anyDuplicated(man$key))
+  stop("BAD_MANIFEST_SCHEMA: expected unique key,value columns; got ", paste(names(man), collapse=","))
 find_source <- function(item) {
-  x <- as.character(man$value[man$item == item])
+  x <- as.character(man$value[man$key == item])
   if (length(x) != 1L || is.na(x) || !nzchar(x))
     stop("MISSING_MANIFEST_KEY: ", item)
   required_file(x)
