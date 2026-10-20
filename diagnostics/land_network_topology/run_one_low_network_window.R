@@ -63,7 +63,8 @@ low_network_terra_backend <- function() {
 # code_revision here is declared; only the CLI below verifies its local Git SHA.
 run_one_low_network_window <- function(baseline_dir, manifest_path = NULL, qa_path = NULL,
                                        backend = low_network_terra_backend(),
-                                       code_revision = "UNKNOWN", emit = TRUE) {
+                                       code_revision = "UNKNOWN", emit = TRUE,
+                                       expected_full_grid = NULL) {
   if (!is.character(baseline_dir) || length(baseline_dir) != 1L ||
       is.na(baseline_dir) || !dir.exists(baseline_dir)) stop("BASELINE_DIR_MISSING")
   base <- normalizePath(baseline_dir, winslash = "/", mustWork = TRUE)
@@ -126,6 +127,16 @@ run_one_low_network_window <- function(baseline_dir, manifest_path = NULL, qa_pa
         abs(h[[k]] - ref[[k]]) <= 1e-7, logical(1)))
   }
   if (!all(vapply(headers, same_geometry, logical(1)))) stop("RASTER_GEOMETRY_MISMATCH")
+  # Production CLI pins the previously observed LOW grid. The optional worker
+  # argument leaves the existing small synthetic backends testable.
+  if (!is.null(expected_full_grid)) {
+    if (!is.list(expected_full_grid) ||
+        !identical(sort(names(expected_full_grid)), c("ncol", "nrow")) ||
+        !all(vapply(expected_full_grid, function(x) finite(x, 1L) &&
+          x >= 11 && x == floor(x), logical(1)))) stop("INVALID_EXPECTED_FULL_GRID")
+    if (ref$nrow != expected_full_grid$nrow || ref$ncol != expected_full_grid$ncol)
+      stop("LOCKED_LOW_GRID_MISMATCH: no alternative window selected")
+  }
   expected_qa <- c(dem_rows = ref$nrow, dem_cols = ref$ncol,
                    dem_res_x = 2, dem_res_y = 2,
                    xmin = ref$xmin, xmax = ref$xmax, ymin = ref$ymin, ymax = ref$ymax)
@@ -139,7 +150,8 @@ run_one_low_network_window <- function(baseline_dir, manifest_path = NULL, qa_pa
       is.na(code_revision) || !nzchar(trimws(code_revision))) stop("INVALID_CODE_REVISION")
   if (!is.logical(emit) || length(emit) != 1L || is.na(emit)) stop("INVALID_EMIT_FLAG")
   if (!exists("build_land_d8_network", mode = "function") ||
-      !exists("select_land_network_cases", mode = "function"))
+      !exists("select_land_network_cases", mode = "function") ||
+      !exists("analyse_land_network_topology", mode = "function"))
     stop("Source the reviewed land-network functions first.")
 
   # Window depends on checked headers ONLY; no 02B or values inform selection.
@@ -167,6 +179,8 @@ run_one_low_network_window <- function(baseline_dir, manifest_path = NULL, qa_pa
                                    lake_id = matrices$lake, max_steps = 32L)
   if (network$work_budget$n_transitions > 3872 || network$work_budget$n_cell_reads > 3993)
     stop("IN_MEMORY_WORK_BUDGET_EXCEEDED")
+  topology_inventory <- analyse_land_network_topology(network,
+    full_grid = list(nrow = ref$nrow, ncol = ref$ncol))
   core_cases <- select_land_network_cases(network, scope = "core")
   halo_cases <- select_land_network_cases(network, scope = "halo")
   statuses <- c("D8_ZERO", "POINTER_NA", "INVALID_POINTER", "NO_DATA", "INVALID_WATER_CLASS",
@@ -189,7 +203,8 @@ run_one_low_network_window <- function(baseline_dir, manifest_path = NULL, qa_pa
       water_class = route$contact$water_class, lake_objectid = route$contact$lake_objectid,
       n_transitions = route$n_transitions, stringsAsFactors = FALSE)
   }))
-  result <- list(network = network, core_cases = core_cases, halo_cases = halo_cases,
+  result <- list(network = network, topology_inventory = topology_inventory,
+    core_cases = core_cases, halo_cases = halo_cases,
     route_counts = route_counts, contacts = contacts, files = files, headers = headers,
     manifest_path = manifest_path, qa_path = qa_path, manifest = man, qa = qa,
     window = window, raster_reads = read_count, raster_values_returned = values_returned,
@@ -200,7 +215,7 @@ run_one_low_network_window <- function(baseline_dir, manifest_path = NULL, qa_pa
   invisible(result)
 }
 
-low_network_print_result <- function(result) {
+low_network_print_result <- function(result, inventory_row_limit = 121L) {
   n <- result$network
   w <- result$window
   cat("========== TULOKSET ALKAVAT ==========\n")
@@ -227,6 +242,7 @@ low_network_print_result <- function(result) {
   cat("ROUTE_STATUS_COUNTS\n"); print(result$route_counts, row.names = FALSE)
   cat("FIRST_RANTA10_CONTACTS\n")
   if (nrow(result$contacts)) print(result$contacts, row.names = FALSE) else cat("NOT_OBSERVED\n")
+  low_network_print_inventory(result$topology_inventory, n, row_limit = inventory_row_limit)
   cat("RASTER_READ_CALLS", result$raster_reads, "RETURNED_VALUES", result$raster_values_returned,
       "IN_MEMORY_TRANSITIONS", n$work_budget$n_transitions,
       "CELL_OBSERVATION_CALLS", n$work_budget$n_cell_reads, "MAX_STEPS=32\n")
@@ -235,6 +251,57 @@ low_network_print_result <- function(result) {
   cat("hydrological_validation=NOT_ASSESSED channel_interpretation=NOT_ASSESSED\n")
   cat("MODERATE=REVIEW_REQUIRED NATIONAL=LOCKED\n")
   cat("========== TULOKSET LOPPUVAT ==========\n")
+}
+
+# Noncryptographic inventory checksum only, never raster provenance or approval.
+# Serialize the COMPLETE typed table in ASCII v2; no temporary file or package.
+low_network_inventory_checksum <- function(x) {
+  payload <- serialize(x, NULL, ascii = TRUE, version = 2)
+  a <- 1; b <- 0
+  for (byte in as.integer(payload)) {
+    a <- (a + byte) %% 65521
+    b <- (b + a) %% 65521
+  }
+  sprintf("%04x%04x", as.integer(b), as.integer(a))
+}
+
+# All tables remain in the result; stdout is bounded without hiding totals.
+low_network_print_inventory <- function(inventory, network, row_limit = 121L) {
+  if (!is.numeric(row_limit) || length(row_limit) != 1L || !is.finite(row_limit) ||
+      row_limit != floor(row_limit) || row_limit < 1 || row_limit > 121^2)
+    stop("INVALID_INVENTORY_PRINT_LIMIT")
+  metadata <- list()
+  show_table <- function(label, x) {
+    printed <- min(nrow(x), row_limit)
+    checksum <- low_network_inventory_checksum(x)
+    metadata[[length(metadata) + 1L]] <<- data.frame(inventory = label,
+      total_rows = nrow(x), printed_rows = printed, truncated = printed < nrow(x),
+      checksum = checksum, stringsAsFactors = FALSE)
+    cat(label, "TOTAL_ROWS", nrow(x), "PRINTED_ROWS", printed,
+        "TRUNCATED", printed < nrow(x), "ADLER32_SERIALIZE_ASCII_V2", checksum, "\n")
+    if (!nrow(x)) cat("NOT_OBSERVED\n") else
+      print(head(x, row_limit), row.names = FALSE, max = printed * ncol(x) + 1L)
+  }
+  show_table("UNIQUE_INTERNAL_EDGES", network$edges)
+  for (scope in c("CORE", "HALO")) {
+    keep <- if (scope == "CORE") inventory$confluence_details$is_core else
+      inventory$confluence_details$is_halo
+    details <- inventory$confluence_details[keep, , drop = FALSE]
+    show_table(paste0(scope, "_CONFLUENCE_DETAILS"), details)
+    incoming <- inventory$confluence_incoming[
+      inventory$confluence_incoming$confluence_uid %in% details$confluence_uid, , drop = FALSE]
+    show_table(paste0(scope, "_CONFLUENCE_INCOMING_EDGES"), incoming)
+  }
+  show_table("SHARED_DOWNSTREAM_SEGMENTS", inventory$shared_segments)
+  show_table("SHARED_SEGMENT_CELLS", inventory$segment_cells)
+  show_table("SHARED_SEGMENT_EDGES", inventory$segment_edges)
+  show_table("SOURCE_CONFLUENCE_MEMBERSHIP", inventory$source_confluences)
+  show_table("UNIQUE_WINDOW_EXIT_EDGES", inventory$exit_edges)
+  show_table("SOURCE_ROUTES_PER_EXIT", inventory$source_routes_per_exit)
+  show_table("TOPOLOGY_ACCOUNTING_QA", inventory$accounting_qa)
+  cat("INVENTORY_PRINT_ROW_LIMIT", row_limit,
+      "CHECKSUM_NONCRYPTOGRAPHIC=TRUE COMPLETE_TABLES=RESULT_TOPOLOGY_INVENTORY OUTSIDE_RASTER_READS=0\n")
+  invisible(do.call(rbind, metadata))
 }
 
 low_network_cli <- function() {
@@ -265,10 +332,12 @@ low_network_cli <- function() {
   source(file.path(here, "..", "land_first_water", "first_water_contact.R"), local = FALSE)
   source(file.path(here, "..", "land_d8_continuity", "trace_land_d8_route.R"), local = FALSE)
   source(file.path(here, "land_network_topology.R"), local = FALSE)
+  source(file.path(here, "analyse_land_network_topology.R"), local = FALSE)
   base <- if (length(args)) args[[1L]] else paste0(
     "/scratch/project_2004707/pienvedet/csc_validation_4bbf22b/hydro_01_02/",
     "runs/E200000_N6900000/02_baseline")
-  result <- run_one_low_network_window(base, code_revision = commit, emit = FALSE)
+  result <- run_one_low_network_window(base, code_revision = commit, emit = FALSE,
+    expected_full_grid = list(nrow = 6000, ncol = 6000))
   result$code_version_verification <- "LOCAL_GIT_CLEAN"
   low_network_print_result(result)
   invisible(result)
