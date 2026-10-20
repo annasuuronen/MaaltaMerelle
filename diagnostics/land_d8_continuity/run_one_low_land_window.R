@@ -1,10 +1,10 @@
 #!/usr/bin/env Rscript
 # Read-only one-window LOW 02B->land continuity evidence. PR #17 dependencies.
-# Usage: Rscript --vanilla diagnostics/land_d8_continuity/run_one_low_land_window.R BASELINE_DIR
+# Usage: Rscript --vanilla diagnostics/land_d8_continuity/run_one_low_land_window.R BASELINE_DIR [SOURCE_CELL]
 # Reads one <=64 MiB 02B CSV, one small manifest, 11x11 x four raster samples.
 # No changed DEM, no Whitebox, no full-raster scan, no output files.
 args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 1L) stop("Usage: Rscript run_one_low_land_window.R BASELINE_DIR")
+if (!(length(args) %in% 1:2)) stop("Usage: Rscript run_one_low_land_window.R BASELINE_DIR [SOURCE_CELL]")
 suppressPackageStartupMessages(library(terra))
 a <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
 if (length(a) != 1L) stop("Rscript --file= required")
@@ -60,9 +60,21 @@ eligible <- which(is.finite(e$source_cell) & is.finite(e$receiver_cell) &
   sr >= 6 & sr <= nr - 5 & sc >= 6 & sc <= nc - 5 &
   e$water_class %in% 1:3 & e$d8_code %in% valid_codes)
 if (!length(eligible)) stop("NO_INTERIOR_02B_ANCHOR; NO_RASTER_SAMPLED")
-ord <- order(e$water_class[eligible], e$receiver_cell[eligible],
-             e$source_cell[eligible], e$d8_code[eligible], eligible)
-k <- eligible[ord[1L]]
+if (length(args) == 2L) {
+  token <- args[[2L]]
+  requested <- suppressWarnings(as.numeric(token))
+  if (!grepl("^[1-9][0-9]*$", token) ||
+      !is.finite(requested) || requested > nr * as.double(nc))
+    stop("INVALID_REQUESTED_SOURCE_CELL")
+  matches <- eligible[e$source_cell[eligible] == requested]
+  if (length(matches) != 1L)
+    stop("SOURCE_CELL_NOT_UNIQUE_OR_NOT_ELIGIBLE_02B")
+  k <- matches[[1L]]
+} else {
+  ord <- order(e$water_class[eligible], e$receiver_cell[eligible],
+               e$source_cell[eligible], e$d8_code[eligible], eligible)
+  k <- eligible[ord[1L]]
+}
 entry <- e[k, , drop = FALSE]
 s <- as.integer(entry$source_cell)
 t <- as.integer(entry$receiver_cell)
