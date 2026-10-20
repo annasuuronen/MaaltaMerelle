@@ -1,0 +1,1 @@
+RESULT n=10000 scenario=mixed cap=4 build_s=24.791000 inventory_s=11.266000 oracle_s=0.859000 network_mib=307.406212 inventory_mib=1.215874 land=9288 edges=7859 confluences=143 exits=1000 checks=9740 status=PASS

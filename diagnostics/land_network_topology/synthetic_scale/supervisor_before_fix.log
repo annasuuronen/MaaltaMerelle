@@ -1,0 +1,48 @@
+test_address_space_limit_is_enforced (__main__.SupervisorTests.test_address_space_limit_is_enforced) ... ok
+test_expired_budget_cannot_launch_child (__main__.SupervisorTests.test_expired_budget_cannot_launch_child) ... ok
+test_nonzero_exit_preserved (__main__.SupervisorTests.test_nonzero_exit_preserved) ... ok
+test_repeated_names_do_not_overwrite_prior_logs (__main__.SupervisorTests.test_repeated_names_do_not_overwrite_prior_logs) ... ok
+test_rss_tripwire_without_giant_allocation (__main__.SupervisorTests.test_rss_tripwire_without_giant_allocation) ... ok
+test_scale_child_without_measurements_cannot_pass (__main__.SupervisorTests.test_scale_child_without_measurements_cannot_pass) ... FAIL
+test_success_and_machine_readable_report (__main__.SupervisorTests.test_success_and_machine_readable_report) ... ok
+test_timeout_is_not_pass_even_if_child_handles_term_with_zero (__main__.SupervisorTests.test_timeout_is_not_pass_even_if_child_handles_term_with_zero) ... FAIL
+test_timeout_terminates_child (__main__.SupervisorTests.test_timeout_terminates_child) ... ok
+
+======================================================================
+FAIL: test_scale_child_without_measurements_cannot_pass (__main__.SupervisorTests.test_scale_child_without_measurements_cannot_pass)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/MaaltaMerelle/diagnostics/land_network_topology/synthetic_scale/test_supervisor.py", line 57, in test_scale_child_without_measurements_cannot_pass
+    self.assertEqual((r["status"], r["reason"]), ("FAIL", "MISSING_RESULT"))
+AssertionError: Tuples differ: ('PASS', '') != ('FAIL', 'MISSING_RESULT')
+
+First differing element 0:
+'PASS'
+'FAIL'
+
+- ('PASS', '')
++ ('FAIL', 'MISSING_RESULT')
+
+======================================================================
+FAIL: test_timeout_is_not_pass_even_if_child_handles_term_with_zero (__main__.SupervisorTests.test_timeout_is_not_pass_even_if_child_handles_term_with_zero)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/MaaltaMerelle/diagnostics/land_network_topology/synthetic_scale/test_supervisor.py", line 51, in test_timeout_is_not_pass_even_if_child_handles_term_with_zero
+    self.assertEqual((r["status"], r["reason"]), ("FAIL", "TIME_STOP"))
+AssertionError: Tuples differ: ('PASS', 'TIME_STOP') != ('FAIL', 'TIME_STOP')
+
+First differing element 0:
+'PASS'
+'FAIL'
+
+- ('PASS', 'TIME_STOP')
+?   ^ ^^
+
++ ('FAIL', 'TIME_STOP')
+?   ^ ^^
+
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.797s
+
+FAILED (failures=2)

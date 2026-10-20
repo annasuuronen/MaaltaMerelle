@@ -1,0 +1,3 @@
+PHASE=BUILD_COMPLETE ELAPSED_S=28.922000
+PHASE=INVENTORY_COMPLETE ELAPSED_S=44.232000
+RESULT n=10000 scenario=fan cap=4 build_s=28.922000 inventory_s=44.232000 oracle_s=6.420000 network_mib=338.685959 inventory_mib=10.274521 land=10000 edges=9500 confluences=4500 exits=500 checks=23523 status=PASS

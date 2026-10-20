@@ -1,0 +1,1 @@
+RESULT n=100 scenario=fan cap=16 build_s=0.569000 inventory_s=0.800000 oracle_s=0.198000 network_mib=3.571587 inventory_mib=0.147545 land=100 edges=95 confluences=45 exits=5 checks=258 status=PASS

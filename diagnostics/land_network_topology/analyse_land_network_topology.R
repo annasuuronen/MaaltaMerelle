@@ -117,6 +117,20 @@ analyse_land_network_topology <- function(network, full_grid = NULL) {
     pointer = cells$pointer[land[confl_idx]], outgoing_kind = nodes$outgoing_kind[confl_idx],
     outgoing_to_uid = nodes$outgoing_to_uid[confl_idx], route_status = nodes$route_status[confl_idx],
     external_inflow = rep("UNKNOWN", length(confl_idx)))
+  # Index only already-observed memberships once. Scanning every stored
+  # source path separately for every confluence costs O(confluences * sources).
+  # Source order and first-visit semantics stay identical; no route is extended.
+  confluence_sources <- vector("list", length(confl_idx))
+  if (length(confl_idx)) {
+    lookup <- new.env(hash = TRUE, parent = emptyenv(), size = max(29L, length(confl_idx)))
+    for (j in seq_along(confl_idx)) assign(nodes$cell_uid[confl_idx[j]], j, envir = lookup)
+    for (s in seq_along(routes)) {
+      for (reached_uid in unique(routes[[s]]$path$cell_uid)) {
+        j <- get0(reached_uid, envir = lookup, inherits = FALSE, ifnotfound = 0L)
+        if (j != 0L) confluence_sources[[j]] <- c(confluence_sources[[j]], s)
+      }
+    }
+  }
   incoming <- segments <- segment_cells <- segment_edges <- associations <- list()
   for (j in seq_along(confl_idx)) {
     i <- confl_idx[j]; uid <- nodes$cell_uid[i]; segment <- paste0("SEGMENT:", uid)
@@ -140,9 +154,8 @@ analyse_land_network_topology <- function(network, full_grid = NULL) {
       edge_id = ids, from_uid = edges$from_uid[k], to_uid = edges$to_uid[k],
       d8_code = edges$d8_code[k], edge_kind = edges$edge_kind[k], step_length_m = lengths[k],
       closes_cycle = r$transitions$closes_cycle)
-    for (s in seq_along(routes)) {
+    for (s in confluence_sources[[j]]) {
       pos <- match(uid, routes[[s]]$path$cell_uid)
-      if (is.na(pos)) next
       observed <- edge_ids_by_route[[s]]
       suffix <- observed[seq_along(observed) >= pos]
       common <- min(length(ids), length(suffix))

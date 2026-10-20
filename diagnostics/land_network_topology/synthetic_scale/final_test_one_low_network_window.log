@@ -1,0 +1,28 @@
+PASS: sourcing the driver defines helpers without CLI or data I/O
+PASS: fixed window uses checked dimensions, including even and odd centres
+PASS: manifest key,value and QA item,value contracts stay distinct
+PASS: duplicate keys and blank values fail before any raster sample
+PASS: extra, empty and oversized metadata reports are rejected
+PASS: extra CSV fields cannot hide in read.csv automatic row names
+PASS: missing manifest keys and missing original raster files are explicit failures
+PASS: wrong tile, pointer scheme and NATIONAL are rejected without samples
+PASS: water and lake identities come from absolute manifest paths outside baseline
+PASS: four bounded mock reads use one immutable centre and return exactly 484 values
+PASS: the production grid pin rejects a different window before raster values
+PASS: numeric double layer counts are accepted and malformed header contracts fail before reads
+PASS: a valid but shifted raster geometry and inconsistent QA are rejected before samples
+PASS: missing QA geometry and nonnumeric QA values cannot become a pass
+PASS: core confluence includes halo inflow while shared edges and core selection stay bounded
+PASS: row-major observations retain global IDs and independent raster lake values
+PASS: pointer observations remain diagnostic instead of being silently repaired
+PASS: empty real-window shapes keep missing cases and do not relocate the sample
+PASS: malformed bounded reader output fails instead of widening or repeating reads
+PASS: reports preserve all termination bins and never promote declared provenance or technical success
+PASS: read-only driver leaves every existing fixture file unchanged and creates no report files
+PASS: inventory output preserves complete counts and checksums when details are limited
+TERRA_VERSION=1.8.29
+PASS: actual tiny GeoTIFFs use bounded column reads and retain row-major raster values
+PASS: actual terra rejects multilayer, shifted and wrong-CRS rasters before window reads
+PASS: actual Rscript CLI verifies an isolated fixture commit and refuses wrong pins or a dirty checkout
+TESTS=25 PASS=25 FAIL=0 NOT_RUN=0
+PASS: synthetic read-only window contracts; no CSC data or hydrological approval
