@@ -4,8 +4,9 @@ Base R -tutkimusprototyyppi käsittelee **kaikki valmiiksi syötetyn pienen
 ikkunan kelvolliset maasolut**. Se ei edellytä RANTA10-kontaktia eikä lue
 CSV:tä tai rastereita. Erillinen, vain lukeva R/terra-ajuri valmistelee
 matriisit yhdestä ennalta määrätystä LOW-ikkunasta. Käyttäjä on raportoinut
-lähtöcommitilla suoritetun todellisen CSC-kokeen; tämän haaran uutta
-inventaarioanalyysiä ei ole ajettu CSC-aineistolla. Ei Whitebox-ajoja, uutta D8:aa,
+sekä alkuperäisen kokeen että poistumisinventaarion todelliset CSC-tulokset.
+Tämän haaran uusi vastaanottajasolujen tarkistus lukee vain 14 lukittua
+solua; sitä ei ole ajettu todellisella CSC-aineistolla. Ei Whitebox-ajoja, uutta D8:aa,
 kertymälaskentaa tai oja-/pienvesiluokitusta.
 
 `hydrological_validation=NOT_ASSESSED`; `channel_interpretation=NOT_ASSESSED`.
@@ -13,10 +14,11 @@ kertymälaskentaa tai oja-/pienvesiluokitusta.
 
 ## Lähtö ja rajaus
 
-- Haara: `codex/low-land-network-exits-confluences-v1`.
-- Lähtö on PR #20:n `ffcdfe93262d02bb453109481afd1ff8991d80bb`.
-  Se jatkaa PR #19:n `63cfcb67`- ja PR #17:n `753ac0d5`-toteutuksia.
-- Draft PR:n kohde on **`codex/low-land-topology-core-halo-readonly-v1`**. PR #18:n
+- Haara: `codex/low-boundary-receivers-v1`.
+- Lähtö on PR #21:n `40509d5006cbf7fb431701e7a48383dde0fdb38c`.
+  Se säilyttää PR #20:n `ffcdfe93`, PR #19:n `63cfcb67` ja PR #17:n
+  `753ac0d5` menetelmät.
+- Draft PR:n kohde on **`codex/low-land-network-exits-confluences-v1`**. PR #18:n
   muutoksia ei yhdistetä tähän haaraan; baselinea, mainia tai aiempia
   tutkimushaaroja ei muuteta.
 - Riippuvuudet ovat PR #12:n LOW-ydin, PR #16:n ensikontaktisovitin ja
@@ -68,18 +70,122 @@ päättymistiloja ei raportoitu. Ensimmäiset RANTA10-kontaktit olivat
 `NOT_OBSERVED`. Neljä rasterilukukutsua palautti 484 arvoa; muistissa
 toteutui 356 reittisiirtymää ja 477 soluhavaintokutsua.
 
-Erotus **121 − 105 = 16** on näiden raportoitujen lukujen perusteella
-muodostettu ehdollinen päätelmä suorista poistumistapahtumista. Erillistä
-todellisen ikkunan poistumisinventaariota ei ole vielä ajettu. Päätelmä
+Erotus **121 − 105 = 16** oli näiden raportoitujen lukujen perusteella
+muodostettu ehdollinen päätelmä suorista poistumistapahtumista. Tuolloin
+erillistä poistumisinventaariota ei ollut vielä ajettu. Päätelmä
 edellyttää, että jokainen maasolun lähtö on joko sisäinen maa→maa-reuna tai
 suora poistuminen ja että muiden päättymisten tai rajautumisten vaikutus on
 selvitetty. 121 reittijäljitystä ei tarkoita 121 uniikkia poistumista.
-Uusi inventaario tarkistaa topologian eikä sisällä tavoitearvoa 16.
+Inventaario tarkistaa topologian eikä sisällä tavoitearvoa 16. Käyttäjän
+myöhemmin toimittama, commitilla `40509d5` tehty todellinen inventaario
+vahvisti 16 poistumista ja 14 ennustettua vastaanottajaa. Sen lukittu
+taulukko ja tämän haaran seuraava tarkistus kuvataan alla.
 
 Paikalliset yhtymät tai poistumiset eivät vahvista ojaa, rumpua, pienvettä
 tai hydrologista purkupistettä. `CODE_VERSION_VERIFICATION=LOCAL_GIT_CLEAN`
 koski käytettyä koodia; `HISTORICAL_SOURCE_COMMIT=UNKNOWN` ja
 `HISTORICAL_PROVENANCE=INCOMPLETE` säilyvät erillisinä havaintoina.
+
+## Lukittu 14 vastaanottajasolun tarkistus
+
+`low_boundary_receivers_targets.csv` tallentaa käyttäjän toimittamat kaikki
+16 poistumisriviä. Lähde on Roihun onnistunut `UNIQUE_WINDOW_EXIT_EDGES`-
+inventaario commitilta `40509d5006cbf7fb431701e7a48383dde0fdb38c`:
+16 riviä, `TRUNCATED FALSE`, `TOPOLOGY_ACCOUNTING_QA=PASS`.
+Ilmoitettu alkuperäinen `ADLER32_SERIALIZE_ASCII_V2` on `0f39c62a`.
+Tämä on käyttäjän raportoima täyden R-taulun tarkistussumma, jota ei lasketa
+uudelleen tästä sarakeprojektiosta eikä väitetä riippumattomasti varmennetuksi.
+Poistumisen `exit_id` ja lähteen rivi/sarake on johdettu toimitetusta UID:stä.
+Muut taulukon arvot ovat annetut alkuperäiset arvot. Uusia kohteita ei valita.
+Kaikkien vastaanottajien alkuperäinen tila oli `WINDOW_EXIT_INSIDE_FULL_GRID`
+ja `receiver_raster_read=FALSE`. Tässä taulukossa ei ole vastaanottajien sisältöä.
+
+Uniikit ennustetut vastaanottajat samalla 6000 × 6000 ruudukolla ovat:
+
+| Rivi | Sarake | Poistumisreunoja | Raportoituja lähtöreittejä |
+| ---: | ---: | ---: | ---: |
+| 2995 | 2994 | 1 | 5 |
+| 2995 | 3006 | 1 | 6 |
+| 2996 | 2994 | 1 | 5 |
+| 2996 | 3006 | 1 | 6 |
+| 2997 | 2994 | 1 | 4 |
+| 2997 | 3006 | 1 | 6 |
+| 2998 | 2994 | 1 | 4 |
+| 2998 | 3006 | 1 | 8 |
+| 2999 | 2994 | 1 | 3 |
+| 3000 | 2994 | 2 | 20 |
+| 3005 | 2994 | 1 | 1 |
+| 3006 | 3002 | 2 | 32 |
+| 3006 | 3004 | 1 | 16 |
+| 3006 | 3005 | 1 | 5 |
+
+`boundary_receivers.R` sisältää Base R -menetelmät:
+
+- `low_boundary_targets(exits, locked_exits)` vertaa kaikki 16 lähde- ja
+  vastaanottajariviä lukittuun taulukkoon, tarkistaa UID:t, rajat, 16→14-
+  ryhmittelyn ja raportoidun reittisumman 121. Deduplikointi tapahtuu ennen
+  rasterilukua. Sama vastaanottaja luetaan kerran rasteria kohti.
+- `observe_boundary_receivers(targets, samples)` luokittelee 14 havaintoa
+  ja palauttaa myös kaikki 16 alkuperäistä poistuminen→vastaanottaja-liitosta.
+  LAND_WATER-arvon äärellisyys määrittää kelvollisuuden. Kelvollisen pinnan
+  vesiluokan NA tarkoittaa `LAND`, luokat 1–3 `WATER` ja muu luokka `UNCLEAR`.
+  Epäkelvollinen pinta on `NO_DATA`. Raaka-arvot säilyvät.
+- Pointerin `D8_ZERO`, `POINTER_NA`, `INVALID_POINTER` ja `VALID_D8_CODE`
+  säilyvät erillisinä. Pointeria ei seurata. Kelvollinen järvitunnus
+  säilytetään vain kelvollisella järvisolulla; puuttuvaa tai virheellistä
+  tunnusta ei korvata. Jokialueelle tai uomaviivalle ei keksitä kohdetunnusta.
+- `read_boundary_cells()` sallii vain 14 yksilöllistä kokonaislukuindeksiä
+  ja neljä rasteria. Se hylkää ylimääräiset, duplikaatit, murtoluvut ja
+  vääränkokoiset lukijan palautukset.
+
+`run_low_boundary_receivers.R` käyttää samaa metadata-/otsake-esitarkistusta
+kuin ikkuna-ajuri (`low_network_open_inputs()`), mutta ei kutsu ikkuna-ajuria
+tai verkkotopologian jäljitystä. Manifestin `key,value`, QA:n `item,value`,
+yhteinen geometria, yksi taso, 6000 × 6000, EPSG:3067 ja 2 m tarkistetaan
+ennen soluarvojen lukua. Vesiluokka ja järvitunnus tulevat manifestin poluista.
+
+Ajuri tekee neljä `terra::extract(raster, numeric_cell_ids, raw=TRUE)`-kutsua,
+14 solutunnusta kussakin: yhteensä **56 palautettua rasteriarvoa**.
+Numeerinen argumentti tarkoittaa globaalin rasterin solutunnuksia, ei
+koordinaattipareja. Kokonaislukutarkistus estää `extract()`-rajapinnan
+sisäisen pyöristyksen muuttamasta kohdetta. Tunnus on
+`(global_row - 1) * 6000 + global_col`. Ei 11 × 11 ikkunan uusintalukua,
+naapuruston lukua tai reittien seuraamista vastaanottajasta eteenpäin.
+Raja koskee pyydettyjä ja palautettuja soluarvoja; GDAL voi käsitellä
+TIFF-lohkoja sisäisesti. Alkuperäisiin aineistoihin ei kirjoiteta.
+
+Myöhemmin erikseen hyväksyttävän käytön komentomuoto on:
+
+```text
+Rscript --vanilla diagnostics/land_network_topology/run_low_boundary_receivers.R [BASELINE_DIR]
+```
+
+CLI käyttää vain samaan puhtaaseen Git-checkoutiin kuuluvaa lukittua CSV:tä.
+Kohdejoukon vaihtamiseen ei ole komentoriviargumenttia. Repositorion origin
+ja koodicommit tarkistetaan; valinnainen `MM_EXPECTED_COMMIT` lukitsee SHA:n.
+Kutsuttavan worker-funktion testisyötteet eivät ole vaihtoehtoinen CSC-ajolupa.
+
+Tulosteen `OBSERVED_RECEIVERS` sisältää 14 solua ja `ORIGINAL_EXIT_TO_RECEIVER_LINKS`
+kaikki 16 poistumista lähde- ja vastaanottaja-UID:ineen. `SHARED_RECEIVER_CELLS`
+erottaa kaksi yhteistä solua. `d8_code` on alkuperäisen poistumisen pointeri;
+vastaanottajan `pointer` on erikseen luettu arvo. Yhteinen koordinaatti
+osoittaa saman ennustetun kohdesolun; sen kelvollisuus raportoidaan erikseen.
+Tämä ei vielä osoita vastaanottajan jälkeistä reittiä. LAND ei vahvista ojaa,
+WATER ei hyväksy purkupistettä, eikä raportoitu 20/32 lähtöreitin määrä ole
+virtauskertymä. HISTORICAL-provenienssi jää edelleen keskeneräiseksi.
+
+Tämän haaran todellista CSC-lukua ei ole suoritettu. Paikallinen tarkistus:
+
+```bash
+Rscript --vanilla diagnostics/land_network_topology/test_boundary_receivers.R
+```
+
+20.10.2026 paikallinen R 4.5.0 / terra 1.8.29: **21 PASS, 0 FAIL, NOT_RUN=0**.
+Testit tarkistivat kaikki toimitetut koordinaatit ja liitokset sekä synteettiset
+NoData-/luokka-/pointerihavainnot. Kolme terra-integraatioryhmää sisälsi
+epäsäännölliset solutunnukset pienessä suorakulmaisessa GeoTIFFissä,
+14 solun lähderasterit 6000 × 6000 VRT-otsakkeissa sekä oikean CLI-käynnistyksen
+tilapäisestä Git-repositoriosta. Yhtään todellista CSC-rasteriarvoa ei luettu.
 
 ## Syöte ja käyttö
 
@@ -336,7 +442,8 @@ Tässä haarassa paikallisesti 20.10.2026 suoritetut tarkistukset
 | --- | --- |
 | Verkkotopologia ja ydin-/halo-regressiot | 46 PASS, 0 FAIL |
 | Uudet yhtymä- ja poistumisinventaariot | 25 PASS, 0 FAIL |
-| Rajatun LOW-ajurin testit | 25 PASS, 0 FAIL, NOT_RUN=0 |
+| 11 × 11 LOW-ikkuna-ajurin testit | 25 PASS, 0 FAIL, NOT_RUN=0 |
+| Uusi 14 rajavastaanottajan tarkistus | 21 PASS, 0 FAIL, NOT_RUN=0 |
 | PR #17:n maareitit | 23 PASS, 0 FAIL |
 | PR #16:n ensikontakti | 26 PASS, 0 FAIL |
 | LOW `test_lake_1847_focus.R` | PASS |
@@ -368,7 +475,7 @@ palautti doublen. Nämä tarkistukset eivät todista CSC:n terra-version
 Nämä ovat synteettisiä regressioita. Ne eivät ole CSC-ajon tai todellisen
 ojaverkon hydrologisen oikeellisuuden hyväksyntä.
 
-## Rajattu vain lukeva LOW-ajuri
+## PR #21:n 11 × 11 LOW-ikkuna-ajuri
 
 `run_one_low_network_window.R` käyttää samoja Base R -verkkofunktioita.
 Se ei sisällä omaa D8-dekooderia tai muuta pointereita. Ajuri on erillinen
@@ -394,7 +501,7 @@ tasojen määrä, geometria, EPSG:3067 ja 2 m resoluutio ennen ikkunan arvojen
 lukemista. `terra::nlyr()`-tulosta verrataan lukumäärään loogisesti;
 sen double-palautusarvoa ei pakoteta `vapply(..., integer(1))`-sopimukseen.
 
-Tulevan erikseen hyväksyttävän käytön komentomuoto on:
+Ikkuna-ajurin komentomuoto aiempaa koetta varten on:
 
 ```text
 Rscript --vanilla diagnostics/land_network_topology/run_one_low_network_window.R [BASELINE_DIR]
@@ -478,10 +585,15 @@ Se ei käynnistä Slurmia tai Whiteboxia eikä tee rasterien uusia
 kokotiedostotiivisteitä. Ilmoitetut lähdepolut ja ajantasaiset otsakkeet
 eivät yksin todista historiallisen D8-laskennan koko provenienssia.
 
-## Yksi myöhemmin hyväksyttävä todellisen LOW:n jatkokoe
+## Aikaisempi 11 × 11 inventaarion koesuunnitelma
 
-**Tämän haaran laajennettua inventaariota ei ole ajettu CSC:llä eikä tämä ole
-ajolupa.** Säilytetään käyttäjän 20.10.2026 kokeen sama 11 × 11 ikkuna:
+**Historiallinen suunnitelma, säilytetty tutkimuksen jäljitettävyyttä varten.**
+Käyttäjä on sittemmin toimittanut tämän inventaarion tulokset commitilta
+`40509d5`: 16 poistumista ja 14 ennustettua vastaanottajaa. Alla säilytetään
+ennen ajoa laadittu suunnitelma. Tämän haaran uusi tarkistus käyttää vain
+14 vastaanottajaa eikä suorita tätä ikkuna-ajoa uudelleen.
+
+Aiemmassa suunnitelmassa säilytettiin 20.10.2026 kokeen sama 11 × 11 ikkuna:
 globaalit rivit ja sarakkeet 2995–3005, ydin 2996–3004 ja yhden solun halo.
 Sijainti ei riipu 02B-kontakteista, pointereista tai reittien onnistumisesta.
 Se vastaa 6000 × 6000 otsakkeiden keskussolua
@@ -538,8 +650,8 @@ uudelleenvalmistamista ei tarvita. Polton vaikutusta ei tämän perusteella
 silti väitetä selvitetyksi. Järven 1847 eteläisen ja luoteisen reitin
 ongelmia ei tutkita tässä uudelleen.
 
-Seuraava koe voi osoittaa, mitkä havaitut solut ja reunat muodostavat
-paikalliset yhtymät ja mitkä lähtöreitit päättyvät samaan poistumiseen.
+Tämän aiemman kokeen tarkoitus oli osoittaa, mitkä havaitut solut ja reunat
+muodostavat paikalliset yhtymät ja mitkä lähtöreitit päättyvät samaan poistumiseen.
 Se ei osoita ikkunan ulkopuolista reittiä, koko valuma-aluetta tai reitin
-luonnollista/ojitettua alkuperää. Uusi todellisen aineiston rasteriluku
-ja tämän haaran CSC-koe odottavat erillistä hyväksyntää.
+luonnollista/ojitettua alkuperää. Tämän haaran 14 vastaanottajan todellinen
+CSC-luku odottaa erillistä hyväksyntää.
