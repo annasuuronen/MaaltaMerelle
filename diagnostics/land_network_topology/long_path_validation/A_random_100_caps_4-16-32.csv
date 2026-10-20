@@ -1,0 +1,4 @@
+"n","scenario","cap","build_s","inventory_s","compatibility_s","oracle_s","land","transitions","censored","confluences","direct_exits","reached_exits","water","cycles","network_mib","inventory_mib","baseline_identical","status"
+100,"random",4,0.649,0.445,0.146,0.255,93,223,24,15,11,21,2,28,3.09883880615234,0.0681228637695312,TRUE,"PASS"
+100,"random",16,0.281,0.142,0.535,0.16,93,266,0,15,11,25,2,48,3.12220001220703,0.068939208984375,TRUE,"PASS"
+100,"random",32,0.319,0.144,0.144,0.15,93,266,0,15,11,25,2,48,3.12220001220703,0.068939208984375,TRUE,"PASS"

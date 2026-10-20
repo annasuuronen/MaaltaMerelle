@@ -1,0 +1,4 @@
+DETAIL n=1000 scenario=mixed cap=4 censored=187 reached_exits=330 checks=4059 status=PASS
+DETAIL n=1000 scenario=mixed cap=16 censored=0 reached_exits=419 checks=9609 status=PASS
+DETAIL n=1000 scenario=mixed cap=32 censored=0 reached_exits=419 checks=15346 status=PASS
+RESULT n=1000 scenario=mixed cap=0 build_s=7.415000 inventory_s=1.647000 compatibility_s=1.762000 oracle_s=1.595000 comparisons=3 checks=15347 status=PASS

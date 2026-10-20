@@ -1,0 +1,4 @@
+DETAIL n=100 scenario=fan cap=4 censored=65 reached_exits=35 checks=1031 status=PASS
+DETAIL n=100 scenario=fan cap=16 censored=0 reached_exits=100 checks=2317 status=PASS
+DETAIL n=100 scenario=fan cap=32 censored=0 reached_exits=100 checks=3668 status=PASS
+RESULT n=100 scenario=fan cap=0 build_s=1.122000 inventory_s=1.521000 compatibility_s=1.631000 oracle_s=0.532000 comparisons=3 checks=3669 status=PASS

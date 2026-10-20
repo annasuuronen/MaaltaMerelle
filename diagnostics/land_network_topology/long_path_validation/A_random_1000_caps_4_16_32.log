@@ -1,0 +1,4 @@
+DETAIL n=1000 scenario=random cap=4 censored=228 reached_exits=176 checks=5880 status=PASS
+DETAIL n=1000 scenario=random cap=16 censored=0 reached_exits=191 checks=13316 status=PASS
+DETAIL n=1000 scenario=random cap=32 censored=0 reached_exits=191 checks=20980 status=PASS
+RESULT n=1000 scenario=random cap=0 build_s=7.856000 inventory_s=4.343000 compatibility_s=6.391000 oracle_s=2.176000 comparisons=3 checks=20981 status=PASS
