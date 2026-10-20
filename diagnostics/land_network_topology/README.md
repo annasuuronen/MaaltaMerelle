@@ -2,18 +2,22 @@
 
 Base R -tutkimusprototyyppi käsittelee **kaikki valmiiksi syötetyn pienen
 ikkunan kelvolliset maasolut**. Se ei edellytä RANTA10-kontaktia eikä lue
-CSV:tä tai rastereita. Ei terraa, Whitebox-ajoja, uutta D8:aa, kertymälaskentaa
-tai oja-/pienvesiluokitusta.
+CSV:tä tai rastereita. Erillinen, vain lukeva R/terra-ajuri valmistelee
+matriisit yhdestä ennalta määrätystä LOW-ikkunasta; sitä ei ole ajettu
+todellisilla CSC-aineistoilla. Ei Whitebox-ajoja, uutta D8:aa,
+kertymälaskentaa tai oja-/pienvesiluokitusta.
 
 `hydrological_validation=NOT_ASSESSED`; `channel_interpretation=NOT_ASSESSED`.
 **MODERATE=REVIEW_REQUIRED; NATIONAL=LOCKED.**
 
 ## Lähtö ja rajaus
 
-- Haara: `codex/low-land-network-topology-v1`.
-- Lähtö on PR #17:n `753ac0d5e09fd8a3ca38475a76b5de3cebeb9d1f`.
-- Draft PR:n kohde on **`codex/land-d8-continuity`**. PR #18:n muutoksia
-  ei yhdistetä tähän haaraan; baselinea, mainia tai aiempia PR:iä ei muuteta.
+- Haara: `codex/low-land-topology-core-halo-readonly-v1`.
+- Lähtö on PR #19:n `63cfcb6701322f07e940c949ecc994c775fa410f`.
+  Sen verkkoydin perustuu PR #17:n `753ac0d5`-commitiin.
+- Draft PR:n kohde on **`codex/low-land-network-topology-v1`**. PR #18:n
+  muutoksia ei yhdistetä tähän haaraan; baselinea, mainia tai aiempia
+  tutkimushaaroja ei muuteta.
 - Riippuvuudet ovat PR #12:n LOW-ydin, PR #16:n ensikontaktisovitin ja
   PR #17:n reittihavainnoija. Näiden tiedostojen toiminta säilyy ennallaan.
 
@@ -49,7 +53,9 @@ network <- build_land_d8_network(
   lake_id = NULL, max_steps = 32L
 )
 table(network$route_summary$route_status)
-cases <- select_land_network_cases(network)
+window_cases <- select_land_network_cases(network) # aiempi oletus: koko ikkuna
+core_cases <- select_land_network_cases(network, scope = "core")
+halo_cases <- select_land_network_cases(network, scope = "halo")
 ```
 
 `pointer` ja `water_class` ovat samankokoisia numeerisia matriiseja;
@@ -95,7 +101,9 @@ Esimerkiksi `A → B`, kun B:n oma pointeri on nolla, on A:n
 Lähtevän reunan laji ja kauempana olevan terminaalin tila eivät ole sama kenttä.
 
 Tulos sisältää `cells`, `land_nodes`, `edges`, `land_edges`, `confluences`,
-`routes`, `route_summary` ja `work_budget`. Maasolutaulukoissa ovat muun muassa
+`routes`, `route_summary`, `core_land_nodes`, `halo_land_nodes`,
+`land_edge_zone_counts` ja `work_budget`.
+Maasolutaulukoissa ovat muun muassa
 `land_indegree_in_window`, `outgoing_kind`, `route_status` ja `is_confluence`.
 Yhtymässä vähintään kaksi erillistä maareunaa tulee samaan maasoluun.
 Sen havaittu yhteinen alavirran jatko on `routes[[cell_uid]]`, missä
@@ -118,9 +126,36 @@ valuma-alueesta. Rajan ulkopuoliset tulot jäävät tuntemattomiksi:
 `accumulation=NOT_COMPUTED`. Pintagraafi ei kuvaa itsestään salaojavirtausta,
 rummun kapasiteettia tai tapahtumakohtaista virtaamaa.
 
+## Ydin ja halo
+
+`cells`- ja `land_nodes`-taulujen `is_core` ja `is_halo` erottavat
+analyysiytimen yhden solun ulkorenkaasta. 11 × 11 ikkunan paikalliset
+rivit 2–10 ja sarakkeet 2–10 ovat 9 × 9 ydin; muut 40 solua ovat halo.
+Sama sääntö koskee pieniä synteettisiä suorakulmaisia ikkunoita. Jos
+ikkunassa ei ole sisäsoluja, ydin on tyhjä ja ydintapaukset puuttuvat.
+
+Kaikki ikkunan kelvolliset maasolut ja niiden lähtevät reunat säilyvät
+verkossa. `edges` sisältää kentät `from_is_core`, `to_is_core` ja
+`zone_transition`. `land_edge_zone_counts` raportoi vain kelvolliset
+maa→maa-reunat neljässä luokassa, myös nollamäärät:
+`CORE_TO_CORE`, `CORE_TO_HALO`, `HALO_TO_CORE`, `HALO_TO_HALO`.
+Maa→vesi- ja kelvottomiin soluihin johtavat reunat säilyvät erikseen
+`edge_kind`-kentän perusteella. Ikkunasta poistumiselle ei keksitä
+vastaanottajasolua tai alueparia.
+
+Ytimen yhtymä on **ytimessä sijaitseva maasolu**, johon tulee vähintään
+kaksi kelvollista maa-D8-reunaa. Tuloreuna saa alkaa myös halosta.
+Paikallista `land_indegree_in_window`-lukua ei rajata ydin→ydin-reunoihin,
+eikä halo→ydin-reunaa tulkita koko yläpuolisen valuma-alueen kertymäksi.
+Halossa sijaitseva yhtymä raportoidaan, mutta se ei kelpaa ydintapaukseksi.
+
 ## Esimerkkien deterministinen valinta
 
-`select_land_network_cases(network)` palauttaa aina neljä tapausriviä:
+`select_land_network_cases(network, scope = "window")` palauttaa aina
+neljä tapausriviä. Oletus `window` säilyttää aiemman koko ikkunan valinnan.
+`scope="core"` rajaa ehdokkaan lähtösolun ytimeen ja `scope="halo"`
+haloon; koko rajattu alavirran reitti saa silti kulkea molemmilla alueilla.
+Yhtymätapauksessa ehdokas on yhtymäsolu.
 
 | Tapaus | Ikkunassa havaittu ehto |
 | --- | --- |
@@ -135,6 +170,14 @@ sarake**, ei pisintä reittiä tai vesistökontaktia. Tila on `SELECTED` tai
 tarkoittaa, ettei sitä havaittu annetussa ikkunassa ja työrajassa; se ei
 osoita kyseisen ilmiön puuttumista LOW:sta tai maastosta. Valinta ei poista
 muita solmuja, reunoja, reittejä tai epäonnistumisen syitä tuloksesta.
+Jos kelvollinen tapaus on vain halossa, ydintaulukossa säilyy
+`NOT_OBSERVED`; erillinen halotaulukko näyttää halohavainnon. Ajuri
+raportoi molemmat eikä siirrä tutkimusikkunaa puuttuvan ydintapauksen vuoksi.
+Tapausrivien `scope`, `n_matches`, `n_matches_window`, `n_matches_core` ja
+`n_matches_halo` säilyttävät valinnan rajauksen ja eri alueiden ehdokasmäärät.
+Ennen tätä korjausta tallennetun v1-tuloksen koko ikkunan valinta on yhä
+mahdollinen ilman aluekenttiä, mutta tuntemattomia ydin-/halomääriä ei
+muuteta nolliksi. Ydin- tai halovalinta edellyttää aluekenttiä.
 
 ## Pieni synteettinen yhtymä
 
@@ -164,22 +207,126 @@ Rscript --vanilla diagnostics/low_d8_scope/test_lake_1847_focus.R
 Rscript --vanilla tests/water_connected_route_diagnostics.R
 ```
 
-Paikallisesti 20.10.2026 suoritetut tarkistukset (Base R 4.5.0):
+Ajurin testit käyttävät synteettisiä metadata- ja lukijafixtureitä sekä,
+jos terra on käytettävissä, pieniä tilapäisiä GeoTIFF-tiedostoja:
+
+```bash
+Rscript --vanilla diagnostics/land_network_topology/test_one_low_network_window.R
+```
+
+Testi ei avaa CSC-polkuja. Ilman terraa integraatio-osuus merkitään
+`NOT_RUN`-tilaan; sitä ei lasketa onnistuneeksi terra-tarkistukseksi.
+
+Uudessa haarassa paikallisesti 20.10.2026 suoritetut tarkistukset
+(Base R 4.5.0):
 
 | Testijoukko | Todellinen tulos |
 | --- | --- |
-| Uusi verkkotopologia | 29 PASS, 0 FAIL |
+| Verkkotopologia ja ydin-/halo-regressiot | 46 PASS, 0 FAIL |
+| Rajatun LOW-ajurin testit | 23 PASS, 0 FAIL, NOT_RUN=0 |
 | PR #17:n maareitit | 23 PASS, 0 FAIL |
 | PR #16:n ensikontakti | 26 PASS, 0 FAIL |
 | LOW `test_lake_1847_focus.R` | PASS |
 | Tuotannon 02F `water_connected_route_diagnostics.R` | PASS |
 
+Lähtöcommitin `63cfcb67` verkkotestijoukossa oli 29 läpäissyttä tapausta.
+Uusi joukko säilyttää nämä ja lisää 17 ydin-/halo-tapausta.
+
+Ajurin 23 tarkistuksesta 20 käytti synteettisiä metadata-/lukijasyötteitä.
+Kolme terra-integraatioryhmää testasi 20 × 24 GeoTIFFien rajatun 11 × 11
+luvun ja rivijärjestyksen, virheellisten geometrioiden hylkäyksen ennen
+arvolukua sekä CLI:n commit-sidonnan erillisessä tilapäisessä Git-fixturessä.
+Väärä commit-lukitus ja likainen työpuu hylättiin.
+
+Paikallinen terra oli 1.8.29, Rcpp 1.0.14 ja GDAL 3.10.3. GEOS ilmoitti
+koostamisversioksi 3.13.0 ja ajonaikaiseksi versioksi 3.13.1; tästä syntyi
+varoitus, mutta nämä paikalliset testit läpäisivät. Paikallinen `nlyr()`
+palautti doublen. Nämä tarkistukset eivät todista CSC:n terra-version
+1.9.34 tai todellisten LOW-rasterien toimivuutta.
+
 Nämä ovat synteettisiä regressioita. Ne eivät ole CSC-ajon tai todellisen
 ojaverkon hydrologisen oikeellisuuden hyväksyntä.
 
+## Rajattu vain lukeva LOW-ajuri
+
+`run_one_low_network_window.R` käyttää samoja Base R -verkkofunktioita.
+Se ei sisällä omaa D8-dekooderia tai muuta pointereita. Ajuri on erillinen
+PR #18:n kuuden 02B-kontaktin kokeesta: se ei lue 02B-kontaktitaulukkoa
+eikä valitse ikkunaa kontaktin, yhtymän tai pitkän reitin perusteella.
+
+LOW:n dokumentoitu baseline-juuri on:
+
+```text
+/scratch/project_2004707/pienvedet/csc_validation_4bbf22b/hydro_01_02/runs/E200000_N6900000/02_baseline
+```
+
+Pointeri `d8_pointer_land_water_FLT8S.tif` ja kelvollisuuden määrittävä
+`routing_surface_land_water_FLT8S.tif` kuuluvat baselineen.
+`ranta10_water_class.tif`- ja `ranta10_lake_id.tif`-rasterien polut sidotaan
+input-manifestin `water_class_raster`- ja `lake_id_raster`-kenttiin;
+niiden ei oleteta sijaitsevan baselinen kanssa samassa hakemistossa.
+
+`R/01_prepare_hydrology_inputs.R` kirjoittaa manifestiin `key,value`
+ja input-QA:han `item,value`. Näitä sopimuksia käsitellään erikseen.
+Ajuri vaatii molemmat pienet raportit. Rasteriotsakkeista tarkistetaan
+tasojen määrä, geometria, EPSG:3067 ja 2 m resoluutio ennen ikkunan arvojen
+lukemista. `terra::nlyr()`-tulosta verrataan lukumäärään loogisesti;
+sen double-palautusarvoa ei pakoteta `vapply(..., integer(1))`-sopimukseen.
+
+Tulevan erikseen hyväksyttävän käytön komentomuoto on:
+
+```text
+Rscript --vanilla diagnostics/land_network_topology/run_one_low_network_window.R [BASELINE_DIR]
+```
+
+Ilman argumenttia käytetään yllä dokumentoitua LOW-baselinea. Ajuri sitoo
+käytetyn koodin saman MaaltaMerelle-repositorion puhtaaseen Git-HEADiin.
+Input-manifesti ja QA oletetaan baselinen rinnakkaiseen `01_inputs`-
+hakemistoon; rasteripolut luetaan manifestista. Kutsuttava funktio sallii
+myös eksplisiittiset `manifest_path`- ja `qa_path`-polut sekä synteettisen
+rasterilukijan, jotta lukusopimus voidaan testata paikallisesti.
+CLI:n valinnainen `MM_EXPECTED_COMMIT` sitoo ajon annettuun täyteen
+commit-SHA:han. Tätä komentoa ei ole ajettu todellisilla LOW-rastereilla
+tässä tehtävässä.
+
+Manifestilta vaaditaan lisäksi `pointer_scheme=whitebox`,
+`test_id=E200000_N6900000` ja `cell_size_m=2`. QA:n kahdeksaa geometria-
+arvoa verrataan rasteriotsakkeisiin ennen arvolukua. Todellista CSC-
+manifestia ei ole tässä luettu. Jos sen arvot poikkeavat vaaditusta,
+ajuri pysähtyy ennen rasteriarvojen lukua; lähdesidonta selvitetään
+ennen jatkamista. Tuntematon alkuperäinen
+D8-laskentacommit säilyy `HISTORICAL_SOURCE_COMMIT=UNKNOWN`-tilassa ja
+historiallinen provenienssi `HISTORICAL_PROVENANCE=INCOMPLETE`-tilassa.
+CLI:n `CODE_VERSION_VERIFICATION=LOCAL_GIT_CLEAN` koskee nyt ajettavaa
+koodia, ei historiallista rasterin laskentaa.
+
+Ajuri tulostaa yhteenvedon seuraavien merkkien väliin:
+
+```text
+========== TULOKSET ALKAVAT ==========
+...
+========== TULOKSET LOPPUVAT ==========
+```
+
+Raportissa erotetaan käytetty koodicommit ja ilmoitettu aineistoprovenienssi,
+rasterien polut ja geometriatarkistus, globaalit ikkuna- ja ydinrajat,
+ytimen ja halon maasolumäärät, neljä maa→maa-reunaluokkaa, ytimen yhtymät,
+neljä ydintapausta sekä halotapaukset, reittien päättymistilojen määrät ja
+saavutetut ensimmäiset RANTA10-kontaktit. Kontaktit ovat olemassa olevan
+D8:n laskennallisia havaintoja; ne eivät vahvista uomaa tai purkupistettä.
+Sama vesisolu voi esiintyä usean maasolualoituksen reitin kontaktina.
+Päättymistilojen `window`-, `core`- ja `halo`-määrät ryhmittelevät reittejä
+niiden lähtösolun alueen mukaan, eivät terminaalisolun sijainnin mukaan.
+
+Ajuri ei kirjoita tulostiedostoja tai alkuperäisiin aineistohakemistoihin.
+Se ei käynnistä Slurmia tai Whiteboxia eikä tee rasterien uusia
+kokotiedostotiivisteitä. Ilmoitetut lähdepolut ja ajantasaiset otsakkeet
+eivät yksin todista historiallisen D8-laskennan koko provenienssia.
+
 ## Yksi myöhemmin hyväksyttävä todellisen LOW:n koe
 
-**Suunnitelma, ei toteutettu CSC-ajuri tai ajolupa.** Valitaan yksi kiinteä
+**Ajuri on valmisteltu; todellista CSC-koetta ei ole suoritettu eikä tämä ole
+ajolupa.** Valitaan yksi kiinteä
 11 × 11 ruudukkoikkuna maantieteellisesti, riippumatta 02B-kontakteista,
 pointereista tai reittien onnistumisesta. Keskussolu on todellisista
 rasteriotsikon mitoista `floor((nrow+1)/2), floor((ncol+1)/2)`; parillisilla
@@ -192,8 +339,8 @@ suurenneta, jos siinä on vettä, ei maareunoja tai ei yhtymää.
    on riitettävä 11 × 11 ikkunalle; muuten koe pysähtyy eikä ikkunaa pienennetä.
    `01_input_manifest.csv`-tuottaja käyttää
    sarakkeita `key,value`, `01_input_QA.csv`-tuottaja `item,value`
-   (`R/01_prepare_hydrology_inputs.R`). Tulevan terra-ajurin API-sopimus
-   tarkistetaan erikseen: esimerkiksi `nlyr()` voi palauttaa doublen;
+   (`R/01_prepare_hydrology_inputs.R`). Terra-ajurin API-sopimus
+   tarkistetaan ennen oikeaa ajoa: esimerkiksi `nlyr()` voi palauttaa doublen;
    lukumäärän loogista vertailua ei sidota integer-palautustyyppiin.
 2. Pyydetään olemassa olevista LAND_WATER-D8-, RANTA10-vesiluokka-, järvi-ID-
    ja LAND_WATER-rastereista samat **121 solupaikkaa**, enintään **484
@@ -212,6 +359,11 @@ suurenneta, jos siinä on vettä, ei maareunoja tai ei yhtymää.
    käynnistä uusia rasterilukuja, koska matriisit on jo luettu. Säilytetään
    kaikki päättymisluokat ja neljän tapausluokan puuttumiset.
 
+Jos otsakkeet vahvistavat 6000 × 6000 solun ruudukon, keskussolu on
+globaalilla rivillä 3000 ja sarakkeessa 3000, ikkuna riveillä ja sarakkeilla
+2995–3005 sekä ydin riveillä ja sarakkeilla 2996–3004. Offsetit lasketaan
+otsakkeista; näitä lukuja ei käytetä eri kokoisen ruudukon oletuksena.
+
 Tämä kiinteä ikkuna ei ole koko LOW:n edustava otos. Koe voi todentaa
 nykyisen D8:n paikallista topologiaa, mutta ojan tai rummun olemassaolo,
 virtaussuunta maastossa ja pienvesiluokitus tarvitsevat riippumatonta näyttöä.
@@ -222,4 +374,4 @@ silti väitetä selvitetyksi. Järven 1847 eteläisen ja luoteisen reitin
 ongelmia ei tutkita tässä uudelleen.
 
 Todellista tutkimusikkunaa ei ole luettu tai analysoitu tällä prototyypillä.
-CSC-koe, uusi rasteriluku ja mahdollinen ajuri odottavat erillistä hyväksyntää.
+CSC-koe ja uusi todellisen aineiston rasteriluku odottavat erillistä hyväksyntää.

@@ -70,8 +70,8 @@ node <- function(n, cell) {
   a
 }
 route <- function(n, cell) n$routes[[node(n, cell)$cell_uid]]
-selection <- function(n, category) {
-  a <- select_land_network_cases(n)
+selection <- function(n, category, scope = "window") {
+  a <- select_land_network_cases(n, scope = scope)
   assert(nrow(a) == 4L && identical(a$category, c("CONFLUENCE", "LAND_CHAIN", "ZERO_CHAIN", "BOUNDARY_CHAIN")))
   assert(all(a$status %in% c("SELECTED", "NOT_OBSERVED")))
   a[a$category == category, , drop = FALSE]
@@ -427,6 +427,232 @@ case("supplied matrices, metadata and existing route functions remain unchanged"
   }
   expected <- trace_land_d8_route(7L, grid, read, max_steps = 32L, provenance = provenance)
   assert(identical(a$routes[[uid]], expected), "Stored routes differ from existing observer output")
+})
+
+case("an 11 by 11 window keeps all 121 cells and separates its exact 81-cell core", {
+  f <- mark(fixture(11L, 11L), 1:121)
+  g <- grid; g$nrow <- 11; g$ncol <- 11
+  n <- run_fixture(f, g)
+  rr <- (n$cells$local_cell - 1L) %/% 11L + 1L
+  cc <- (n$cells$local_cell - 1L) %% 11L + 1L
+  expected <- rr >= 2L & rr <= 10L & cc >= 2L & cc <= 10L
+  assert(is.logical(n$cells$is_core) && is.logical(n$cells$is_halo))
+  assert(identical(n$cells$is_core, expected) && identical(n$cells$is_halo, !expected))
+  assert(sum(n$cells$is_core) == 81L && sum(n$cells$is_halo) == 40L)
+  assert(nrow(n$land_nodes) == 121L && sum(n$land_nodes$is_core) == 81L)
+  assert(all(n$cells$is_halo == n$cells$on_window_boundary))
+})
+
+case("a core confluence includes an observed incoming land edge from the halo", {
+  f <- mark(mark(mark(fixture(), 6L, 4L), 7L, 8L), 12L, 2L)
+  f <- mark(f, 13L)
+  n <- run_fixture(f)
+  assert(node(n, 6L)$is_halo && node(n, 7L)$is_core && node(n, 12L)$is_core)
+  assert(node(n, 12L)$land_indegree_in_window == 2L)
+  assert(selection(n, "CONFLUENCE", "core")$source_cell == 12L)
+  assert(selection(n, "CONFLUENCE", "halo")$status == "NOT_OBSERVED")
+  incoming <- n$land_edges[n$land_edges$to_cell == 12L, , drop = FALSE]
+  assert(nrow(incoming) == 2L && sum(incoming$from_is_core) == 1L)
+  assert(all(incoming$to_is_core))
+})
+
+case("a confluence only in the halo is never promoted to a core case", {
+  f <- mark(mark(mark(fixture(), 1L, 2L), 7L, 128L), 2L)
+  n <- run_fixture(f)
+  assert(n$confluences$local_cell == 2L && n$confluences$is_halo)
+  assert(selection(n, "CONFLUENCE")$source_cell == 2L)
+  assert(selection(n, "CONFLUENCE", "halo")$source_cell == 2L)
+  a <- selection(n, "CONFLUENCE", "core")
+  assert(a$status == "NOT_OBSERVED" && a$n_matches == 0L && is.na(a$source_cell))
+})
+
+case("core selection skips a smaller global halo cell without ranking by route success", {
+  f <- mark(mark(fixture(), c(1L, 2L), 2L), 3L)
+  f <- mark(mark(f, c(12L, 13L), 2L), 14L)
+  n <- run_fixture(f)
+  assert(node(n, 1L)$is_halo && node(n, 12L)$is_core)
+  assert(selection(n, "LAND_CHAIN")$source_cell == 1L)
+  assert(selection(n, "LAND_CHAIN", "halo")$source_cell == 1L)
+  assert(selection(n, "LAND_CHAIN", "core")$source_cell == 12L)
+  assert(selection(n, "ZERO_CHAIN", "core")$source_cell == 12L)
+})
+
+case("a multi-cell core land chain remains observable without any water contact", {
+  f <- mark(mark(fixture(), c(12L, 13L), 2L), 14L)
+  n <- run_fixture(f)
+  assert(all(n$land_nodes$is_core) && nrow(n$land_edges) == 2L)
+  assert(all(n$land_edges$zone_transition == "CORE_TO_CORE"))
+  a <- selection(n, "LAND_CHAIN", "core")
+  assert(a$status == "SELECTED" && a$source_cell == 12L && a$route_status == "D8_ZERO")
+  assert(is.null(route(n, 12L)$first_water))
+})
+
+case("a core route continues through halo before its unresolved window exit", {
+  f <- mark(fixture(), c(13L, 14L, 15L), 2L)
+  n <- run_fixture(f)
+  assert(node(n, 13L)$is_core && node(n, 15L)$is_halo)
+  assert(identical(as.integer(route(n, 13L)$path$local_cell), c(13L, 14L, 15L)))
+  assert(route(n, 13L)$route_status == "DOMAIN_EXIT_UNRESOLVED")
+  assert(node(n, 13L)$outgoing_kind == "LAND_TO_LAND")
+  assert(node(n, 15L)$outgoing_kind == "DOMAIN_EXIT_UNRESOLVED")
+  assert(selection(n, "BOUNDARY_CHAIN", "core")$source_cell == 13L)
+  assert(selection(n, "BOUNDARY_CHAIN", "halo")$status == "NOT_OBSERVED")
+  assert(sum(n$land_edges$zone_transition == "CORE_TO_CORE") == 1L)
+  assert(sum(n$land_edges$zone_transition == "CORE_TO_HALO") == 1L)
+})
+
+case("a core confluence shared downstream edge is present once across halo-fed routes", {
+  f <- mark(mark(mark(fixture(), 6L, 4L), 7L, 8L), c(12L, 13L), 2L)
+  f <- mark(f, 14L)
+  n <- run_fixture(f)
+  assert(selection(n, "CONFLUENCE", "core")$source_cell == 12L)
+  assert(nrow(n$land_edges) == 4L)
+  assert(sum(n$land_edges$from_cell == 12L & n$land_edges$to_cell == 13L) == 1L)
+  assert(sum(n$land_edges$from_cell == 13L & n$land_edges$to_cell == 14L) == 1L)
+  assert(identical(as.integer(route(n, 6L)$path$local_cell), c(6L, 12L, 13L, 14L)))
+  assert(identical(as.integer(route(n, 7L)$path$local_cell), c(7L, 12L, 13L, 14L)))
+})
+
+case("halo-only chains leave all absent core case rows explicit", {
+  f <- mark(mark(fixture(), c(1L, 2L), 2L), 3L)
+  n <- run_fixture(f)
+  core <- select_land_network_cases(n, scope = "core")
+  halo <- select_land_network_cases(n, scope = "halo")
+  assert(nrow(core) == 4L && all(core$status == "NOT_OBSERVED"))
+  assert(all(core$n_matches == 0L) && all(is.na(core$source_uid)))
+  assert(halo$status[halo$category == "LAND_CHAIN"] == "SELECTED")
+  assert(halo$status[halo$category == "ZERO_CHAIN"] == "SELECTED")
+  assert(nrow(n$cells) == 25L && nrow(n$land_nodes) == 3L)
+})
+
+case("halo land indegree is observed locally without inventing total upstream accumulation", {
+  f <- mark(mark(mark(fixture(), 6L, 4L), 7L, 8L), 12L)
+  n <- run_fixture(f)
+  assert(node(n, 12L)$land_indegree_in_window == 2L)
+  assert(n$external_inflow == "UNKNOWN" && n$upstream_coverage == "WINDOW_ONLY")
+  assert(n$accumulation == "NOT_COMPUTED")
+  assert(selection(n, "CONFLUENCE", "core")$status == "SELECTED")
+})
+
+case("core and halo use local positions while offsets preserve global identity and coordinates", {
+  f <- mark(mark(fixture(), 6L, 2L), 7L)
+  g <- grid; g$row_offset <- 2994; g$col_offset <- 2994
+  n <- run_fixture(f, g)
+  a <- node(n, 6L); b <- node(n, 7L)
+  assert(a$is_halo && b$is_core)
+  assert(a$global_row == 2996 && a$global_col == 2995)
+  assert(b$global_row == 2996 && b$global_col == 2996)
+  assert(b$cell_uid == "synthetic-network:2996:2996")
+  assert(b$x_m == grid$xmin + (2996 - 0.5) * 2)
+  assert(b$y_m == grid$ymax - (2996 - 0.5) * 2)
+  assert(n$land_edges$from_uid == a$cell_uid && n$land_edges$to_uid == b$cell_uid)
+  assert(n$land_edges$zone_transition == "HALO_TO_CORE")
+})
+
+case("all four directed core-halo land-edge classes have separate exact counts", {
+  f <- mark(fixture(), c(1L, 6L, 12L, 14L), 2L)
+  f <- mark(f, c(2L, 7L, 13L, 15L))
+  n <- run_fixture(f)
+  expected <- c("CORE_TO_CORE", "CORE_TO_HALO", "HALO_TO_CORE", "HALO_TO_HALO")
+  counts <- n$land_edge_zone_counts
+  assert(is.data.frame(counts) && nrow(counts) == 4L)
+  assert(setequal(counts$zone_transition, expected) && all(counts$n_edges == 1L))
+  assert(nrow(n$land_edges) == 4L && sum(counts$n_edges) == nrow(n$land_edges))
+  for (i in seq_len(nrow(n$land_edges))) {
+    e <- n$land_edges[i, , drop = FALSE]
+    assert(e$from_is_core == node(n, e$from_cell)$is_core)
+    assert(e$to_is_core == node(n, e$to_cell)$is_core)
+  }
+})
+
+case("water-only core and halo preserve empty scoped cases and zero typed edge counts", {
+  f <- mark(fixture(11L, 11L), 1:121, water_class = 2L)
+  g <- grid; g$nrow <- 11; g$ncol <- 11
+  n <- run_fixture(f, g)
+  assert(sum(n$cells$is_core) == 81L && sum(n$cells$is_halo) == 40L)
+  assert(nrow(n$land_nodes) == 0L && nrow(n$land_edges) == 0L)
+  assert(is.numeric(n$land_edge_zone_counts$n_edges) && all(n$land_edge_zone_counts$n_edges == 0))
+  for (scope in c("window", "core", "halo")) {
+    a <- select_land_network_cases(n, scope = scope)
+    assert(nrow(a) == 4L && all(a$status == "NOT_OBSERVED") && all(a$n_matches == 0L))
+  }
+})
+
+case("NoData-only and invalid-class-only windows cannot supply core or halo cases", {
+  for (f in list(fixture(), mark(fixture(), 1:25, water_class = 4L))) {
+    n <- run_fixture(f)
+    assert(nrow(n$land_nodes) == 0L)
+    assert(is.logical(n$land_nodes$is_core) && is.logical(n$land_nodes$is_halo))
+    assert(all(select_land_network_cases(n, scope = "core")$status == "NOT_OBSERVED"))
+    assert(all(select_land_network_cases(n, scope = "halo")$status == "NOT_OBSERVED"))
+  }
+})
+
+case("scoping preserves all previous termination classes and source outgoing semantics", {
+  fs <- list(
+    D8_ZERO = mark(fixture(), 12L),
+    POINTER_NA = mark(fixture(), 12L, NA_real_),
+    INVALID_POINTER = mark(fixture(), 12L, 3),
+    NO_DATA = mark(fixture(), 12L, 2),
+    CYCLE = mark(mark(fixture(), 12L, 2), 13L, 32),
+    DOMAIN_EXIT_UNRESOLVED = mark(fixture(), c(14L, 15L), 2),
+    STEP_LIMIT = mark(mark(fixture(), c(12L, 13L), 2), 14L),
+    FIRST_WATER_CONTACT = mark(mark(fixture(), 12L, 2), 13L, water_class = 3L)
+  )
+  for (status in names(fs)) {
+    n <- run_fixture(fs[[status]], budget = if (status == "STEP_LIMIT") 1L else 32L)
+    start <- if (status == "DOMAIN_EXIT_UNRESOLVED") 14L else 12L
+    assert(node(n, start)$is_core && route(n, start)$route_status == status)
+    if (status %in% c("NO_DATA", "CYCLE", "DOMAIN_EXIT_UNRESOLVED", "STEP_LIMIT", "FIRST_WATER_CONTACT")) {
+      assert(grepl("^LAND_TO_", node(n, start)$outgoing_kind))
+    } else assert(node(n, start)$outgoing_kind == status)
+    before <- n$route_summary
+    select_land_network_cases(n, scope = "core")
+    select_land_network_cases(n, scope = "halo")
+    assert(identical(before, n$route_summary))
+  }
+})
+
+case("invalid scopes and missing nonlogical or inconsistent core-halo flags are rejected", {
+  n <- run_fixture(confluence_fixture())
+  for (scope in list("outside", NA_character_, 1, character(), c("core", "halo"))) {
+    expect_error(select_land_network_cases(n, scope = scope))
+  }
+  for (field in c("is_core", "is_halo")) {
+    bad <- n; bad$land_nodes[[field]] <- NULL
+    expect_error(select_land_network_cases(bad, scope = "core"))
+    bad <- n; bad$land_nodes[[field]] <- as.numeric(bad$land_nodes[[field]])
+    expect_error(select_land_network_cases(bad, scope = "core"))
+    bad <- n; bad$land_nodes[[field]][1L] <- NA
+    expect_error(select_land_network_cases(bad, scope = "core"))
+  }
+  bad <- n; bad$land_nodes$is_halo <- bad$land_nodes$is_core
+  expect_error(select_land_network_cases(bad, scope = "core"))
+})
+
+case("default whole-window selection remains explicit and never changes stored graph or routes", {
+  n <- run_fixture(confluence_fixture())
+  before <- serialize(n, NULL)
+  whole <- select_land_network_cases(n)
+  assert(identical(whole, select_land_network_cases(n, scope = "window")))
+  assert(all(whole$n_matches_window == whole$n_matches_core + whole$n_matches_halo))
+  select_land_network_cases(n, scope = "core")
+  select_land_network_cases(n, scope = "halo")
+  assert(identical(before, serialize(n, NULL)))
+})
+
+case("old serialized results without zone flags keep window selection and unknown zone counts", {
+  n <- run_fixture(confluence_fixture())
+  expected <- select_land_network_cases(n, scope = "window")
+  n$land_nodes$is_core <- NULL
+  n$land_nodes$is_halo <- NULL
+  a <- select_land_network_cases(n)
+  fields <- c("category", "status", "source_cell", "source_uid", "route_status", "n_matches")
+  assert(identical(a[, fields], expected[, fields]))
+  assert(all(a$scope == "window") && all(a$n_matches_window == a$n_matches))
+  assert(all(is.na(a$n_matches_core)) && all(is.na(a$n_matches_halo)))
+  expect_error(select_land_network_cases(n, scope = "core"))
+  expect_error(select_land_network_cases(n, scope = "halo"))
 })
 
 if (qa$total == 0L) stop("FAIL: no land-network tests were executed", call. = FALSE)
