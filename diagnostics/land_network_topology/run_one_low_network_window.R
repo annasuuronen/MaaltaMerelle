@@ -59,12 +59,10 @@ low_network_terra_backend <- function() {
   )
 }
 
-# Injectable backend makes metadata/one-read budgets testable without terra.
-# code_revision here is declared; only the CLI below verifies its local Git SHA.
-run_one_low_network_window <- function(baseline_dir, manifest_path = NULL, qa_path = NULL,
-                                       backend = low_network_terra_backend(),
-                                       code_revision = "UNKNOWN", emit = TRUE,
-                                       expected_full_grid = NULL) {
+# Open and check existing metadata/headers only; never read raster values.
+low_network_open_inputs <- function(baseline_dir, manifest_path = NULL, qa_path = NULL,
+                                    backend = low_network_terra_backend(),
+                                    expected_full_grid = NULL) {
   if (!is.character(baseline_dir) || length(baseline_dir) != 1L ||
       is.na(baseline_dir) || !dir.exists(baseline_dir)) stop("BASELINE_DIR_MISSING")
   base <- normalizePath(baseline_dir, winslash = "/", mustWork = TRUE)
@@ -102,8 +100,8 @@ run_one_low_network_window <- function(baseline_dir, manifest_path = NULL, qa_pa
     land = low_network_required_file(file.path(base, "routing_surface_land_water_FLT8S.tif"))
   )
   if (anyDuplicated(unlist(files, use.names = FALSE))) stop("RASTER_PATHS_NOT_DISTINCT")
-  if (!is.list(backend) || !all(c("open", "header", "read_window") %in% names(backend)) ||
-      !all(vapply(backend[c("open", "header", "read_window")], is.function, logical(1))))
+  if (!is.list(backend) || !all(c("open", "header") %in% names(backend)) ||
+      !all(vapply(backend[c("open", "header")], is.function, logical(1))))
     stop("INVALID_RASTER_BACKEND")
   rasters <- lapply(files, backend$open)
   headers <- lapply(rasters, backend$header)
@@ -146,6 +144,22 @@ run_one_low_network_window <- function(baseline_dir, manifest_path = NULL, qa_pa
     x
   }, numeric(1))
   if (any(abs(observed_qa - expected_qa) > 1e-7)) stop("INPUT_QA_GEOMETRY_MISMATCH")
+  list(baseline_dir = base, manifest_path = manifest_path, qa_path = qa_path,
+       manifest = man, qa = qa, files = files, rasters = rasters, headers = headers)
+}
+
+# Injectable backend makes the window read budget testable without terra.
+# code_revision here is declared; only the CLI below verifies its local Git SHA.
+run_one_low_network_window <- function(baseline_dir, manifest_path = NULL, qa_path = NULL,
+                                       backend = low_network_terra_backend(),
+                                       code_revision = "UNKNOWN", emit = TRUE,
+                                       expected_full_grid = NULL) {
+  if (!is.list(backend) || !is.function(backend$read_window)) stop("WINDOW_RASTER_BACKEND_REQUIRED")
+  inputs <- low_network_open_inputs(baseline_dir, manifest_path, qa_path,
+                                     backend, expected_full_grid)
+  manifest_path <- inputs$manifest_path; qa_path <- inputs$qa_path
+  man <- inputs$manifest; qa <- inputs$qa; files <- inputs$files
+  rasters <- inputs$rasters; headers <- inputs$headers; ref <- headers$pointer
   if (!is.character(code_revision) || length(code_revision) != 1L ||
       is.na(code_revision) || !nzchar(trimws(code_revision))) stop("INVALID_CODE_REVISION")
   if (!is.logical(emit) || length(emit) != 1L || is.na(emit)) stop("INVALID_EMIT_FLAG")
