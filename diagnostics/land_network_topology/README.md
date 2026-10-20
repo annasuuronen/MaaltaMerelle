@@ -3,8 +3,9 @@
 Base R -tutkimusprototyyppi käsittelee **kaikki valmiiksi syötetyn pienen
 ikkunan kelvolliset maasolut**. Se ei edellytä RANTA10-kontaktia eikä lue
 CSV:tä tai rastereita. Erillinen, vain lukeva R/terra-ajuri valmistelee
-matriisit yhdestä ennalta määrätystä LOW-ikkunasta; sitä ei ole ajettu
-todellisilla CSC-aineistoilla. Ei Whitebox-ajoja, uutta D8:aa,
+matriisit yhdestä ennalta määrätystä LOW-ikkunasta. Käyttäjä on raportoinut
+lähtöcommitilla suoritetun todellisen CSC-kokeen; tämän haaran uutta
+inventaarioanalyysiä ei ole ajettu CSC-aineistolla. Ei Whitebox-ajoja, uutta D8:aa,
 kertymälaskentaa tai oja-/pienvesiluokitusta.
 
 `hydrological_validation=NOT_ASSESSED`; `channel_interpretation=NOT_ASSESSED`.
@@ -12,10 +13,10 @@ kertymälaskentaa tai oja-/pienvesiluokitusta.
 
 ## Lähtö ja rajaus
 
-- Haara: `codex/low-land-topology-core-halo-readonly-v1`.
-- Lähtö on PR #19:n `63cfcb6701322f07e940c949ecc994c775fa410f`.
-  Sen verkkoydin perustuu PR #17:n `753ac0d5`-commitiin.
-- Draft PR:n kohde on **`codex/low-land-network-topology-v1`**. PR #18:n
+- Haara: `codex/low-land-network-exits-confluences-v1`.
+- Lähtö on PR #20:n `ffcdfe93262d02bb453109481afd1ff8991d80bb`.
+  Se jatkaa PR #19:n `63cfcb67`- ja PR #17:n `753ac0d5`-toteutuksia.
+- Draft PR:n kohde on **`codex/low-land-topology-core-halo-readonly-v1`**. PR #18:n
   muutoksia ei yhdistetä tähän haaraan; baselinea, mainia tai aiempia
   tutkimushaaroja ei muuteta.
 - Riippuvuudet ovat PR #12:n LOW-ydin, PR #16:n ensikontaktisovitin ja
@@ -38,6 +39,48 @@ maareittien puuttumista. Neljän muun valitun lähteen `33517609`, `26761820`,
 kahdesta eikä korvata onnistuneemmilla kontakteilla. Raakoja CSC-tiedostoja
 ei ole luettu tätä synteettistä prototyyppiä varten.
 
+## Käyttäjän raportoima todellinen LOW-ikkuna 20.10.2026
+
+Käyttäjä ilmoitti vain lukevan CSC-kokeen onnistuneen commitilla
+`ffcdfe93262d02bb453109481afd1ff8991d80bb`. Tämä on käyttäjän toimittama
+tulosnäyttö; Codex ei ole lukenut kokeen CSC-tiedostoja tai yksittäisiä
+pointeriarvoja. Seuraavia lukuja ei tuoteta tämän haaran synteettisistä testeistä.
+
+Ruudukko oli LOW `E200000_N6900000`, 6000 × 6000, EPSG:3067, 2 m,
+Whitebox-D8. Ikkuna oli riveillä ja sarakkeilla 2995–3005 ja 9 × 9 ydin
+riveillä ja sarakkeilla 2996–3004.
+
+| Raportoitu havainto | Ydin | Halo | Yhteensä |
+| --- | ---: | ---: | ---: |
+| Kelvolliset maasolut | 81 | 40 | 121 |
+| Paikalliset yhtymäsolut | 12 | 6 | 18 |
+
+| Maa→maa-reunaluokka | Reunoja |
+| --- | ---: |
+| `CORE_TO_CORE` | 66 |
+| `CORE_TO_HALO` | 15 |
+| `HALO_TO_CORE` | 2 |
+| `HALO_TO_HALO` | 22 |
+| Yhteensä | 105 |
+
+Kaikki 121 lähtöreittiä saivat `DOMAIN_EXIT_UNRESOLVED`-tilan; muita
+päättymistiloja ei raportoitu. Ensimmäiset RANTA10-kontaktit olivat
+`NOT_OBSERVED`. Neljä rasterilukukutsua palautti 484 arvoa; muistissa
+toteutui 356 reittisiirtymää ja 477 soluhavaintokutsua.
+
+Erotus **121 − 105 = 16** on näiden raportoitujen lukujen perusteella
+muodostettu ehdollinen päätelmä suorista poistumistapahtumista. Erillistä
+todellisen ikkunan poistumisinventaariota ei ole vielä ajettu. Päätelmä
+edellyttää, että jokainen maasolun lähtö on joko sisäinen maa→maa-reuna tai
+suora poistuminen ja että muiden päättymisten tai rajautumisten vaikutus on
+selvitetty. 121 reittijäljitystä ei tarkoita 121 uniikkia poistumista.
+Uusi inventaario tarkistaa topologian eikä sisällä tavoitearvoa 16.
+
+Paikalliset yhtymät tai poistumiset eivät vahvista ojaa, rumpua, pienvettä
+tai hydrologista purkupistettä. `CODE_VERSION_VERIFICATION=LOCAL_GIT_CLEAN`
+koski käytettyä koodia; `HISTORICAL_SOURCE_COMMIT=UNKNOWN` ja
+`HISTORICAL_PROVENANCE=INCOMPLETE` säilyvät erillisinä havaintoina.
+
 ## Syöte ja käyttö
 
 Lataa repositorion juuresta olemassa olevat riippuvuudet tässä järjestyksessä:
@@ -47,6 +90,7 @@ source("diagnostics/low_d8_scope/lake_1847_focus_core.R")
 source("diagnostics/land_first_water/first_water_contact.R")
 source("diagnostics/land_d8_continuity/trace_land_d8_route.R")
 source("diagnostics/land_network_topology/land_network_topology.R")
+source("diagnostics/land_network_topology/analyse_land_network_topology.R")
 
 network <- build_land_d8_network(
   pointer, water_class, valid, grid, provenance,
@@ -56,6 +100,7 @@ table(network$route_summary$route_status)
 window_cases <- select_land_network_cases(network) # aiempi oletus: koko ikkuna
 core_cases <- select_land_network_cases(network, scope = "core")
 halo_cases <- select_land_network_cases(network, scope = "halo")
+inventory <- analyse_land_network_topology(network)
 ```
 
 `pointer` ja `water_class` ovat samankokoisia numeerisia matriiseja;
@@ -179,6 +224,72 @@ Ennen tätä korjausta tallennetun v1-tuloksen koko ikkunan valinta on yhä
 mahdollinen ilman aluekenttiä, mutta tuntemattomia ydin-/halomääriä ei
 muuteta nolliksi. Ydin- tai halovalinta edellyttää aluekenttiä.
 
+## Yhtymien, yhteisten osuuksien ja poistumisten inventaario
+
+`analyse_land_network_topology(network, full_grid = NULL)` käsittelee vain
+valmiin `network`-olion solmuja, kanonisia reunoja ja jo tallennettuja
+reittihavaintoja. Se ei kutsu reittiytimiä tai solulukijaa uudelleen eikä
+täydennä katkennutta reittiä graafin avulla työrajan ohi. Analyysi ei
+kuluta uusia rasterilukuja tai muuta aiemman jäljityksen työbudjettia.
+
+Yhtymän yksilöi maasolun globaali UID. Sen tietueeseen liitetään
+globaali rivi ja sarake, ydin-/halo-asema, paikallinen indegree, saapuvien
+kanonisten maa→maa-reunojen lähdesolut ja pointerit sekä solmun oma
+lähtevä reuna tai terminaalitila. Ytimen yhtymän halosta tulevat reunat
+säilyvät. Vesisolut eivät ole näitä maa-D8-yhtymiä.
+
+Yhteisen alavirran osuuden kuvaus alkaa yhtymäsolusta ja käyttää sen
+omaa valmista reittitietuetta. Solujen ja reunojen järjestys säilyy,
+ja reunaviittaukset kohdistuvat yhteisen graafin yksilöllisiin
+`edge_id`-tunnuksiin. Sama reuna voi olla usean yhtymäosuuden viittaus;
+sitä ei lisätä uudelleen kanoniseen reunaverkkoon. Osuudelle ilmoitetaan
+havaittujen reunojen määrä ja niiden geometrinen pituus: kohtisuora
+2 m, diagonaalinen `sqrt(8)` m. Ulkopuolelle ennustettua askelta ei lisätä
+havaittuun osuuteen tai sen pituuteen.
+
+Lähtösolu yhdistetään yhtymään vain, jos tämän solun **alkuperäinen rajattu
+reittihavainto** saavutti yhtymän. Sama lähde voi esiintyä usean alavirran
+yhtymän yhteydessä mutta vain kerran samassa lähde–yhtymä-parissa.
+Lähteen käytettävissä oleva yhteinen jatko voi olla yhtymäsolun omaa
+reittikuvausta lyhyempi, jos lähteen askelraja tulee vastaan. Koko yhteistä
+osuutta ei tällöin väitetä havaituksi kyseisen lähteen reitissä.
+
+Suora poistumistapahtuma on maasolmu, jonka **oma**
+`outgoing_kind=DOMAIN_EXIT_UNRESOLVED`. Sen tunnus perustuu viimeisen
+ikkunan sisäisen maasolun UID:hen. Toisen solun koko reitin samanniminen
+päättymistila ei luo uutta poistumisreunaa. Nollapointeri, puuttuva tai
+virheellinen pointeri, NoData, sykli ja askelraja säilyvät erillisinä.
+Poistumiseen yhdistetään vain siihen todella päättyneet tallennetut
+lähtöreitit. Uniikki lähtösolujoukko sisältää myös itse poistuvan solun,
+jos sen oma jäljitys päättyi tähän tapahtumaan. Tämä on ikkunassa havaittu
+saavutettavuusjoukko, ei virtauskertymä tai kokonainen valuma-alue.
+
+Suunnan ennusteessa ei kopioida `l1847_trace()`-ytimen yksityistä D8-
+dekooderia. Koodin rivi-/sarakesiirtymä voidaan johtaa saman koodin jo
+havaituista kanonisista sisäisistä reunoista, jos niiden suunnat ovat
+johdonmukaisia. Tekstisuunta muodostetaan tästä geometrisesta askeleesta.
+Jos tällaista sisäistä havaintoa ei ole, suunta ja ulkopuolinen vastaanottaja
+jäävät `UNKNOWN`-tilaan ilmoitetulla syyllä; niitä ei päätellä uudesta
+suuntataulukosta. Poistumistapahtuman olemassaolo perustuu silti vanhan
+ytimen raportoimaan terminaaliin eikä vastaanottajaennusteen saatavuuteen.
+
+`full_grid=list(nrow=..., ncol=...)` antaa varmennetut koko ruudun mitat
+ennusteen rajatarkistukseen. Ajuri käyttää tähän tarkistettuja rasteri-
+otsakkeita. Niiden avulla erotetaan ikkunasta poistuminen koko ruudun
+sisällä ja myös koko ruudusta poistuminen. Ilman mittoja tai kelvollista
+suuntaennustetta koko ruudun rajatulkinta jää tuntemattomaksi.
+Vastaanottajan rasteriarvoa ei lueta eikä ennustettua solua lisätä
+havaittujen solujen graafiin.
+
+Topologian kirjanpito erottaa solmut, sisäiset maa→maa-reunat, muut
+sisäiset reunat, suorat poistumiset ja reunattomat muut terminaalit.
+Se tarkistaa myös poistumisiin päättyvien lähtöreittien yksilöllisen
+ryhmittelyn. Erotusta `N_land − E_land_to_land` saa verrata suoriin
+poistumisiin vasta soveltuvuusehtojen täyttyessä. Muut terminaalit tai
+rajautuneet reitit raportoidaan, eikä identiteettiä pakoteta tai tulkita
+hydrologiseksi hyväksynnäksi. Kaikissa tapauksissa
+`accumulation=NOT_COMPUTED` ja `external_inflow=UNKNOWN` säilyvät.
+
 ## Pieni synteettinen yhtymä
 
 Seuraavat ovat kuvitteellisen 5 × 5 ruudukon rivijärjestyksen solunumeroita.
@@ -201,6 +312,7 @@ todellisia rastereita. Testitulokset ilmoitetaan vain toteutuneen ajon perusteel
 
 ```bash
 Rscript --vanilla diagnostics/land_network_topology/test_land_network_topology.R
+Rscript --vanilla diagnostics/land_network_topology/test_land_network_topology_inventory.R
 Rscript --vanilla diagnostics/land_d8_continuity/test_land_d8_route.R
 Rscript --vanilla diagnostics/land_first_water/test_first_water_contact.R
 Rscript --vanilla diagnostics/low_d8_scope/test_lake_1847_focus.R
@@ -217,13 +329,14 @@ Rscript --vanilla diagnostics/land_network_topology/test_one_low_network_window.
 Testi ei avaa CSC-polkuja. Ilman terraa integraatio-osuus merkitään
 `NOT_RUN`-tilaan; sitä ei lasketa onnistuneeksi terra-tarkistukseksi.
 
-Uudessa haarassa paikallisesti 20.10.2026 suoritetut tarkistukset
+Tässä haarassa paikallisesti 20.10.2026 suoritetut tarkistukset
 (Base R 4.5.0):
 
 | Testijoukko | Todellinen tulos |
 | --- | --- |
 | Verkkotopologia ja ydin-/halo-regressiot | 46 PASS, 0 FAIL |
-| Rajatun LOW-ajurin testit | 23 PASS, 0 FAIL, NOT_RUN=0 |
+| Uudet yhtymä- ja poistumisinventaariot | 25 PASS, 0 FAIL |
+| Rajatun LOW-ajurin testit | 25 PASS, 0 FAIL, NOT_RUN=0 |
 | PR #17:n maareitit | 23 PASS, 0 FAIL |
 | PR #16:n ensikontakti | 26 PASS, 0 FAIL |
 | LOW `test_lake_1847_focus.R` | PASS |
@@ -232,11 +345,19 @@ Uudessa haarassa paikallisesti 20.10.2026 suoritetut tarkistukset
 Lähtöcommitin `63cfcb67` verkkotestijoukossa oli 29 läpäissyttä tapausta.
 Uusi joukko säilyttää nämä ja lisää 17 ydin-/halo-tapausta.
 
-Ajurin 23 tarkistuksesta 20 käytti synteettisiä metadata-/lukijasyötteitä.
+Lähtöcommitissa `ffcdfe93` ajurin testejä oli 23. Uusi joukko säilyttää
+niiden merkityksen ja lisää lukitun LOW-ruudukon sekä rajatun tulostuksen
+kirjanpidon tarkistukset. Inventaariotesteissä varmistetaan myös, ettei
+analyysi kutsu jäljitysytimiä uudelleen tai täydennä lähteen askelrajaan
+rajautunutta havaintoa yhtymäsolun pidemmällä reitillä.
+
+Ajurin 25 tarkistuksesta 22 käytti synteettisiä metadata-/lukijasyötteitä.
 Kolme terra-integraatioryhmää testasi 20 × 24 GeoTIFFien rajatun 11 × 11
 luvun ja rivijärjestyksen, virheellisten geometrioiden hylkäyksen ennen
 arvolukua sekä CLI:n commit-sidonnan erillisessä tilapäisessä Git-fixturessä.
-Väärä commit-lukitus ja likainen työpuu hylättiin.
+Väärä commit-lukitus ja likainen työpuu hylättiin. CLI-testissä pienet
+GeoTIFF-lähdeikkunat sijoitettiin 6000 × 6000 VRT-otsakkeiden keskelle;
+36 miljoonan solun aineistoa ei muodostettu, luettu tai kirjoitettu.
 
 Paikallinen terra oli 1.8.29, Rcpp 1.0.14 ja GDAL 3.10.3. GEOS ilmoitti
 koostamisversioksi 3.13.0 ja ajonaikaiseksi versioksi 3.13.1; tästä syntyi
@@ -286,8 +407,13 @@ hakemistoon; rasteripolut luetaan manifestista. Kutsuttava funktio sallii
 myös eksplisiittiset `manifest_path`- ja `qa_path`-polut sekä synteettisen
 rasterilukijan, jotta lukusopimus voidaan testata paikallisesti.
 CLI:n valinnainen `MM_EXPECTED_COMMIT` sitoo ajon annettuun täyteen
-commit-SHA:han. Tätä komentoa ei ole ajettu todellisilla LOW-rastereilla
-tässä tehtävässä.
+commit-SHA:han. Uusi CLI vaatii myös 6000 × 6000 kokonaisruudukon ennen
+rasteriarvojen lukua, jotta historiallisesti valittu ikkuna ei siirry
+erikokoisen rasterin keskipisteeseen. Worker-funktion valinnainen
+`expected_full_grid` sallii erikokoisten synteettisten fixtureiden
+testaamisen; komentorivi ei tarjoa tämän LOW-rajauksen ohitusvalintaa.
+Tämän haaran laajennettua komentoa ei ole ajettu todellisilla
+LOW-rastereilla tässä tehtävässä.
 
 Manifestilta vaaditaan lisäksi `pointer_scheme=whitebox`,
 `test_id=E200000_N6900000` ja `cell_size_m=2`. QA:n kahdeksaa geometria-
@@ -318,25 +444,56 @@ Sama vesisolu voi esiintyä usean maasolualoituksen reitin kontaktina.
 Päättymistilojen `window`-, `core`- ja `halo`-määrät ryhmittelevät reittejä
 niiden lähtösolun alueen mukaan, eivät terminaalisolun sijainnin mukaan.
 
+Topologiainventaario lisää erilliset osiot:
+
+- `CORE_CONFLUENCE_DETAILS` ja `HALO_CONFLUENCE_DETAILS`: yksilöidyt
+  yhtymäsolut sekä niiden havaittujen tuloreunojen lähde-UID:t ja D8-koodit.
+- `SHARED_DOWNSTREAM_SEGMENTS`: yhteisten osuuksien järjestetyt
+  solu-/reunaviittaukset sekä havaittuihin lähtöreitteihin perustuvat jäsenyydet.
+- `UNIQUE_WINDOW_EXIT_EDGES`: yksi tietue jokaista suoraan poistuvaa
+  maasolua kohti, erillään siihen päättyvistä lähtöreiteistä.
+- `SOURCE_ROUTES_PER_EXIT`: poistumisiin päättyneet yksilölliset
+  lähtösolut; itse poistuva maasolu sisältyy joukkoon.
+- `TOPOLOGY_ACCOUNTING_QA`: kirjanpidon luvut ja soveltuvuusehdot,
+  mukaan lukien ehdollinen `N_land − E_land_to_land`-vertailu.
+
+Kunkin inventaariotaulun stdout-tulostus rajataan oletuksena 121 riviin.
+Tämä näyttää kaikki enintään 121 uniikkia sisäistä reunaa, poistumista ja
+poistumiseen päättynyttä lähdereittiä; suuremmat yhteisosuus- ja
+jäsenyystaulut voivat lyhentyä. Jokaisen taulun yhteydessä näkyvät
+`TOTAL_ROWS`, `PRINTED_ROWS`, `TRUNCATED` ja **koko taulun** tarkistussumma.
+Kaikki rivit säilyvät worker-tuloksen `topology_inventory`-oliossa.
+Tulostusrajan voi antaa `low_network_print_result(..., inventory_row_limit=...)`
+tai `low_network_print_inventory(..., row_limit=...)`-kutsulle väliltä 1–14641.
+Raja ei muuta inventaariota tai sen tarkistussummaa.
+
+`ADLER32_SERIALIZE_ASCII_V2` on Base R:n ASCII-version-2-serialisoinnista
+laskettu **ei-kryptografinen** sisältötarkistussumma. Se ei varmista rasterien
+historiallista alkuperää eikä korvaa tiedostojen SHA256-provenienssia.
+Tarkistussumma ei tarvitse uusia riippuvuuksia, tiedostolukuja tai
+tilapäisten raporttitiedostojen kirjoittamista.
+
 Ajuri ei kirjoita tulostiedostoja tai alkuperäisiin aineistohakemistoihin.
 Se ei käynnistä Slurmia tai Whiteboxia eikä tee rasterien uusia
 kokotiedostotiivisteitä. Ilmoitetut lähdepolut ja ajantasaiset otsakkeet
 eivät yksin todista historiallisen D8-laskennan koko provenienssia.
 
-## Yksi myöhemmin hyväksyttävä todellisen LOW:n koe
+## Yksi myöhemmin hyväksyttävä todellisen LOW:n jatkokoe
 
-**Ajuri on valmisteltu; todellista CSC-koetta ei ole suoritettu eikä tämä ole
-ajolupa.** Valitaan yksi kiinteä
-11 × 11 ruudukkoikkuna maantieteellisesti, riippumatta 02B-kontakteista,
-pointereista tai reittien onnistumisesta. Keskussolu on todellisista
-rasteriotsikon mitoista `floor((nrow+1)/2), floor((ncol+1)/2)`; parillisilla
-mitoilla tämä on neljän keskisolun luoteinen. Ikkunaa ei siirretä tai
-suurenneta, jos siinä on vettä, ei maareunoja tai ei yhtymää.
+**Tämän haaran laajennettua inventaariota ei ole ajettu CSC:llä eikä tämä ole
+ajolupa.** Säilytetään käyttäjän 20.10.2026 kokeen sama 11 × 11 ikkuna:
+globaalit rivit ja sarakkeet 2995–3005, ydin 2996–3004 ja yhden solun halo.
+Sijainti ei riipu 02B-kontakteista, pointereista tai reittien onnistumisesta.
+Se vastaa 6000 × 6000 otsakkeiden keskussolua
+`floor((nrow+1)/2), floor((ncol+1)/2)`, eli riviä ja saraketta 3000.
+CLI pysähtyy, jos kokonaisruudukon mitat poikkeavat odotetusta; eri
+ikkunaa ei valita. Ikkunaa ei myöskään siirretä tai suurenneta puuttuvien
+yhtymien tai muiden tulosten vuoksi.
 
 1. Sidotaan nykyisten rasterien lähdepolut, saatavilla olevat tunnisteet ja
    testikoodi. Varmennetaan todelliset mitat, yhteinen geometria, EPSG:3067,
-   2 m resoluutio, yksi taso/rasteri, origo ja NoData. Molempien mittojen
-   on riitettävä 11 × 11 ikkunalle; muuten koe pysähtyy eikä ikkunaa pienennetä.
+   2 m resoluutio, yksi taso/rasteri, origo ja NoData. Todellisen CLI-ajon
+   on vahvistettava 6000 × 6000 mitat; muuten koe pysähtyy.
    `01_input_manifest.csv`-tuottaja käyttää
    sarakkeita `key,value`, `01_input_QA.csv`-tuottaja `item,value`
    (`R/01_prepare_hydrology_inputs.R`). Terra-ajurin API-sopimus
@@ -358,11 +515,19 @@ suurenneta, jos siinä on vettä, ei maareunoja tai ei yhtymää.
    Yksilöllisiä lähteviä graafireunoja on enintään 121. Reittihavainnot eivät
    käynnistä uusia rasterilukuja, koska matriisit on jo luettu. Säilytetään
    kaikki päättymisluokat ja neljän tapausluokan puuttumiset.
+5. Muodostetaan yhtymä-, yhteisosuus- ja poistumisinventaariot jo valmiista
+   `network`-oliosta ilman uusia jäljityksiä. Tarkistetaan uniikkien suorien
+   poistumisten määrä, niiden lähtösolujoukkojen erillisyys ja kirjanpidon
+   soveltuvuusehdot. Verrataan tulosta alustavaan lukuun 16; eroa ei korjata
+   keinotekoisesti. Käyttäjän aiemmat 121 solun, 105 sisäisen maareunan,
+   18 yhtymän ja 121 poistuvan reitin luvut ovat vertailun lähtönä,
+   eivät uuden ajon tulokseksi valmiiksi asetettuja odotusarvoja.
 
-Jos otsakkeet vahvistavat 6000 × 6000 solun ruudukon, keskussolu on
-globaalilla rivillä 3000 ja sarakkeessa 3000, ikkuna riveillä ja sarakkeilla
-2995–3005 sekä ydin riveillä ja sarakkeilla 2996–3004. Offsetit lasketaan
-otsakkeista; näitä lukuja ei käytetä eri kokoisen ruudukon oletuksena.
+Jo muistissa oleva saman ikkunan kelvollinen `network`-olio riittää
+inventaariofunktion ajamiseen ilman mitään rasterilukua. Jos sitä ei ole
+käytettävissä, erikseen hyväksyttävä ajuri lukee vain yllä mainitut neljä
+ikkunaa; koko LOW:n onnistuneita skannauksia tai hydrologisia laskentoja
+ei toisteta. Tässä työssä CSC-verkko-oliota ei ole saatu luettavaksi.
 
 Tämä kiinteä ikkuna ei ole koko LOW:n edustava otos. Koe voi todentaa
 nykyisen D8:n paikallista topologiaa, mutta ojan tai rummun olemassaolo,
@@ -373,5 +538,8 @@ uudelleenvalmistamista ei tarvita. Polton vaikutusta ei tämän perusteella
 silti väitetä selvitetyksi. Järven 1847 eteläisen ja luoteisen reitin
 ongelmia ei tutkita tässä uudelleen.
 
-Todellista tutkimusikkunaa ei ole luettu tai analysoitu tällä prototyypillä.
-CSC-koe ja uusi todellisen aineiston rasteriluku odottavat erillistä hyväksyntää.
+Seuraava koe voi osoittaa, mitkä havaitut solut ja reunat muodostavat
+paikalliset yhtymät ja mitkä lähtöreitit päättyvät samaan poistumiseen.
+Se ei osoita ikkunan ulkopuolista reittiä, koko valuma-aluetta tai reitin
+luonnollista/ojitettua alkuperää. Uusi todellisen aineiston rasteriluku
+ja tämän haaran CSC-koe odottavat erillistä hyväksyntää.

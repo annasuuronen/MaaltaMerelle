@@ -7,6 +7,7 @@ source(file.path(here, "..", "low_d8_scope", "lake_1847_focus_core.R"))
 source(file.path(here, "..", "land_first_water", "first_water_contact.R"))
 source(file.path(here, "..", "land_d8_continuity", "trace_land_d8_route.R"))
 source(file.path(here, "land_network_topology.R"))
+source(file.path(here, "analyse_land_network_topology.R"))
 source(file.path(here, "run_one_low_network_window.R"))
 assert <- function(x, message = "Assertion failed") {
   if (!isTRUE(x)) stop(message, call. = FALSE)
@@ -170,6 +171,18 @@ case("four bounded mock reads use one immutable centre and return exactly 484 va
   assert(result$raster_reads == 4L && result$raster_values_returned == 484L)
   assert(result$network$work_budget$n_transitions <= 3872 && result$network$work_budget$n_cell_reads <= 3993)
   assert(result$network$work_budget$max_steps == 32)
+  assert(result$topology_inventory$extra_raster_reads == 0L &&
+         result$topology_inventory$extra_route_traces == 0L)
+})
+
+case("the production grid pin rejects a different window before raster values", {
+  f <- fixture(20, 24)
+  expect_error(run(f, expected_full_grid = list(nrow = 6000, ncol = 6000)),
+               "LOCKED_LOW_GRID_MISMATCH")
+  assert(length(f$state$reads) == 0L)
+  f <- fixture()
+  result <- run(f, expected_full_grid = list(nrow = 6000, ncol = 6000))
+  assert(result$window$row_start == 2995 && result$window$col_start == 2995)
 })
 case("numeric double layer counts are accepted and malformed header contracts fail before reads", {
   f <- fixture(); assert(typeof(f$header$nlyr) == "double"); assert(run(f)$geometry_check == "PASS")
@@ -268,6 +281,26 @@ case("read-only driver leaves every existing fixture file unchanged and creates 
   assert(identical(before, tools::md5sum(files)) && result$geometry_check == "PASS")
 })
 
+case("inventory output preserves complete counts and checksums when details are limited", {
+  result <- run(fixture())
+  full_text <- capture.output(full <- low_network_print_inventory(
+    result$topology_inventory, result$network))
+  short_text <- capture.output(short <- low_network_print_inventory(
+    result$topology_inventory, result$network, row_limit = 1L))
+  assert(identical(full$inventory, short$inventory) && identical(full$total_rows, short$total_rows))
+  assert(identical(full$checksum, short$checksum) && any(short$truncated))
+  assert(all(short$printed_rows <= 1L) && all(grepl("^[0-9a-f]{8}$", full$checksum)))
+  for (name in c("CORE_CONFLUENCE_DETAILS", "HALO_CONFLUENCE_DETAILS", "SHARED_DOWNSTREAM_SEGMENTS",
+                 "UNIQUE_WINDOW_EXIT_EDGES", "SOURCE_ROUTES_PER_EXIT", "TOPOLOGY_ACCOUNTING_QA"))
+    assert(any(grepl(name, full_text, fixed = TRUE)))
+  assert(any(grepl("TRUNCATED TRUE", short_text, fixed = TRUE)))
+  mutated <- result$topology_inventory$confluence_details
+  before <- low_network_inventory_checksum(mutated)
+  mutated <- rbind(mutated, mutated)
+  assert(before != low_network_inventory_checksum(mutated))
+  expect_error(low_network_print_inventory(result$topology_inventory, result$network, row_limit = 0))
+})
+
 if (requireNamespace("terra", quietly = TRUE)) {
   cat("TERRA_VERSION=", as.character(utils::packageVersion("terra")), "\n", sep = "")
   write_terra_fixture <- function(f) {
@@ -320,12 +353,27 @@ if (requireNamespace("terra", quietly = TRUE)) {
   case("actual Rscript CLI verifies an isolated fixture commit and refuses wrong pins or a dirty checkout", {
     assert(nzchar(Sys.which("git")), "Git is needed for the CLI provenance regression")
     f <- write_terra_fixture(fixture(20, 24))
+    # Four tiny source windows inside virtual 6000x6000 headers. No full-grid
+    # value allocation, scan or write is needed to exercise the real CLI pin.
+    for (path in f$paths) {
+      source_path <- paste0(path, ".source.tif")
+      assert(file.rename(path, source_path))
+      writeLines(c('<VRTDataset rasterXSize="6000" rasterYSize="6000">',
+        '<SRS>EPSG:3067</SRS><GeoTransform>200000,2,0,6912000,0,-2</GeoTransform>',
+        '<VRTRasterBand dataType="Float64" band="1"><NoDataValue>nan</NoDataValue><SimpleSource>',
+        paste0('<SourceFilename relativeToVRT="0">', source_path, '</SourceFilename><SourceBand>1</SourceBand>'),
+        '<SrcRect xOff="6" yOff="4" xSize="11" ySize="11"/>',
+        '<DstRect xOff="2994" yOff="2994" xSize="11" ySize="11"/>',
+        '</SimpleSource></VRTRasterBand></VRTDataset>'), path)
+    }
+    write_kv(f$qa, f$items, c(6000, 6000, 2, 2, 200000, 212000, 6900000, 6912000), "item")
     repo <- tempfile("synthetic-code-", tmpdir = root)
     dir.create(repo)
     relative <- c("diagnostics/low_d8_scope/lake_1847_focus_core.R",
                   "diagnostics/land_first_water/first_water_contact.R",
                   "diagnostics/land_d8_continuity/trace_land_d8_route.R",
                   "diagnostics/land_network_topology/land_network_topology.R",
+                  "diagnostics/land_network_topology/analyse_land_network_topology.R",
                   "diagnostics/land_network_topology/run_one_low_network_window.R")
     project <- dirname(dirname(here))
     for (path in relative) {
@@ -354,6 +402,10 @@ if (requireNamespace("terra", quietly = TRUE)) {
     text <- paste(output, collapse = "\n")
     assert(grepl(paste0("COMMIT=", commit), text, fixed = TRUE))
     assert(grepl("CODE_VERSION_VERIFICATION=LOCAL_GIT_CLEAN", text, fixed = TRUE))
+    assert(grepl("WINDOW_GLOBAL_ROWS 2995 3005 COLS 2995 3005", text, fixed = TRUE))
+    assert(grepl("VALID_LAND CORE 3 HALO 1", text, fixed = TRUE))
+    assert(grepl("CORE_CONFLUENCES 1 HALO_CONFLUENCES 0", text, fixed = TRUE))
+    assert(grepl("RASTER_READ_CALLS 4 RETURNED_VALUES 484", text, fixed = TRUE))
     assert(grepl("========== TULOKSET LOPPUVAT ==========", text, fixed = TRUE))
     assert(grepl("hydrological_validation=NOT_ASSESSED", text, fixed = TRUE))
     wrong <- cli(paste(rep("0", 40L), collapse = ""))
