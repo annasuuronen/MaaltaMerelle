@@ -1,8 +1,10 @@
-# MaaltaMerelle: maa–vesi-soluverkon tutkimussuunnitelma
+# MaaltaMerelle: maa-alueiden virtausverkon, ojitusten ja pienvesien tutkimussuunnitelma
 
-19.10.2026. **Suunnitelma tieteelliseen katselmointiin.** Tämä dokumentti ei
-osoita alla ehdotettujen menetelmien toteutusta tai hyväksyntää. Muutos lisää
-vain tämän tiedoston erilliseen suunnitteluhaaraan, jonka lähtöcommit on
+Laadittu 19.10.2026, päivitetty 20.10.2026 käyttäjän hyväksymän ojitus- ja
+pienvesipainotuksen mukaisesti. **Suunnitelma tieteelliseen katselmointiin.**
+Tämä dokumentti ei osoita alla ehdotettujen menetelmien toteutusta tai
+hyväksyntää. Päivitys muuttaa vain tätä tiedostoa suunnitteluhaarassa,
+jonka lähtöcommit on
 `baseline-no-structures`-haaran `7050b582edab3195669529f366b4f5a2915488c6`.
 LOW:n ja MODERATE:n kehityshaaroja ei yhdistetä tähän muutokseen.
 
@@ -13,19 +15,31 @@ ohjelmointia, rasterimuutoksia tai uusia CSC-ajoja.
 
 ## 1. Tavoite ja tutkimuksen kohde
 
-Rakennetaan mahdollisimman tarkka **maa-alueiden solukohtainen pintavalunnan
-virtausverkko ensimmäiseen määriteltyyn vesistökontaktiin asti**. Jokaiselle
-mallin lähtöjoukkoon kuuluvalle maasolulle pitää pystyä esittämään:
+Tutkimuksen viisi keskeistä tavoitetta ovat:
+
+1. Mahdollisimman tarkka ja jäljitettävä 2 m solukohtainen virtausverkko maa-alueilla.
+2. Ojien, rumpuyhteyksien ja muiden kuivatusreittien tunnistaminen ja jatkuvuuden arviointi.
+3. Virtauskertymän, ojien yhtymien ja uomaverkon muodostumisen tutkiminen.
+4. Mahdollisten RANTA10:stä puuttuvien pienvesien tunnistaminen näyttöön sidottuina ehdokkaina.
+5. Reittien luotettava kytkeminen tunnettuihin RANTA10-vesistöihin ja muualla kehitettyihin vesistömalleihin.
+
+Tutkimuskohteena on erityisesti **ennen tunnettua RANTA10-vesikontaktia
+kulkeva ojitus- ja pintavirtausverkko**. Kontakti ei ole ainoa kiinnostava
+tulos eikä koko verkon kattava validointikriteeri. RANTA10:n tunnettuja
+kohteita käytetään vertailuaineistona ja mallien välisinä liittyminä.
+Jokaiselle mallin lähtöjoukkoon kuuluvalle maasolulle pitää pystyä esittämään:
 
 - lähtösolun yksikäsitteinen tunniste ja sijainti;
 - käytetyn pinnan ja D8:n määräämä soluketju, myös sen epävarmat kohdat;
+- reitin ojitus-/uomaehdokkaat, yhtymät ja niiden näytön alkuperä;
 - ensimmäinen vastaanottava vesisolu, sen luokka,
   koordinaatit ja tunnistettu vesistökohde;
 - yläpuolinen kertymä sekä jatkumisen ja taseen tarkistukset;
 - nimenomainen selvittämätön päätepiste, jos vastaanottajaa ei voida osoittaa.
 
-Ensimmäisen vesistökontaktin jälkeen järven tai joen sisäinen jatkoreititys
-kuuluu erilliseen kytkentään olemassa olevaan vesistöverkkoon. Maalta tulevan
+Ensimmäisen tunnetun RANTA10-vesistökontaktin jälkeen järven tai joen
+sisäinen jatkoreititys kuuluu erilliseen kytkentään olemassa olevaan
+vesistöverkkoon. Maalta tulevan
 veden vastaanottaja ja vesistöstä myöhemmin poistuvan veden purkupiste ovat
 eri tutkimuskysymyksiä. Uutta hydrodynaamista järvi- tai jokimallia ei tarvita
 tämän tavoitteen toteuttamiseksi.
@@ -134,7 +148,54 @@ Jatkuvuusmuistion `docs/maaltamerelle_tutkimustilanne_20261019.md` [S7]
 aiempi tieto vielä ajamattomasta 49 järven kokeesta on tätä uutta
 käyttäjän ajonäyttöä vanhempi. Muistio säilytetään historiallisena.
 
-## 3. Maa–vesi-tavoitteen vaikutus 02D–02G:n painotukseen
+### 2.4 DEM:n lähtötilanne ja pintojen käsittelyhistoria
+
+**Käyttäjän ilmoittama lähtötilanne:** tutkimuksen 2 m DEM:iin on poltettu
+rumpuyhteyksiä, ojituksia ja salaojituksia. Sitä käsitellään hydrologisesti
+muokattuna syötteenä, ei alkuperäisenä muuttamattomana Paituli-DEM:nä.
+Konfiguraatio lukee valmiin `dem_12km_rumpukorjattu.tif`-tiedoston [S1C].
+Tarkistetusta lähdekoodista ja dokumentaatiosta ei löytynyt sen valmistavaa
+polttomenetelmää tai näiden kolmen polttotyypin tarkkoja lähdetietoja.
+Ilmoitettu esikäsittely ja riippumattomasti varmennettu valmistushistoria
+ovat eri näyttöä.
+
+| Pinta | Koodista tai lähdekuvauksesta tiedetty | Mahdollinen vaikutus kuivatusyhteyteen |
+| --- | --- | --- |
+| Alkuperäinen Paitulin 2 m DEM | Ennen polttoja käytetty aineisto pitää yksilöidä; sen versio ja vertailukopio eivät ole tässä varmennettuja. | Vertailuperusta polton vaikutukselle, ei sama asia kuin nykyinen syöte. |
+| Hydrologisesti muokattu DEM | Valmis syötetiedosto; rummut, ojitukset ja salaojitukset käyttäjän ilmoittamia. | Sisältää ennakkoon kuvattuja kuivatusyhteyksiä, joiden geometria, korkeudet ja menetelmä on sidottava lähteeseen. |
+| LAND_RAW | `ifel(is.na(lake_id), dem, NA)` [S1R]. | Järvi-ID-solut poistetaan; niihin osuva polttojälki voi poistua reititysesityksestä. Muu pinta periytyy muokatusta DEM:stä. |
+| LAND_FILL | `FillDepressions(LAND_RAW, fix_flats=TRUE)` [S1R]. | Täyttö voi korottaa poltettua uraa ja tasanteiden käsittely muuttaa paikallista kaltevuutta. Jatkuva poltettu yhteys ei välttämättä muutu; säilyminen pitää osoittaa. |
+| LAND_WATER | `cover(land_fill, lake_z)` [S1R]; järvikorkeudet sidotaan RANTA10-kohteisiin [S9]. | Säilyttää kelvollisen LAND_FILLin ja täydentää puuttuvia soluja järvikorkeuksilla. Ei palauta järvialueen alkuperäistä polttotopografiaa. |
+| STORAGE | Erillinen `FillDepressions(LAND_WATER, fix_flats=FALSE)` [S1R]. | Voi korottaa lisää soluja ilman pyydettyä tasannegradienttia. Ei ole LAND_WATERin tai alkuperäisen maaston hydrologinen vastine. |
+
+Nykyinen Whitebox-D8 tuotetaan **LAND_WATERista, ei STORAGEsta** [S1R].
+STORAGEssa havaittu muutos ei yksin osoita nykyisen D8-suunnan muuttuneen.
+Polton ja myöhemmän käsittelyn vaikutukset erotetaan ketjussa
+alkuperäinen DEM → muokattu DEM → LAND_RAW → LAND_FILL → LAND_WATER → D8;
+STORAGE säilytetään erillisenä diagnostisena haarana.
+
+Myös tallennustarkkuus ja vanhojen välitulosten käyttö huomioidaan:
+LAND_RAW kirjoitetaan koodissa `FLT4S`-muodossa tiedostonimen `FLT8S`-päätteestä
+huolimatta, ja `OVERWRITE=FALSE` sallii olemassa olevien tiedostojen käytön.
+Tämä on koodihavainto, ei tässä todettu CSC:n reittivirhe. Nykyinen koodi
+ei yksin todista olemassa olevan rasterin historiallista syntytapaa.
+`01_input_manifest.csv` sisältää polkuja ja asetuksia, mutta ei polttoreseptiä,
+alkuperäisen DEM:n yksilöintiä, koodi-SHA:ta tai rasteritiivisteitä [S9].
+Ilman ennen–jälkeen-aineistoja ja valmistustietoja polton vaikutusta ei
+voida varmasti erottaa muista syötteen muutoksista.
+
+### 2.5 Ensikontaktiprototyypin erillinen tila
+
+Draft PR #16:n `first_water_contact()` on erillisessä haarassa,
+commitissa `24b81af244c867d7a3f7c36594589acc8d9c01f9` [S10]. Se käyttää
+LOW:n jäljitysydintä ja erottaa ensimmäisen vesikontaktin, vastaanottajan
+tunnistamisen ja `hydrological_validation=NOT_ASSESSED`-tilan.
+Paikallinen synteettinen tarkistus on dokumentoitu, mutta ensimmäistä
+todelliseen LOW:n 02B-raporttiin ja alkuperäisiin rasterisoluihin perustuvaa
+vertailua ei ole tässä varmennettu. Prototyyppiä ei yhdistetä tähän haaraan
+eikä muuteta tällä dokumentaatiopäivityksellä.
+
+## 3. Ojitus- ja pienvesitavoitteen vaikutus 02D–02G:n painotukseen
 
 | Vaihe | Säilyvä tehtävä | Painotus uudessa tutkimusrajauksessa |
 | --- | --- | --- |
@@ -142,6 +203,14 @@ käyttäjän ajonäyttöä vanhempi. Muistio säilytetään historiallisena.
 | 02E | Kaikkien kelvollisten rinnakkaisehdokkaiden säilyttäminen | Vesistöverkon jatkokytkennän evidenssiä; ehdokkaan puuttuminen ei sulje pois maalta saapuvaa kontaktia. Ei outlet-valintaa. |
 | 02F | Ehdokasvastaanottajien D8-päätepisteet | Nykyisiä terminaaliluokkia ja jäljityksen periaatteita voidaan uusiokäyttää. Kattavuus pitää laajentaa erikseen hyväksyttävänä tutkimuksena maasoluihin. |
 | 02G / myöhempi vaihe | Tarkistetuissa puissa ei toteutusta | Solukohtainen vastaanotinkartta, kertymä ja tiiligraafi ovat suunniteltavia toimituksia. Niitä ei nimetä valmiiksi 02G-menetelmäksi. |
+
+Ojaverkon tutkimukseen tarvitaan myöhemmin suunniteltava solureunojen tai
+segmenttien havaintotuote ennen RANTA10-kontaktia: lähde- ja kohdesolut,
+pinnan ja pointerin identiteetti, yhtymät, katkokset, kertymän luotettavuus
+sekä lähdeaineistoihin sidotut oja- ja pienvesihavainnot. Nykyiset
+02B/02F-raportit tai ensikontaktiprototyyppi eivät yksin tuota tätä verkkoa.
+Pienvesiehdokkaan löytäminen ei automaattisesti muuta nykyistä vesimaskia
+eikä prototyypin pysähtymissääntöä.
 
 Ensikontaktin havaintograafissa vesi käsitellään päätepisteenä. Kun
 **maasolujen seuraajat ja vesimaski pysyvät samoina**, pelkkä vesisolujen
@@ -183,13 +252,25 @@ vedenjakajan epävarmat suunnat saavat erilliset syyt. Kelvoton tai epävarma
 suunta ei muutu keksityksi D8-reunaksi. Korkeusmallin epävarmuuden kanssa
 yhteensopiva lähes tasainen tapaus ei ole sama kuin ohjelmointivirhe.
 
+Dokumentoidulle ojalle tai rumpuyhteydelle tutkitaan, seuraako D8 kuvattua
+yhteyttä, jatkuuko reitti rakenteen kohdalla ja päätyykö se alempaan uomaan
+tai tunnettuun vesistöön. Katkos paikannetaan käsittelyvaiheeseen: poltto,
+järvimaskaus, täyttö, tasanteen käsittely tai järvikorkeuden yhdistäminen.
+Samansuuntaisuus polttolinjan kanssa on sisäistä johdonmukaisuutta,
+ei riippumaton todiste todellisesta uomasta.
+
+Vedenjakajan ylityksessä erotetaan virheellinen pintareitti dokumentoidusta
+ojan, rummun tai maanalaisen yhteyden vaikutuksesta. Alkuperäisen ja
+muokatun pinnan vedenjakajat voivat erota perustellusti. Kumpaakaan ei
+käytetä automaattisena totuutena ilman yhteyden riippumatonta näyttöä.
+
 **Näyttö:** nykyisten rajattujen D8-ytimien ja testien uusiokäyttö,
 pienten tunnettujen topologioiden tarkistukset sekä perustellut todelliset
 vertailukohteet. Ratkaistuksi merkityn reunan pitää johtaa täsmälleen
 dekoodattuun naapuriin, ja jokainen poikkeama säilytetään. Uusi koko
 LOW-/MODERATE-skannaus edellyttää muuttunutta tutkimuskysymystä ja erillistä lupaa.
 
-### B — Maa–vesi-rajapinta ja ensimmäinen vastaanottaja
+### B — Maa–vesi-rajapinta, ensimmäinen vastaanottaja ja pienvesiehdokkaat
 
 Määritellään lähdeaineistoon sidottu vesiluokitus: järvi, jokialue,
 uomaviiva ja mahdollinen erikseen hyväksyttävä muu vesikohde. Tarkistetaan
@@ -214,6 +295,25 @@ kontaktin tai yhden selvittämättömän terminaalin. Veteen saapumisen jälkeen
 ei vaadita järven sisäistä D8-jatkoa tässä havaintotuotteessa.
 Vesiulosmenojen muuttumattomuusinvariantti testataan erikseen.
 
+Ojaverkon ja pienvesien suunnitellussa tulossopimuksessa erotetaan kohteen
+lähdeluokka, laskennallinen reittihavainto ja riippumaton vahvistus. Nämä
+ovat eri ulottuvuuksia: esimerkiksi tunnettu oja voi olla myös RANTA10-uoma.
+
+| Raportoitava luokka | Näyttövaatimus ja epävarmuus |
+| --- | --- |
+| Tunnettu RANTA10-vesistö | Versio ja lähdekohde sidottu; kontakti ei yksin vahvista rantaa tai virtaussuuntaa. |
+| Tunnettu tai ennakkokäsittelyssä kuvattu oja | Erota maastossa tai rekisterissä todettu kohde polttosyötteen kuvauksesta. Säilytä kohdetunnus, alkuperä ja todistusaste. |
+| Laskennallinen uomaehdokas | D8:n, kertymän tai maastonmuodon peruste ja lähdepinta kirjataan. Suuri kertymä tai polttolinja ei yksin osoita uomaa tai vettä. |
+| Mahdollinen RANTA10:stä puuttuva pienvesi | Puuttuminen tarkistetusta RANTA10-versiosta sekä polttoaineistosta riippumaton uoma- tai vesihavainto. Luonnollisuus, kohdelaji, veden pysyvyys ja virtaussuunta voivat jäädä avoimiksi. |
+| Ratkaisematon virtausyhteys | Nolla, NoData, tasanne, sykli, hakuraja, epäselvä siirto tai ristiriitainen näyttö säilytetään syineen ja vaikutusalueineen. |
+
+Ehdokkaat muodostetaan myöhemmin varmennetun maaverkon segmenteistä ja
+niiden näytöstä; nykyinen prototyyppi ei tee tätä luokittelua. Pelkkä
+RANTA10:n ulkopuolisuus ei osoita uuden vesistön löytymistä. Nollapointeri
+tai painanne voi liittyä myös todelliseen kosteikkoon tai kausittaiseen
+pienveteen; niitä ei korjata automaattisesti eikä kaikkia ojia luokitella
+pienvesiksi. Ehdokkaan hyväksyntä tunnetuksi kohteeksi on erillinen päätös.
+
 ### C — Virtauskertymä ja jatkuvuus
 
 Sovitaan yksikkö, lähtösolun sisällyttäminen kertymään ja pinta-alan laskenta.
@@ -232,6 +332,12 @@ varmennetut tuonnit. Syklien ja muiden ratkaisemattomien terminaalien
 yläpuolinen lähdejoukko jää näkyviin; sitä ei hävitetä eikä sille lasketa
 ääretöntä tai keinotekoista läpivirtausta.
 
+Ojien yhtymissä tarkistetaan eri yläpuolisten lähdejoukkojen yhdistyminen,
+kertymän kasvu ja saman lähteen kertalaskenta. D8:n laskennallinen yhtymä
+ei yksin osoita todellista uomien yhtymäkohtaa. Jos vain paikallinen osa
+verkosta tai ulkopuolinen tuonti tunnetaan, kokonaiskertymää ei väitetä
+tarkaksi; katkosten yläpuolinen vaikutusala säilyy tarvittaessa tuntemattomana.
+
 **Näyttö:** kokonaislukuisen solutaseen täsmällinen yhtälö, paikalliset
 kertymärekursiot ja riippumaton pienen verkon rekonstruktio. Yhteenlaskettua
 solupinta-alaa ei kutsuta virtaamaksi: virtaama tai kuormitus vaatii lisäksi
@@ -241,6 +347,16 @@ Nykyinen **4 ha = 40 000 m² = 10 000 kahden metrin solua** säilyy
 uomaverkon lähtökynnyksenä. Se on myöhemmän uomaesityksen/eroosioskenaarion
 valinta, ei ensimmäisen vesistökontaktin suodatin. Myös sitä pienempien
 yläpuolisten alueiden vesikontaktit ja katkokset pitää säilyttää.
+4 ha ei ole pienveden olemassaolon tai riippumattoman vahvistuksen raja,
+eikä sen alittaminen ole pienvesiehdokkaan poistoperuste.
+
+Yllä oleva kertymä- ja tasemääritelmä koskee pintamaagraafia. Salaojien
+maanalaiset yhteydet kuvataan erikseen lähde-, liittymä- ja purkupisteineen.
+DEM:iin poltettu salaojalinja on laskennallinen esitys, ei havaittu pintauoma.
+Pinta- ja salaojareitin yhdistäminen edellyttäisi erikseen hyväksyttyä
+siirto-/jakautumissopimusta: samaa vettä ei lasketa molempiin. Pelkkä
+topologinen yhteys ei osoita putken kapasiteettia, painekorkeuksia tai
+tapahtumakohtaista virtausta. Tällaista maanalaista mallia ei toteuteta tässä.
 
 ### D — Tiilirajojen ylittävät yhteydet
 
@@ -291,6 +407,16 @@ valuma-alueita. MML:n ja RANTA10:n rajavertailu on lähteiden vertailu,
 ei automaattinen totuusluokitus. Samaa lähdedataa käyttävää vertailukohdetta
 ei lasketa riippumattomaksi todisteeksi.
 
+Ojien ja pienvesien vertailua varten selvitetään dokumentoitujen
+maastohavaintojen, rumpujen pohjakorkeusmittausten, ojitus-/salaojasuunnitelmien
+ja toteumakarttojen, ortokuvien sekä erillisten uoma- ja laserkeilaushavaintojen
+saatavuus. Poltossa käytetty aineisto voi todentaa syötteen tarkoituksen,
+mutta ei samalla toimia riippumattomana validointina. Myös eri julkaisuissa
+esiintyvien aineistojen yhteinen alkuperä ja havainnointiajankohta tarkistetaan.
+Vertailun pitää erottaa uoman olemassaolo, sijainti, virtaussuunta ja veden
+esiintyminen eri vuodenaikoina. Aineistojen saatavuutta tai tätä vertailua
+ei ole tässä varmennettu.
+
 Issue #9:n SYKE-aineisto sisältää metatiedon mukaan lähteikköjen
 **50 m lähialueen puskuripolygoneja**, ei 2 m tarkkoja lähdepisteitä.
 Vertailu tehdään D8-arvosta riippumatta, myös D8≠0-kohteille. Osuma kuvaa
@@ -306,6 +432,8 @@ tai pohjaveden virtausta. Sen käyttöönotto on suunniteltu, ei tässä toteute
 | DEM ja sijainti | Versio, korkeusjärjestelmä, ruudukon vastaavuus, NoData, muokkaushistoria, rajaerot | Metadata ja kohdistus voidaan tarkistaa; korkeuden ja oikean rannan luotettavuus vaatii vertailua. |
 | Paikallinen D8 | Kelvottomat koodit, väärä naapurisiirtymä, nollat, tasanteet, korkeusepävarmuuden kannalta epäselvät suunnat | Koodaus ja geometria tarkasti; fysikaalinen suunta tarvitsee maastollisen perustelun. |
 | Reitin topologia | Syklit, katkokset, askelrajoitukset, NoData ja ratkaistujen lähteiden kattavuus | Lähdesolut ositetaan kattavasti ja ilman päällekkäisyyttä. Askelraja ei todista yhteyden puuttumista. |
+| Kuivatusyhteys | Polttokohteen sijainti, käsittelyvaiheiden muutokset, rummun jatko, yhtymä ja vedenjakajan ylitys | Polttosyötteen toistuminen erotetaan riippumattomasti todetusta yhteydestä. Pintareitti ja maanalainen siirto erotellaan. |
+| Pienvesiehdokas | Lähdeluokka, jatkuvuus, kertymän peruste, RANTA10-version kattavuus ja riippumaton havainto | Ehdokas ei muutu tunnetuksi pienvedeksi pelkän kynnysarvon, polton tai RANTA10:n puuttuvan osuman perusteella. |
 | Ensimmäinen vesikontakti | Kontaktisolun sijainti, vesiluokka, ID:n saatavuus, päällekkäisyydet, vastaanottajan vaihtuminen | Soluketju ja tunnisteviitteet tarkasti; oikea vastaanottaja vaatii vertailua. |
 | Kertymä | Paikallisen rekursion jäännös, vastaanotettu ja selvittämätön maa-ala, tuonti/vienti | Valitun kokonaislukusopimuksen tase on täsmällinen. Tasetulos ei yksin todista oikeaa reittiä. |
 | Tiilirajat | Puuttuvat/väärät siirrot, kaksoislaskettu ydin/halo, katkokselle päätyvä maa-ala | Solu-ID:t, siirtokirjanpito ja vertailugraafi tarkasti. Ulkorajan hydrologinen merkitys erikseen. |
@@ -331,6 +459,13 @@ vaikutuksen epävarmuus. Saman katkoksen päällekkäisiä yläpuolisia alueita 
 summata useaan kertaan. Jos kelvollista kertymää ei vielä ole, vaikutusala
 merkitään tuntemattomaksi; sitä ei korvata ehdokasreittien määrällä.
 
+Riskipriorisointi tehdään solureunalle tai yhteydelle ja sen vaikutukselle,
+ei vain onnistuneiden kontaktien lukumäärälle. Erityisesti tarkastetaan
+kuivatusyhteyden katkeaminen, väärä vastaanottaja, perustelematon vedenjakajan
+ylitys ja pinta-/salaojareittien kaksoislaskenta. Tuntematon kertymä tai
+RANTA10-kontaktin puuttuminen ei osoita vähäistä riskiä. Myös pienen
+valuma-alueen pienvesiehdokas ja ristiriitainen näyttö säilytetään auditoitavina.
+
 ## 6. Rakenteet ja muut tunnetut vaikutukset
 
 Padot, rummut, kanavat, tiet ja muut rakenteet kirjataan erilliseen
@@ -339,17 +474,45 @@ koskee myös niiden hydrologista vaikutusaluetta tiilineliön ulkopuolella.
 Tuntematon rakennevaikutus ei muutu luonnontilaisuuden todisteeksi.
 
 Baselineen ei lisätä rakenteiden perusteella uusia reititysohituksia.
-Syötteen mahdollinen aikaisempi rumpukorjaus tai muu korkeusmallin muokkaus
-pitää silti kirjata: rakenteita käyttämätön ajokoodi ei osoita syötedatan
-olevan rakenteista riippumatonta. Tunnelin/rummun todellinen yhteys voi jäädä
-pintamallin ulkopuolelle. Tällainen poikkeama säilytetään mallirajauksena tai
+Käyttäjän ilmoittamat aikaisemmat rumpu-, ojitus- ja salaojapoltot kirjataan
+syötedatan käsittelyhistoriaan: rakenteita käyttämätön ajokoodi ei osoita
+syötedatan olevan rakenteista riippumatonta. Tarkat valmistusmenetelmät
+säilyvät vahvistamattomina, kunnes lähdenäyttö löytyy. Tunnelin/rummun
+todellinen yhteys voi jäädä pintamallin ulkopuolelle. Tällainen poikkeama säilytetään mallirajauksena tai
 epävarmuutena, ei automaattisena pointerikorjauksena.
+
+Polttojen provenienssivaatimukset ovat:
+
+- alkuperäisen Paituli-DEM:n ja käsitellyn DEM:n yksilöivät lähdeviitteet,
+  versiot/ajankohdat, ruudukot, NoData ja korkeusjärjestelmät;
+- erikseen rumpu-, oja- ja salaojageometrioiden alkuperä, versio,
+  kohdetunnukset, sijaintitarkkuus sekä käytetyt korkeus- ja suuntatiedot;
+- menetelmä, ohjelmisto/koodiversio, syvyys, leveys, kaltevuuden muodostus,
+  kohdistus/rasterointi ja päällekkäisten polttojen käsittelyjärjestys;
+- käytettävissä oleva ennen–jälkeen-näyttö: muutosraportti tai tallennettu
+  erotus/polttomaski sekä niiden sidonta samoihin lähtötiedostoihin;
+- myöhempien pintojen ja D8:n ajokohtaiset lähteet, parametrit,
+  ohjelmisto-/binääriversiot, exit-tilat ja olemassa olevat tarkistussummat.
+
+Vaatimus ei tarkoita, että nämä tiedot olisivat jo saatavilla. Pelkkä
+tiedostonimi, nykyinen SHA256 tai nykyisen checkoutin HEAD ei todista
+historiallista valmistustapaa. Puuttuva tieto merkitään puuttuvaksi;
+esimerkiksi `flat_increment`-arvoa tai polttosyvyyttä ei arvata. Eri
+ruudukkojen ennen–jälkeen-vertailu edellyttäisi kohdistuksen ja mahdollisen
+uudelleennäytteistyksen vaikutusten erottamista poltosta.
 
 Mahdollinen myöhempi rakennekerros on erillinen hyväksyttävä menetelmä,
 jota verrataan muuttumattomaan baselineen vaikutusalueineen ja taseineen.
 
 ## 7. Avoimet tutkimuskysymykset
 
+- Mikä on LOW:n yhden yksilöidyn oja–rumpuyhteyden alkuperä, miten se on
+  kuvattu muokattuun DEM:iin ja mikä myöhempi vaihe säilyttää tai muuttaa sitä?
+- Mitkä RANTA10:n ulkopuoliset reitit ovat dokumentoituja ojia, mitkä vain
+  laskennallisia uomaehdokkaita ja millä riippumattomalla näytöllä niistä
+  voidaan erottaa mahdollisia puuttuvia pienvesiä?
+- Miten pintavalunta ja salaojasiirrot erotetaan niin, että yhtymät,
+  vedenjakajien tulkinta ja lähteiden kertalaskenta säilyvät oikein?
 - Mitkä LOW:n tunnetut nollat ja rajaerot muuttavat maalta saapuvan veden
   **ensimmäistä** kontaktia, ja mitkä koskevat vasta järvestä poistumista?
   Nykyiset järvilähtöiset 02F-reitit eivät anna koko maajoukon vastausta.
@@ -371,10 +534,66 @@ jota verrataan muuttumattomaan baselineen vaikutusalueineen ja taseineen.
 
 ## 8. Seuraavat kolme tehtävää tärkeysjärjestyksessä
 
-### 1. Maa–vesi-ensikontaktin näyttösopimus ja LOW:n raporttipohjainen rajaus
+### 1. Yhden dokumentoidun LOW:n oja–rumpuyhteyden provenienssiauditointi
 
-**Suositus ensimmäiseksi toteutettavaksi tehtäväksi erillisen hyväksynnän
-jälkeen.** Määritellään yllä olevan B-vaiheen tulossopimus ja luetaan
+**Ensimmäinen seuraava tutkimustehtävä.** Tämän päivityksen toimitus on
+auditoinnin määrittely; itse auditointia ei suoriteta tässä. Tarkastelu
+rajataan yhteen jo dokumentoituun oja–rumpuyhteyteen LOW-alueella
+`E200000_N6900000`. Käytetään vain olemassa olevia lähdekuvauksia,
+esikäsittelymuistioita, kohdeviitteitä, manifesteja ja pieniä raportteja.
+Ei uusia CSC-töitä, rasterilukuja, rasterien sisältötiivisteiden laskentaa,
+polttoja, täyttöjä tai koko alueen inventaarioita.
+
+Tarkistus etenee seuraavasti:
+
+1. Varmistetaan raporttien todellinen saatavuus ja aineistosidonta. LOW:n
+   dokumentoitu tulosjuuri on
+   `/scratch/project_2004707/pienvedet/csc_validation_4bbf22b/hydro_01_02/runs/E200000_N6900000/02_baseline/`.
+   `../01_inputs/01_input_manifest.csv` ja `../01_inputs/01_input_QA.csv`
+   ovat tähän juureen suhteutettuja rinnakkaisen vaihehakemiston
+   raporttiehdokkaita; lähdepolut eivät osoita
+   tiedostojen olemassaoloa. Tästä Codex-ympäristöstä CSC:n `/scratch` ei ollut
+   luettavissa. Se ei osoita tiedostojen puuttuvan Roihulta.
+2. Selvitetään olemassa olevasta poltto-/kohdekuvauksesta yksi yksilöity
+   yhteys: ojan ja rummun lähdekohteet/tunnukset, sijainti ja niiden välisen
+   yhteyden dokumentointi. Valintaperuste, lähdetiedosto, versio ja saatavilla
+   oleva tarkistussumma kirjataan. Mielivaltaista D8-reittiä, nollasolua tai
+   suurta kertymää ei nimetä ojaksi tai rummuksi.
+3. Jäljitetään geometrian ja polttotoimenpiteen alkuperä sekä alkuperäisen
+   Paituli-DEM:n ja käsitellyn DEM:n identiteetit. Selvitetään, onko jo
+   olemassa kohteeseen sidottu ennen–jälkeen-raportti, polttomaski tai muu
+   vertailunäyttö. Rasterin tai maskin sisältöä ei lueta tällä rajauksella;
+   pelkkä tiedostoviite ei osoita muutoksen suuruutta tai oikeellisuutta.
+4. Sidotaan saatavilla olevat ajotiedot ja vertailuraportit LAND_RAW-,
+   LAND_FILL-, LAND_WATER-, STORAGE- ja D8-vaiheisiin. Esimerkiksi
+   `02A_storage_regression_QA.csv` ja aiemman storage-provenienssiauditoinnin
+   `comparisons.csv` ovat olemassaololtaan tarkistettavia raporttiehdokkaita.
+   Koko pinnan summat tai regressiovastaavuus eivät todista juuri valitun
+   kuivatusyhteyden säilymistä. Raportoimaton kohdekohtainen muutos jää tuntemattomaksi.
+5. Toimitetaan yksi jäljitettävyystaulu: kohde ja valintaperuste,
+   geometrialähde, polttomenetelmän saatavilla olevat tiedot, alkuperäinen
+   ja käsitelty DEM, ennen–jälkeen-näyttö, myöhemmät pinnat/ajot sekä kunkin
+   tiedon lähde ja puuttuvat alkuperäisaineistot. Käyttäjän ilmoitus,
+   dokumentoitu valmistus ja numeerinen vertailuhavainto erotetaan toisistaan.
+
+**Jos yksilöityä dokumentoitua kohdetta ei löydy, raportti sanoo nimenomaisesti
+"Yksilöityä dokumentoitua LOW:n oja–rumpuyhteyttä ei löytynyt tarkistetuista
+lähteistä" ja nimeää tarkistetut lähteet sekä puuttuvan näytön.** Tämä ei
+osoita ojien tai rumpujen puuttuvan maastosta. Puuttuva polttoresepti tai
+ennen–jälkeen-vertailu raportoidaan erikseen myös silloin, kun kohde löytyy.
+Auditointi ei hyväksy yhteyttä hydrologisesti. Mahdollinen seuraava
+kohdekohtainen rasterivertailu määritellään vasta tämän näytön perusteella
+ja hyväksytään erikseen.
+
+### 2. Rajattu ojaverkon ja RANTA10-liittymän menetelmävalidointi
+
+Provenienssiauditoinnin jälkeen suunnitellaan erikseen hyväksyttävä rajattu
+jatkuvuuskoe dokumentoidulle kuivatusyhteydelle. Määritellään edellä kuvattu
+solureunojen/segmenttien tulossopimus, pintojen muutoksen ja riippumattoman
+uomanäytön erottelu sekä katkosten ja yhtymien tarkistukset. Tätä menetelmää
+ei nimetä toteutetuksi.
+
+Liittymän rinnakkaisena tutkimuslinjana säilytetään B-vaiheen tulossopimus ja
 valmiit LOW:n 02B/02C/02D.8/02E/02F-pienraportit. Seitsemän tunnetun
 päätesolun ja 1847/1898-vertailun avulla erotetaan ennen kontaktia ja sen
 jälkeen olevat katkokset sekä raporttien todellinen kattavuus. Tarkastetaan
@@ -389,8 +608,6 @@ Tarvittavia olemassa olevia raportteja ovat esimerkiksi
 `02F_water_connected_route_evidence.csv` ja lähdemanifesti.
 Todelliset ajokohtaiset tiedostonimet ja olemassaolo tarkistetaan
 ajomanifestista; tuntemattomia ei korvata keksityillä tiedostoilla.
-LOW:n dokumentoitu tulosjuuri on
-`/scratch/project_2004707/pienvedet/csc_validation_4bbf22b/hydro_01_02/runs/E200000_N6900000/02_baseline/`.
 
 Toimitus: lähteisiin sidottu kattavuus- ja epävarmuustaulukko, vastaanottajan
 tunnistesopimus ja perusteltu pienin seuraava mittaus. Olemassa olevat
@@ -398,14 +615,16 @@ CSV:t voivat jättää yläpuolisen maa-alan ja ensikontaktin tuntemattomiksi;
 niiden ei väitetä sisältävän koko maagraafia. Ei uusia rasterilukuja tai
 D8-korjauksia tämän raporttitehtävän perusteella.
 
-### 2. Rajattu maasolujen ensikontaktigraafin menetelmävalidointi
-
-Erikseen hyväksyttävä pieni tutkimustoteutus hyödyntää olemassa olevia
-D8- ja päätepisteytimiä sekä nykyisiä testikäytäntöjä. Pienissä tunnetuissa
-verkoissa todennetaan maa→järvi/jokialue/uomaviiva, nolla, NoData, tasanne,
-sykli, puuttuva vastaanottaja-ID ja vesiosuuden ulosmenojen invariantti.
-Tämän jälkeen valitaan vain uutta kysymystä vastaava rajattu todellinen
-vertailu. Kokonaista onnistunutta LOW-skannausta ei uusita varmuuden vuoksi.
+PR #16:n ensikontaktiprototyyppi ja sen pienet synteettiset regressiot
+säilytetään erillisinä (§2.5). Mahdollinen LOW:n
+`02B_land_to_first_water_entries.csv`-tarkistus valitsee deterministisesti
+enintään kaksi todellista reunaa kustakin esiintyvästä vesiluokasta,
+yhteensä enintään kuusi. Puuttuvia luokkia ei keksitä. Tämä on liittymän
+regressio, ei ojaverkon kattava validointi. CSV:n sisäinen geometria,
+alkuperäisten rasterisolujen vastaavuus ja riippumaton hydrologinen
+oikeellisuus ovat eri näyttöä. `read_cell`-syötteitä ei rakenneta CSV:n
+odotetuista tuloksista itsenäiseksi rasteritestiksi. Uudet rasteriluvut
+vaativat erillisen hyväksynnän; valmiita raskaita laskentoja ei uusita.
 
 Toimitus: todennettu ensikontaktimenetelmän kattavuus, eksplisiittiset
 epävarmuudet ja muuttumattomien syötteiden osoitus. Tuotannon lopullista
@@ -432,7 +651,9 @@ testi- ja workflow-tiedostot, CSC-arkistot ja historialliset tutkimusraportit
 säilyvät. Tarkistus kohdistuu lähdeviitteisiin, toteutuksen ja suunnitelman
 erotteluun, dokumentointidiffiin ja Actions-triggerien rajauksiin.
 Raskaita tai jo onnistuneita hydrologisia testejä ei tarvita tämän
-dokumentin tarkistamiseen. PR #7:ää tai PR #12:ta ei yhdistetä.
+dokumentin tarkistamiseen. PR #7:ää, #12:ta tai #16:ta ei muuteta tai yhdistetä.
+Auditointia, ohjelmointia tai uusia CSC-rasterilukuja ei suoriteta tällä
+dokumentaatiopäivityksellä.
 
 Kaikki seuraavan tehtävän ohjelmointi ja mahdolliset CSC-mittaukset
 odottavat erillistä hyväksyntää. **MODERATE=REVIEW_REQUIRED; NATIONAL=LOCKED.**
@@ -453,6 +674,10 @@ odottavat erillistä hyväksyntää. **MODERATE=REVIEW_REQUIRED; NATIONAL=LOCKED
   PR #7:n tarkistetussa commitissa. Uusi työ 2369720 on tämän toimeksiannon
   yhteydessä käyttäjän raportoima; raakaa raporttipakettia ei ole luettu tässä.
 - [S8: baseline-validointigradientti][S8].
+- [S9: syötemanifesti ja järvikorkeuksien muodostus][S9], baseline-commit
+  `7050b582edab3195669529f366b4f5a2915488c6`.
+- [S10: erillinen ensikontaktiprototyyppi ja dokumentoidut synteettiset tarkistukset][S10],
+  commit `24b81af244c867d7a3f7c36594589acc8d9c01f9`, draft PR #16.
 
 [S1]: https://github.com/annasuuronen/MaaltaMerelle/blob/7050b582edab3195669529f366b4f5a2915488c6/README.md
 [S1R]: https://github.com/annasuuronen/MaaltaMerelle/blob/7050b582edab3195669529f366b4f5a2915488c6/R/02_build_baseline_hydrology.R
@@ -470,3 +695,5 @@ odottavat erillistä hyväksyntää. **MODERATE=REVIEW_REQUIRED; NATIONAL=LOCKED
 [S7]: https://github.com/annasuuronen/MaaltaMerelle/blob/a3c42be333468e25c731faa3fd63f9687ed83978/docs/maaltamerelle_tutkimustilanne_20261019.md
 [S7R]: https://github.com/annasuuronen/MaaltaMerelle/blob/a3c42be333468e25c731faa3fd63f9687ed83978/docs/moderate_roihu_readonly_review_20261016.md
 [S8]: https://github.com/annasuuronen/MaaltaMerelle/blob/7050b582edab3195669529f366b4f5a2915488c6/docs/validation_gradient.md
+[S9]: https://github.com/annasuuronen/MaaltaMerelle/blob/7050b582edab3195669529f366b4f5a2915488c6/R/01_prepare_hydrology_inputs.R
+[S10]: https://github.com/annasuuronen/MaaltaMerelle/blob/24b81af244c867d7a3f7c36594589acc8d9c01f9/diagnostics/land_first_water/README.md
