@@ -1,0 +1,27 @@
+EXAMPLE: 12 --2--> 13 --2--> 14 [LAKE 1847]; land_edges=12->13; last_valid_land=13; first_water=14; hydrology=NOT_ASSESSED
+PASS: ordered land transitions and first lake contact retain their observations
+PASS: a longer land chain records every completed land-to-land transition
+CONFLUENCE: 7 --4--> 13 <--2-- 12; shared land 13 --2--> 14 --2--> 15 [LAKE]; this is synthetic topology, not a verified ditch
+PASS: two starts merge into a shared downstream land edge and water contact
+PASS: all eight Whitebox directions preserve exact neighbours and 2 m coordinates
+PASS: an interior zero preserves the whole land chain and last valid land
+PASS: a missing pointer remains a valid land observation rather than NoData
+PASS: invalid pointer values are observed but never invented into directions
+PASS: movement into NoData is counted but is not a valid land-to-land edge
+PASS: an unusable source has no valid land and no completed transition
+PASS: an invalid water class is an explicit unusable target rather than water
+PASS: cycle closure records an edge and cached target without a second read
+PASS: a prefixed cycle closes exactly at the budget before cap classification
+PASS: raster exit cannot fabricate a wrapped receiver or completed edge
+PASS: a work limit censors continuation rather than proving a physical break
+PASS: water contact exactly at the transition budget is retained
+PASS: real pointer terminals exactly at the budget are not mislabeled caps
+PASS: all three water classes terminate tracing without inventing river IDs
+PASS: water outgoing pointers change raw audit values but not the land route
+PASS: global offsets identify the same physical cell in two local windows
+PASS: source and callback contract errors cannot become plausible route results
+PASS: invalid arguments fail without invoking the cell reader
+PASS: supplied data and existing methods remain unchanged and repeatable
+PASS: the observer delegates exactly one traversal to each existing function
+TESTS=23 PASS=23 FAIL=0
+PASS: synthetic D8 continuity only; no real LOW validation or verified ditch network

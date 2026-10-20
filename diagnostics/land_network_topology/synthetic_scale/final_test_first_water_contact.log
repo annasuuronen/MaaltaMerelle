@@ -1,0 +1,29 @@
+EXAMPLE: 12 -> 13 -> 14; last_land=13; first_water=14; lake=1847; x=200007 y=6900005; scientific=NOT_ASSESSED
+PASS: two land transitions terminate at the first identified lake
+PASS: river-area contact is observed with an explicitly unknown recipient ID
+PASS: river-line contact is observed without inventing a waterbody ID
+PASS: all eight Whitebox directions use row-major neighbour cells
+PASS: zero pointer remains an unresolved land terminal
+PASS: missing pointer is distinct from a zero pointer
+PASS: invalid finite and infinite pointers never create synthetic directions
+PASS: a missing water-class value on valid land permits continued tracing
+PASS: an invalid domain observation stops before reading beyond NoData
+PASS: invalid source-domain data is an observation rather than a water hit
+PASS: invalid water classes stay explicit and never become first contacts
+PASS: a cycle includes its closing transition without rereading the cell
+PASS: domain exit cannot wrap east or west into another raster row
+PASS: contact exactly at the transition budget is retained
+PASS: a contact beyond the budget stays censored without an extra read
+PASS: a real terminal at the budget is not mislabeled as a visit cap
+PASS: merged land paths retain distinct source identities and one common contact
+PASS: water outgoing pointers cannot alter the first-water contact
+PASS: a lake with a missing or invalid ID remains an unidentified water contact
+PASS: global offsets preserve coordinates and identify the same cell across windows
+PASS: an already valid water source is rejected rather than counted as land
+PASS: invalid source indices and transition budgets fail before any callback
+PASS: invalid grid geometry is rejected
+PASS: provenance is required and cannot become implied verification
+PASS: malformed callback contracts and callback errors do not produce success
+PASS: method preserves supplied grid, source arrays, provenance and existing core
+TESTS=26 PASS=26 FAIL=0
+PASS: first-water synthetic prototype only; no CSC evidence or hydrological approval

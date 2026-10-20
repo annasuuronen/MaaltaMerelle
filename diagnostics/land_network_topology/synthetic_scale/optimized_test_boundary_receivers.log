@@ -1,0 +1,24 @@
+PASS: tracked exit rows equal all sixteen user-supplied coordinate, pointer and count records
+PASS: the exact fourteen receiver coordinates deduplicate the two known pairs
+PASS: reordering the approved table cannot change targets and joins
+PASS: a changed receiver cannot pass merely by retaining sixteen-to-fourteen counts
+PASS: missing duplicate extra and malformed exit records are rejected
+PASS: all original exit IDs remain mapped to the same deduplicated receivers
+PASS: NoData and invalid water class do not become valid land or water
+PASS: zero missing invalid and valid pointers are recorded without following them
+PASS: lake IDs survive only at usable lake cells while river IDs remain unknown
+PASS: duplicate missing or unexpected sampled cells cannot produce a plausible observation table
+PASS: shared cells remain two observed receivers and never become approved outlets
+PASS: the cell reader requests exactly fourteen unique cells per raster and nothing else
+PASS: fractional duplicate outside and excess IDs fail before touching any raster
+PASS: a reader returning neighbours matrices or the wrong number of values is rejected
+PASS: the integrated worker validates headers and joins sixteen exits using fifty-six values
+PASS: a changed target set stops before metadata or sample access
+PASS: geometry CRS layers and resolution disagreements fail before sampling
+PASS: the report distinguishes reported provenance from newly sampled receiver contents
+TERRA_VERSION=1.8.29
+PASS: actual non-square GeoTIFF extraction uses exact numeric cell IDs and original request order
+PASS: actual terra reads only the locked fourteen cells in four virtual LOW rasters
+PASS: the actual CLI uses the committed target file and refuses dirty or mismatched code
+TESTS=21 PASS=21 FAIL=0 NOT_RUN=0
+PASS: contract and synthetic observations only; no CSC reads or hydrological approval

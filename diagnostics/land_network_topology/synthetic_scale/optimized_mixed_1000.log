@@ -1,0 +1,3 @@
+PHASE=BUILD_COMPLETE ELAPSED_S=3.078000
+PHASE=INVENTORY_COMPLETE ELAPSED_S=0.952000
+RESULT n=1000 scenario=mixed cap=4 build_s=3.078000 inventory_s=0.952000 oracle_s=0.156000 network_mib=30.804626 inventory_mib=0.141823 land=930 edges=786 confluences=14 exits=100 checks=995 status=PASS
