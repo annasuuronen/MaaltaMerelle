@@ -108,8 +108,8 @@ if (entry$water_class == 1L &&
      entry$lake_objectid != l[target[1L], target[2L]]))
   stop("02B_LAKE_ID_MISMATCH")
 xy <- terra::xyFromCell(rasters$pointer, c(s, t))
-sx <- as.numeric(entry[, c("source_x", "source_y")])
-tx <- as.numeric(entry[, c("receiver_x", "receiver_y")])
+sx <- as.numeric(unlist(entry[, c("source_x", "source_y"), drop=FALSE], use.names=FALSE))
+tx <- as.numeric(unlist(entry[, c("receiver_x", "receiver_y"), drop=FALSE], use.names=FALSE))
 if (any(!is.finite(xy)) || any(!is.finite(c(sx, tx))) ||
     max(abs(xy[1L,] - sx), abs(xy[2L,] - tx)) > 1e-4)
   stop("02B_COORDINATE_MISMATCH")
