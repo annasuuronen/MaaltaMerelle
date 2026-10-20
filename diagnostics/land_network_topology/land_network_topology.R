@@ -72,6 +72,10 @@ build_land_d8_network <- function(pointer, water_class, valid, grid, provenance,
       (local - 1) %% grid$ncol %in% c(0, grid$ncol - 1),
     stringsAsFactors = FALSE
   )
+  # A one-cell outer ring is halo for every shape (tiny windows may have no
+  # core). This annotates all cells; it never removes halo sources or edges.
+  cells$is_core <- !cells$on_window_boundary
+  cells$is_halo <- cells$on_window_boundary
   starts <- which(kind == "LAND")
   read <- function(cell) {
     r <- (cell - 1L) %/% grid$ncol + 1L
@@ -96,6 +100,11 @@ build_land_d8_network <- function(pointer, water_class, valid, grid, provenance,
   row.names(edges) <- NULL
   edges$edge_id <- seq_len(nrow(edges))
   edges <- edges[, c("edge_id", edge_fields), drop = FALSE]
+  edges$from_is_core <- cells$is_core[match(edges$from_cell, cells$local_cell)]
+  edges$to_is_core <- cells$is_core[match(edges$to_cell, cells$local_cell)]
+  edges$zone_transition <- if (nrow(edges))
+    paste0(ifelse(edges$from_is_core, "CORE", "HALO"), "_TO_",
+           ifelse(edges$to_is_core, "CORE", "HALO")) else character()
   land_edges <- edges[edges$edge_kind == "LAND_TO_LAND", , drop = FALSE]
   if (anyDuplicated(edges$from_cell) || anyNA(match(land_edges$to_cell, starts))) {
     stop("Graph edge identity or land target accounting failed.", call. = FALSE)
@@ -111,6 +120,8 @@ build_land_d8_network <- function(pointer, water_class, valid, grid, provenance,
     lake_objectid = vapply(routes, function(r) r$contact$lake_objectid, numeric(1)),
     stringsAsFactors = FALSE, row.names = NULL
   )
+  route_summary$is_core <- cells$is_core[starts]
+  route_summary$is_halo <- cells$is_halo[starts]
   land_nodes <- cells[starts, , drop = FALSE]
   land_nodes$land_indegree_in_window <- tabulate(match(land_edges$to_cell, starts),
                                                 nbins = length(starts))
@@ -131,9 +142,19 @@ build_land_d8_network <- function(pointer, water_class, valid, grid, provenance,
   require_true(sum(route_summary$n_transitions) <= max_transitions &&
                  sum(route_summary$n_cell_reads) <= max_reads,
                "In-memory route work exceeded the declared bound.")
+  zones <- c("CORE_TO_CORE", "CORE_TO_HALO", "HALO_TO_CORE", "HALO_TO_HALO")
+  land_edge_zone_counts <- data.frame(zone_transition = zones,
+    n_edges = tabulate(match(land_edges$zone_transition, zones), nbins = 4L),
+    stringsAsFactors = FALSE)
+  require_true(sum(land_edge_zone_counts$n_edges) == nrow(land_edges) &&
+                 !anyNA(edges$from_is_core) && !anyNA(edges$to_is_core),
+               "Core/halo edge accounting failed.")
   list(
     method_version = "land-network-topology-v1", cells = cells,
     land_nodes = land_nodes, edges = edges, land_edges = land_edges,
+    core_land_nodes = land_nodes[land_nodes$is_core, , drop = FALSE],
+    halo_land_nodes = land_nodes[land_nodes$is_halo, , drop = FALSE],
+    land_edge_zone_counts = land_edge_zone_counts,
     confluences = land_nodes[land_nodes$is_confluence, , drop = FALSE],
     routes = routes, route_summary = route_summary,
     work_budget = list(max_cells = 121L, max_steps = as.integer(max_steps),
@@ -150,7 +171,8 @@ build_land_d8_network <- function(pointer, water_class, valid, grid, provenance,
 
 # Fixed categories, fixed numeric global-cell ordering. Never rank by route
 # length or water success. A missing category is local/budget-limited evidence.
-select_land_network_cases <- function(network) {
+select_land_network_cases <- function(network, scope = c("window", "core", "halo")) {
+  scope <- match.arg(scope)
   if (!is.list(network) || !identical(network$method_version, "land-network-topology-v1") ||
       !is.data.frame(network$land_nodes) || !is.data.frame(network$route_summary)) {
     stop("Expected a matching land-network-topology-v1 result.", call. = FALSE)
@@ -179,6 +201,17 @@ select_land_network_cases <- function(network) {
         "STEP_LIMIT", "FIRST_WATER_CONTACT"))) {
     stop("Invalid or mismatched network selection tables.", call. = FALSE)
   }
+  # Old serialized v1 results can still use the original window selection.
+  # Their missing core/halo annotation is unknown, never a measured zero.
+  flags <- c("is_core", "is_halo") %in% names(nodes)
+  has_zones <- all(flags)
+  logical_column <- function(x) is.logical(x) && length(x) == n && !anyNA(x)
+  if ((any(flags) && !has_zones) ||
+      (has_zones && (!logical_column(nodes$is_core) ||
+        !logical_column(nodes$is_halo) || any(nodes$is_core == nodes$is_halo))) ||
+      (!has_zones && scope != "window")) {
+    stop("Missing or invalid core/halo selection flags.", call. = FALSE)
+  }
   candidates <- list(
     CONFLUENCE = which(nodes$land_indegree_in_window >= 2L),
     LAND_CHAIN = which(r$n_land_edges >= 2L),
@@ -190,8 +223,19 @@ select_land_network_cases <- function(network) {
                        route_status = NA_character_,
                        n_matches = vapply(candidates, length, numeric(1)),
                        stringsAsFactors = FALSE, row.names = NULL)
+  cases$scope <- scope
+  cases$n_matches_window <- cases$n_matches
+  cases$n_matches_core <- if (has_zones)
+    vapply(candidates, function(ids) sum(nodes$is_core[ids]), numeric(1)) else NA_real_
+  cases$n_matches_halo <- if (has_zones)
+    vapply(candidates, function(ids) sum(nodes$is_halo[ids]), numeric(1)) else NA_real_
   for (i in seq_along(candidates)) {
     ids <- candidates[[i]]
+    if (scope != "window") {
+      eligible <- if (scope == "core") nodes$is_core else nodes$is_halo
+      ids <- ids[eligible[ids]]
+    }
+    cases$n_matches[i] <- length(ids)
     if (!length(ids)) next
     k <- ids[order(nodes$global_row[ids], nodes$global_col[ids])[1L]]
     cases$status[i] <- "SELECTED"
