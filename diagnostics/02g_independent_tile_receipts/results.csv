@@ -1,0 +1,6 @@
+phase,name,n,scenario,cap,status,reason,wall_s,build_s,inventory_s,oracle_s,peak_rss_mib,peak_group_rss_mib,network_mib,inventory_mib,land,edges,confluences,exits,checks
+targeted,protocol,27,receipts,,FAIL,,0.66,,,,65.02,65.039,,,,,,,
+targeted,protocol,27,receipts,,FAIL,,1.8779,,,,65.215,130.801,,,,,,,
+targeted,protocol,27,receipts,,PASS,,1.883,,,,65.195,130.855,,,,,,,2199
+targeted,protocol,27,receipts,,PASS,,2.3457,,,,65.23,130.84,,,,,,,2204
+targeted,protocol,27,receipts,,PASS,,1.9807,,,,65.25,130.898,,,,,,,2293

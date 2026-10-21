@@ -1,0 +1,133 @@
+{
+  "execution_s": 8.747353844955796,
+  "runs": [
+    {
+      "phase": "targeted",
+      "name": "protocol",
+      "n": 27,
+      "scenario": "receipts",
+      "status": "FAIL",
+      "reason": "",
+      "exit_code": 1,
+      "wall_s": 0.66,
+      "peak_rss_mib": 65.02,
+      "peak_group_rss_mib": 65.039,
+      "log_raw_sha256": "650742e2ffdcb9819cd2d2de5ebd42287f2ad82ee83570837c13cd055f959e6a",
+      "log_normalized_sha256": "650742e2ffdcb9819cd2d2de5ebd42287f2ad82ee83570837c13cd055f959e6a",
+      "log": "targeted_protocol.log",
+      "failure_output": "Error: 02G2_TEST_FAILURE: semantic result invariant to arrival order\nExecution halted\n"
+    },
+    {
+      "phase": "targeted",
+      "name": "protocol",
+      "n": 27,
+      "scenario": "receipts",
+      "status": "FAIL",
+      "reason": "",
+      "exit_code": 1,
+      "wall_s": 1.8779,
+      "peak_rss_mib": 65.215,
+      "peak_group_rss_mib": 130.801,
+      "log_raw_sha256": "379822415b3a548b13705446e01c1dbc5e321db520fa9f5736d22343e93829ae",
+      "log_normalized_sha256": "f50edaafa58ec54c45ea73f3865836ba8a9c68d1edfe95b89dff483b3d613e7f",
+      "log": "targeted_protocol_attempt2.log",
+      "failure_output": "PASS: two/three tiles match explicit oracle under independent message orders and replays \nPASS: receiver executes in a fresh R process with only its own state and one message \nPASS: conflicting payloads, runs, directions and unknown fields fail before mutation \nPASS: conflicting replay path with the same logical ID is rejected \nPASS: missing neighbour never fabricates receipts, imports or missing source units \nPASS: lost deliveries and lost acknowledgements remain distinct and restartable \nPASS: cross-tile cycle stays unresolved and has no finite cyclic accumulation \nPASS: zero, NA, invalid pointer, NoData, invalid class and raster boundary remain unresolved \nPASS: first contact ignores water outgoing pointer and never implies an outlet \nError: Core source inventory mismatch\nExecution halted\n"
+    },
+    {
+      "phase": "targeted",
+      "name": "protocol",
+      "n": 27,
+      "scenario": "receipts",
+      "status": "PASS",
+      "reason": "",
+      "exit_code": 0,
+      "wall_s": 1.883,
+      "peak_rss_mib": 65.195,
+      "peak_group_rss_mib": 130.855,
+      "log_raw_sha256": "4bf9162463a74bd21645090455892f47cb4d756aa97c763c24e78bd3d019334f",
+      "log_normalized_sha256": "8a3337ad20351346b59207d5acc357c8da4d3a11fc50ddea805bcc9985f70a33",
+      "cases": 10,
+      "checks": 2199,
+      "log": "targeted_protocol_attempt3.log"
+    },
+    {
+      "phase": "targeted",
+      "name": "protocol",
+      "n": 27,
+      "scenario": "receipts",
+      "status": "PASS",
+      "reason": "",
+      "exit_code": 0,
+      "wall_s": 2.3457,
+      "peak_rss_mib": 65.23,
+      "peak_group_rss_mib": 130.84,
+      "log_raw_sha256": "41071e0616dde3d939340a0c47d25d50453d2008141a7c796c62e2417a776b40",
+      "log_normalized_sha256": "46d8310894610c64e4caf10ac988e6cd7c14b3b9f319f5ba5f837a69eb5ddcde",
+      "cases": 11,
+      "checks": 2204,
+      "log": "targeted_protocol_attempt4.log"
+    },
+    {
+      "phase": "targeted",
+      "name": "protocol",
+      "n": 27,
+      "scenario": "receipts",
+      "status": "PASS",
+      "reason": "",
+      "exit_code": 0,
+      "wall_s": 1.9807,
+      "peak_rss_mib": 65.25,
+      "peak_group_rss_mib": 130.898,
+      "log_raw_sha256": "01f2c25fa7d334eac0b9aa525117508d9b12877ace81950699abcef3071cf0b7",
+      "log_normalized_sha256": "1e5c39103df969d3bc134de613398c9359eb1e2aad04d5c8465d94faa0ed7008",
+      "cases": 12,
+      "checks": 2293,
+      "log": "targeted_protocol_attempt5.log"
+    }
+  ],
+  "parent_commit": "08a7b17f856aa266cd989a3c9c2bb9734e623900",
+  "started_utc": "2026-10-21T04:12:02.953361+00:00",
+  "deadline_epoch": 1792557122.9533608,
+  "wall_budget_s": 1200,
+  "test_timeout_s": 120,
+  "address_space_limit_mib": 1536,
+  "aggregate_rss_stop_mib": 1792,
+  "source_snapshots": [
+    {
+      "diagnostics/02g_independent_tile_receipts/messages.R": "ea63ed38f9970741d4d895d96e46fcf92e804b853e72dfb7545d3435b8a41714",
+      "diagnostics/02g_independent_tile_receipts/tests/oracle.R": "a91c5257f1bf0fd37885640dac5f98e8aa1e2915d660b42172fae3c1b69dace9",
+      "diagnostics/02g_independent_tile_receipts/tests/receive_worker.R": "9e86c241e43d80d75d85447050720426a2c5605c31c8d49d31ca8cccf858676f",
+      "diagnostics/02g_independent_tile_receipts/tests/run_tests.py": "731cb264499f9c9722634ccdde6cba878d23f10f2cda4e78a76c2c26dbfbcb3d",
+      "diagnostics/02g_independent_tile_receipts/tests/test_protocol.R": "4600c5a37295e77937bf1d5ed5848eeac8a55a9c473a33a498e5ebac2e3e4f59"
+    },
+    {
+      "diagnostics/02g_independent_tile_receipts/messages.R": "d47e5e8154982a41ba44df3006ed3c9184f2c5747cffdb9b7de9acfe986c9170",
+      "diagnostics/02g_independent_tile_receipts/tests/oracle.R": "a91c5257f1bf0fd37885640dac5f98e8aa1e2915d660b42172fae3c1b69dace9",
+      "diagnostics/02g_independent_tile_receipts/tests/receive_worker.R": "9e86c241e43d80d75d85447050720426a2c5605c31c8d49d31ca8cccf858676f",
+      "diagnostics/02g_independent_tile_receipts/tests/run_tests.py": "731cb264499f9c9722634ccdde6cba878d23f10f2cda4e78a76c2c26dbfbcb3d",
+      "diagnostics/02g_independent_tile_receipts/tests/test_protocol.R": "4600c5a37295e77937bf1d5ed5848eeac8a55a9c473a33a498e5ebac2e3e4f59"
+    },
+    {
+      "diagnostics/02g_independent_tile_receipts/messages.R": "76ac855728d42d5cf9950885e2bfa0dd3a7d711d8d8e1eb7bed7f27982fcc34c",
+      "diagnostics/02g_independent_tile_receipts/tests/oracle.R": "a91c5257f1bf0fd37885640dac5f98e8aa1e2915d660b42172fae3c1b69dace9",
+      "diagnostics/02g_independent_tile_receipts/tests/receive_worker.R": "9e86c241e43d80d75d85447050720426a2c5605c31c8d49d31ca8cccf858676f",
+      "diagnostics/02g_independent_tile_receipts/tests/run_tests.py": "731cb264499f9c9722634ccdde6cba878d23f10f2cda4e78a76c2c26dbfbcb3d",
+      "diagnostics/02g_independent_tile_receipts/tests/test_protocol.R": "4a5ee243731a86705d96a514a923bfae92294c208d862f5df358b8c42a9afcae"
+    },
+    {
+      "diagnostics/02g_independent_tile_receipts/messages.R": "76ac855728d42d5cf9950885e2bfa0dd3a7d711d8d8e1eb7bed7f27982fcc34c",
+      "diagnostics/02g_independent_tile_receipts/tests/oracle.R": "a91c5257f1bf0fd37885640dac5f98e8aa1e2915d660b42172fae3c1b69dace9",
+      "diagnostics/02g_independent_tile_receipts/tests/receive_worker.R": "9e86c241e43d80d75d85447050720426a2c5605c31c8d49d31ca8cccf858676f",
+      "diagnostics/02g_independent_tile_receipts/tests/run_tests.py": "731cb264499f9c9722634ccdde6cba878d23f10f2cda4e78a76c2c26dbfbcb3d",
+      "diagnostics/02g_independent_tile_receipts/tests/test_protocol.R": "c6d8bebdd79f569c84f7c4ba55c5fae346bb2a5d92be791a5a34a2456ab08dfc"
+    },
+    {
+      "diagnostics/02g_independent_tile_receipts/messages.R": "76ac855728d42d5cf9950885e2bfa0dd3a7d711d8d8e1eb7bed7f27982fcc34c",
+      "diagnostics/02g_independent_tile_receipts/tests/oracle.R": "a91c5257f1bf0fd37885640dac5f98e8aa1e2915d660b42172fae3c1b69dace9",
+      "diagnostics/02g_independent_tile_receipts/tests/receive_worker.R": "9e86c241e43d80d75d85447050720426a2c5605c31c8d49d31ca8cccf858676f",
+      "diagnostics/02g_independent_tile_receipts/tests/run_tests.py": "731cb264499f9c9722634ccdde6cba878d23f10f2cda4e78a76c2c26dbfbcb3d",
+      "diagnostics/02g_independent_tile_receipts/tests/test_protocol.R": "82ddb28450b20e143872478c0e676076a2835063f460defc804f17f9d94f66f6"
+    }
+  ],
+  "last_completed_utc": "2026-10-21T04:15:26.544855+00:00"
+}
