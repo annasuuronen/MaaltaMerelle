@@ -1,0 +1,37 @@
+test_clean_git_fixture (__main__.Supervisor.test_clean_git_fixture) ... ok
+test_content_snapshot_detects_change (__main__.Supervisor.test_content_snapshot_detects_change) ... ok
+test_dirty_tracked_untracked_and_ignored (__main__.Supervisor.test_dirty_tracked_untracked_and_ignored) ... ok
+test_git_refuses_after_whole_package_deadline (__main__.Supervisor.test_git_refuses_after_whole_package_deadline) ... ok
+test_global_deadline_overrides_suite_budget (__main__.Supervisor.test_global_deadline_overrides_suite_budget) ... ok
+test_log_limit (__main__.Supervisor.test_log_limit) ... ok
+test_memory_accounts_for_child_in_another_session (__main__.Supervisor.test_memory_accounts_for_child_in_another_session) ... ok
+test_memory_limit (__main__.Supervisor.test_memory_limit) ... ok
+test_missing_R_is_not_run_not_pass (__main__.Supervisor.test_missing_R_is_not_run_not_pass) ... ok
+test_missing_executable (__main__.Supervisor.test_missing_executable) ... ok
+test_missing_pin_stops_all_suites (__main__.Supervisor.test_missing_pin_stops_all_suites) ... ok
+test_missing_separate_checkout_is_not_run (__main__.Supervisor.test_missing_separate_checkout_is_not_run) ... ok
+test_mutated_evidence_stops_before_any_suite (__main__.Supervisor.test_mutated_evidence_stops_before_any_suite) ... ok
+test_no_overwrite_existing_log (__main__.Supervisor.test_no_overwrite_existing_log) ... ok
+test_nonzero_is_failure (__main__.Supervisor.test_nonzero_is_failure) ... ok
+test_output_inside_source_is_rejected (__main__.Supervisor.test_output_inside_source_is_rejected) ... ok
+test_output_not_overwritten (__main__.Supervisor.test_output_not_overwritten) ... ok
+test_positive_summary (__main__.Supervisor.test_positive_summary) ... ok
+test_post_run_mutation_prevents_pass (__main__.Supervisor.test_post_run_mutation_prevents_pass) ... ok
+test_pr32_exact_pinned_summary (__main__.Supervisor.test_pr32_exact_pinned_summary) ... ok
+test_report_write_failure_still_emits_failed_summary (__main__.Supervisor.test_report_write_failure_still_emits_failed_summary) ... ok
+test_simulated_all_phases_pass (__main__.Supervisor.test_simulated_all_phases_pass) ... ok
+test_simulated_failure_keeps_independent_tests (__main__.Supervisor.test_simulated_failure_keeps_independent_tests) ... ok
+test_success (__main__.Supervisor.test_success) ... ok
+test_symlink_output_is_rejected (__main__.Supervisor.test_symlink_output_is_rejected) ... ok
+test_symlink_source_rejected (__main__.Supervisor.test_symlink_source_rejected) ... ok
+test_timeout (__main__.Supervisor.test_timeout) ... ok
+test_timeout_cleans_descendants (__main__.Supervisor.test_timeout_cleans_descendants) ... ok
+test_wrong_R_environment_cannot_pass (__main__.Supervisor.test_wrong_R_environment_cannot_pass) ... ok
+test_wrong_commit_origin_and_branch (__main__.Supervisor.test_wrong_commit_origin_and_branch) ... ok
+test_zero_fail_skip_duplicate_or_missing_summary (__main__.Supervisor.test_zero_fail_skip_duplicate_or_missing_summary) ... ok
+
+----------------------------------------------------------------------
+Ran 31 tests in 1.767s
+
+OK
+SUITE_RESULT cases=31 pass=31 fail=0 not_run=0

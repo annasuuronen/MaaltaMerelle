@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "mode": "OFFLINE_SYNTHETIC_ONLY",
+  "commit": "6d64d3ad32ea8803e7835d4c9b55778c70c8e9dd",
+  "pr32_commit": "fb5c673b5fb08652e846191074095627b364d7db",
+  "limits": {
+    "total_seconds": 300,
+    "aggregate_rss_bytes": 2147483648,
+    "poll_seconds": 0.02,
+    "log_bytes_per_suite": 4194304
+  },
+  "rss_measurement": "SAMPLED_PROCESS_GROUP_SUM_SHARED_PAGES_COUNTED_PER_PROCESS",
+  "hydrological_validation": "NOT_ASSESSED",
+  "channel_interpretation": "NOT_ASSESSED",
+  "MODERATE": "REVIEW_REQUIRED",
+  "NATIONAL": "LOCKED",
+  "suites": {
+    "observations": {
+      "status": "PASS",
+      "reason": "EXIT_ZERO",
+      "seconds": 0.2072,
+      "peak_rss_bytes": 16646144,
+      "returncode": 0,
+      "cases": 34,
+      "pass": 34,
+      "fail": 0,
+      "not_run": 0
+    },
+    "supervisor": {
+      "status": "PASS",
+      "reason": "EXIT_ZERO",
+      "seconds": 1.882,
+      "peak_rss_bytes": 61132800,
+      "returncode": 0,
+      "cases": 31,
+      "pass": 31,
+      "fail": 0,
+      "not_run": 0
+    },
+    "terra_compatibility": {
+      "status": "PASS",
+      "reason": "EXIT_ZERO",
+      "seconds": 3.324,
+      "peak_rss_bytes": 197091328,
+      "returncode": 0,
+      "cases": 6,
+      "pass": 6,
+      "fail": 0,
+      "not_run": 0
+    },
+    "pr32_separate_dag": {
+      "status": "PASS",
+      "reason": "EXIT_ZERO",
+      "seconds": 0.6183,
+      "peak_rss_bytes": 67977216,
+      "returncode": 0,
+      "cases": 15,
+      "checks": 739,
+      "expected_stops": 53
+    }
+  },
+  "observation_provenance": {
+    "schema_version": 1,
+    "repository": "annasuuronen/MaaltaMerelle",
+    "report_url": "https://github.com/annasuuronen/MaaltaMerelle/pull/22",
+    "observation_date": "2026-10-21",
+    "evidence_kind": "USER_REPORTED_CONSOLE_TRANSCRIPTION",
+    "observation_code_commit": "effab29aa4d44ecc897efc0c91c96f3bfc1b4db6",
+    "exit_inventory_code_commit": "40509d5006cbf7fb431701e7a48383dde0fdb38c",
+    "observation_sha256": "176558ec8306afdee35d7932d56faa5979313c5b8a748f2613ab11b76ee62683",
+    "target_sha256": "965eec1ea145adc346e52413f2539ec9fe17d82eeab7cf709fafa37f7696bf57",
+    "reported_original_adler32": "0f39c62a",
+    "adler32_verification": "NOT_RECOMPUTED",
+    "historical_d8_provenance": "INCOMPLETE",
+    "historical_d8_commit": "UNKNOWN",
+    "land_water_precision": "CONSOLE_PRINTED_ONLY",
+    "signed_raw_artifact": false,
+    "reported_geometry": {
+      "nrow": 6000,
+      "ncol": 6000,
+      "epsg": 3067,
+      "resolution_m": 2
+    },
+    "reported_read_budget": {
+      "calls": 4,
+      "unique_cells": 14,
+      "returned_values": 56,
+      "downstream_steps": 0
+    },
+    "source_routes_meaning": "REPORTED_COUNTS_NOT_ACCUMULATION",
+    "hydrological_validation": "NOT_ASSESSED",
+    "channel_interpretation": "NOT_ASSESSED",
+    "MODERATE": "REVIEW_REQUIRED",
+    "NATIONAL": "LOCKED"
+  },
+  "test_sources_sha256": {
+    "diagnostics/low_receiver_evidence/observation_provenance.json": "e607b70d67f2d03cf703be85985395495641b5532464973ad1608795007a4fb5",
+    "diagnostics/low_receiver_evidence/observed_receivers_20261021.csv": "176558ec8306afdee35d7932d56faa5979313c5b8a748f2613ab11b76ee62683",
+    "diagnostics/low_receiver_evidence/one_shot_roihu.sh": "63384e0a2ece01e1f72278b2b177d49cb9ebe9d0ec72ea8716e5d507466208bf",
+    "diagnostics/low_receiver_evidence/run_one_shot.py": "7f038fb0f6bb86ef83e6698472d262e0604dfa692da3afc76a9966dffced46ab",
+    "diagnostics/low_receiver_evidence/test_observed_receivers.py": "6c2f09a886d24fb2bead3a9b4a56629ffbe418f8a48fcbe585b5ca6545c78cf4",
+    "diagnostics/low_receiver_evidence/test_one_shot.py": "9bc0985627980db5bbad01f98557dee1717676ca75c9e910015ef6ad5bcd150d",
+    "diagnostics/low_receiver_evidence/test_terra_compatibility.R": "209e2026956ad99c68213b34e0065f183a8fea3599c70c4e04c185b93bee55f0"
+  },
+  "python": "3.12.14",
+  "r_dependencies": {
+    "status": "PASS",
+    "reason": "EXIT_ZERO",
+    "seconds": 2.8828,
+    "peak_rss_bytes": 175792128,
+    "returncode": 0
+  },
+  "r_versions_output": "R_VERSION=4.5.0\nTERRA_VERSION=1.8.29\n",
+  "status": "PASS",
+  "stop_reason": null,
+  "suite_counts": {
+    "PASS": 4,
+    "FAIL": 0,
+    "NOT_RUN": 0
+  },
+  "seconds": 9.0338
+}

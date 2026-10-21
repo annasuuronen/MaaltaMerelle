@@ -1,0 +1,40 @@
+test_all_d8_edges_are_one_step (__main__.ObservationContract.test_all_d8_edges_are_one_step) ... ok
+test_all_observation_rows_match_printed_transcript (__main__.ObservationContract.test_all_observation_rows_match_printed_transcript) ... ok
+test_complete_contract (__main__.ObservationContract.test_complete_contract) ... ok
+test_csv_headers_fields_and_missing_values (__main__.ObservationContract.test_csv_headers_fields_and_missing_values) ... ok
+test_current_sample_d8_status_all_valid (__main__.ObservationContract.test_current_sample_d8_status_all_valid) ... ok
+test_derived_one_known_link_and_no_inferred_water_contact (__main__.ObservationContract.test_derived_one_known_link_and_no_inferred_water_contact) ... ok
+test_each_observation_coordinate_and_group_size_is_locked (__main__.ObservationContract.test_each_observation_coordinate_and_group_size_is_locked) ... ok
+test_each_source_coordinate_and_both_uids_are_locked (__main__.ObservationContract.test_each_source_coordinate_and_both_uids_are_locked) ... ok
+test_eight_directions_against_independent_numbered_grid (__main__.ObservationContract.test_eight_directions_against_independent_numbered_grid) ... ok
+test_every_provenance_field_is_locked (__main__.ObservationContract.test_every_provenance_field_is_locked) ... ok
+test_evidence_bytes_and_provenance (__main__.ObservationContract.test_evidence_bytes_and_provenance) ... ok
+test_extra_observation_and_concatenated_output_rejected (__main__.ObservationContract.test_extra_observation_and_concatenated_output_rejected) ... ok
+test_fourteen_positions_and_no_unsupported_contacts (__main__.ObservationContract.test_fourteen_positions_and_no_unsupported_contacts) ... ok
+test_grid_edges_do_not_wrap (__main__.ObservationContract.test_grid_edges_do_not_wrap) ... ok
+test_group_and_route_tallies (__main__.ObservationContract.test_group_and_route_tallies) ... ok
+test_independent_whole_raster_indices (__main__.ObservationContract.test_independent_whole_raster_indices) ... ok
+test_invalid_direction_types_and_sources (__main__.ObservationContract.test_invalid_direction_types_and_sources) ... ok
+test_nested_provenance_mutations (__main__.ObservationContract.test_nested_provenance_mutations) ... ok
+test_nonfinite_nodata_and_noncanonical_numbers (__main__.ObservationContract.test_nonfinite_nodata_and_noncanonical_numbers) ... ok
+test_observed_pointer_changes_to_other_valid_codes (__main__.ObservationContract.test_observed_pointer_changes_to_other_valid_codes) ... ok
+test_order_permutations_invariant (__main__.ObservationContract.test_order_permutations_invariant) ... ok
+test_printed_precision_must_not_be_called_raw_precision (__main__.ObservationContract.test_printed_precision_must_not_be_called_raw_precision) ... ok
+test_provenance_duplicate_unknown_keys_and_boolean_version (__main__.ObservationContract.test_provenance_duplicate_unknown_keys_and_boolean_version) ... ok
+test_reject_all_missing_observed_rows (__main__.ObservationContract.test_reject_all_missing_observed_rows) ... ok
+test_reject_all_missing_target_rows (__main__.ObservationContract.test_reject_all_missing_target_rows) ... ok
+test_reject_duplicate_exits_and_receivers (__main__.ObservationContract.test_reject_duplicate_exits_and_receivers) ... ok
+test_reject_every_changed_observed_value (__main__.ObservationContract.test_reject_every_changed_observed_value) ... ok
+test_reject_every_changed_source_direction (__main__.ObservationContract.test_reject_every_changed_source_direction) ... ok
+test_reject_every_changed_source_route_count_even_if_global_sum_preserved (__main__.ObservationContract.test_reject_every_changed_source_route_count_even_if_global_sum_preserved) ... ok
+test_reject_wrong_historical_provenance_uid (__main__.ObservationContract.test_reject_wrong_historical_provenance_uid) ... ok
+test_reject_wrong_predicted_receivers (__main__.ObservationContract.test_reject_wrong_predicted_receivers) ... ok
+test_transcription_and_original_target_byte_mutations (__main__.ObservationContract.test_transcription_and_original_target_byte_mutations) ... ok
+test_unknown_or_missing_in_memory_columns_rejected (__main__.ObservationContract.test_unknown_or_missing_in_memory_columns_rejected) ... ok
+test_west_east_south_inventory (__main__.ObservationContract.test_west_east_south_inventory) ... ok
+
+----------------------------------------------------------------------
+Ran 34 tests in 0.125s
+
+OK
+SUITE_RESULT cases=34 pass=34 fail=0 not_run=0
