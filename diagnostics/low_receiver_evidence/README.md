@@ -165,6 +165,11 @@ Kaikki uudet ajot säilyvät [local_validation](local_validation/)-hakemistossa;
 [validation_record.json](local_validation/validation_record.json) sitoo lokien
 tiivisteet ja kertoo myös kehitysvaiheen FAIL-havainnosta. Aiempiin tuloksiin
 tai muiden PR:ien raportteihin ei kirjoitettu.
+Raakalokit säilyvät tavutasolla alkuperäisinä, myös R-tulosteen rivien
+loppuvälilyönnit. Vain tämän uuden lokihakemiston `*.log`-tiedostoilta on
+rajatulla `.gitattributes`-määrityksellä poistettu tekstin whitespace-lint;
+ohjelmakoodi, JSON ja Markdown tarkistetaan normaalisti. Lokien omat
+SHA256-tarkistukset säilyvät voimassa.
 
 | Paikallinen one-shot | Testattu toteutuscommit | Havainto / valvoja / terra / erillinen DAG | Tila | Koko aika |
 | --- | --- | --- | --- | --- |
