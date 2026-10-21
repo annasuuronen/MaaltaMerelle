@@ -1,0 +1,4 @@
+DETAIL n=100 scenario=long cap=4 censored=96 reached_exits=4 checks=520 status=PASS
+DETAIL n=100 scenario=long cap=16 censored=84 reached_exits=16 checks=1137 status=PASS
+DETAIL n=100 scenario=long cap=32 censored=68 reached_exits=32 checks=1750 status=PASS
+RESULT n=100 scenario=long cap=0 build_s=1.329000 inventory_s=0.472000 compatibility_s=0.469000 oracle_s=0.484000 comparisons=3 checks=1751 status=PASS

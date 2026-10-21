@@ -1,0 +1,49 @@
+PASS: three land cells form an internal chain without requiring any water
+EXAMPLE: 7 --4--> 13 <--2-- 12; common 13 --2--> 14 --2--> 15 [LAKE 9001]; unique land edges=3; confluence=13; accumulation=NOT_COMPUTED
+PASS: two upstream routes form one confluence and share deduplicated downstream edges
+PASS: shared water targets are not misclassified as land confluences
+PASS: outgoing edge kind belongs to the source even when the next land node is zero
+PASS: missing and invalid pointers stay separate local terminals
+PASS: a NoData target is an explicit edge but never a land node or water contact
+PASS: invalid water classes cannot become land or known water
+PASS: cycles retain each directed edge once and do not create accumulation
+PASS: cycle and incoming prefix use graph indegree rather than route multiplicity
+PASS: window exits have no fabricated or row-wrapped outgoing edge
+PASS: work limits censor routes while the local one-step edge graph stays complete
+PASS: lake, river-area and river-line contacts retain classes but not invented river IDs
+PASS: all Whitebox directions preserve the expected one-step land neighbour
+PASS: non-square matrices use full row-major raster indexing
+PASS: overlapping windows give the same global IDs and coordinates to one edge
+PASS: integer and double matrices and numeric dimensions both satisfy the contract
+PASS: a NULL lake-ID input stays explicitly unknown at a lake contact
+PASS: a window containing only water has typed empty network and missing cases
+PASS: all-NoData and all-invalid-class windows cannot create land sources
+PASS: an isolated zero land cell has no fabricated edge or chain
+PASS: unknown external inflow is retained even for a locally closed-looking chain
+PASS: case selection uses numeric global row then column instead of lexical UID order
+PASS: selection does not prefer a longer or successful water-ending route
+PASS: work accounting accepts the 121-cell bound and rejects larger windows
+PASS: input shape, types, missing validity and step bounds are rejected
+PASS: grid and provenance validation also runs when there are no land starts
+PASS: case selection rejects malformed tables instead of reporting missing cases
+PASS: water outgoing pointers cannot change land edges, selections or contacts
+PASS: supplied matrices, metadata and existing route functions remain unchanged
+PASS: an 11 by 11 window keeps all 121 cells and separates its exact 81-cell core
+PASS: a core confluence includes an observed incoming land edge from the halo
+PASS: a confluence only in the halo is never promoted to a core case
+PASS: core selection skips a smaller global halo cell without ranking by route success
+PASS: a multi-cell core land chain remains observable without any water contact
+PASS: a core route continues through halo before its unresolved window exit
+PASS: a core confluence shared downstream edge is present once across halo-fed routes
+PASS: halo-only chains leave all absent core case rows explicit
+PASS: halo land indegree is observed locally without inventing total upstream accumulation
+PASS: core and halo use local positions while offsets preserve global identity and coordinates
+PASS: all four directed core-halo land-edge classes have separate exact counts
+PASS: water-only core and halo preserve empty scoped cases and zero typed edge counts
+PASS: NoData-only and invalid-class-only windows cannot supply core or halo cases
+PASS: scoping preserves all previous termination classes and source outgoing semantics
+PASS: invalid scopes and missing nonlogical or inconsistent core-halo flags are rejected
+PASS: default whole-window selection remains explicit and never changes stored graph or routes
+PASS: old serialized results without zone flags keep window selection and unknown zone counts
+TESTS=46 PASS=46 FAIL=0
+PASS: bounded synthetic topology only; no accumulation or hydrological approval

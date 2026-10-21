@@ -1,0 +1,19 @@
+PASS: long_chain_censored_at_256
+PASS: exit_one_move_before_cap
+PASS: at_exit_source_exactly_at_cap
+PASS: zero_one_move_before_cap
+PASS: cycle_before_cap
+PASS: multiple_serial_confluences
+PASS: first_water_class_1
+PASS: water_outgoing_pointer_0
+PASS: water_outgoing_pointer_3
+PASS: water_outgoing_pointer_NA
+PASS: first_water_class_2
+PASS: first_water_class_3
+PASS: shorter_source_budget_32
+PASS: other_source_observes_beyond_primary_cap
+PASS: other_source_direct_exit
+PASS: serial inventory cap=32 baseline identical
+PASS: serial inventory cap=64 baseline identical
+PASS: serial inventory cap=128 baseline identical
+RESULT n=1000 scenario=sparse cap=256 sparse_cases=15 serial_inventory_cases=3 checks=2029 status=PASS

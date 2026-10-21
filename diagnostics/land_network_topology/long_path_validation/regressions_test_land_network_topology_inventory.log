@@ -1,0 +1,27 @@
+PASS: two land branches merge and share one unique boundary exit
+PASS: three independent branches retain three separate exit events
+PASS: one source can be observed through two consecutive confluences
+PASS: core confluences preserve the identity and code of a halo incoming edge
+PASS: shared downstream segments reference deduplicated canonical edges and known lengths
+PASS: exit groups contain each observed source once including the direct exit cell
+PASS: shared geometry measures observed diagonal steps without inventing an exit step
+PASS: a boundary cell pointing inward is not a direct exit
+PASS: an outward receiver is only predicted from an already observed core direction
+PASS: an exit code absent from observed internal edges stays explicitly unknown
+PASS: full-grid exits differ from local-window exits and missing full-grid knowledge
+PASS: zero pointers and missing or invalid pointers never become exit events
+PASS: NoData targets remain explicit internal unusable transitions rather than exits
+PASS: cycles remain bounded observations without inventing exits or accumulation
+PASS: capped source routes are not extended to a graph-reachable exit
+PASS: a capped source reaching a confluence cannot claim its longer observed suffix
+PASS: N minus E equals zero in a complete cycle without validating an exit identity
+PASS: local indegree and observed source memberships are not total accumulation
+PASS: global offsets remain stable for confluences and predicted exit recipients
+PASS: water-only and NoData-only windows return typed empty inventories
+PASS: N minus internal edges is conditional and never forced to sixteen
+PASS: a cycle-closing edge is a canonical reference and finite observed segment
+PASS: inventories are deterministic and leave every source observation unchanged
+PASS: inventory formation performs no fresh trace or observation callback
+PASS: malformed graph and route identity cannot produce plausible inventories
+TESTS=25 PASS=25 FAIL=0
+PASS: synthetic topology inventory only; no CSC or hydrological approval
