@@ -1,0 +1,95 @@
+{
+  "parent_commit": "35808cf6fea0b74dcdc878ec9fb9629ee66f8ea5",
+  "started_utc": "2026-10-21T06:34:51.069020+00:00",
+  "execution_s": 2.2401418500521686,
+  "execution_budget_s": 120,
+  "address_space_limit_mib": 1536,
+  "sampled_group_rss_stop_mib": 1792,
+  "max_grid_positions": 27,
+  "max_owned_land_sources": 11,
+  "runs": [
+    {
+      "phase": "targeted",
+      "name": "count_core",
+      "n": 27,
+      "scenario": "complete_dag",
+      "status": "PASS",
+      "reason": "",
+      "exit_code": 0,
+      "wall_s": 0.7642,
+      "peak_rss_mib": 65.074,
+      "peak_group_rss_mib": 65.047,
+      "log_raw_sha256": "dff67fb639973693283d9ed5a342622dd7dec21bc297d5b33ec4f02421685cc1",
+      "log_normalized_sha256": "00be5e1ad92f5fdc3e26d8d4e9855029905f0b946852bb58fd3262ae27168524",
+      "cases": 14,
+      "checks": 689,
+      "stop_cases": 48,
+      "log": "targeted_count_core.log"
+    },
+    {
+      "phase": "targeted",
+      "name": "count_core",
+      "n": 27,
+      "scenario": "complete_dag",
+      "status": "PASS",
+      "reason": "",
+      "exit_code": 0,
+      "wall_s": 0.8153,
+      "peak_rss_mib": 65.074,
+      "peak_group_rss_mib": 65.047,
+      "log_raw_sha256": "0ec1aad0874d09854a8c5ed6d511131d885d8a3262151cacbd3a130c10275884",
+      "log_normalized_sha256": "3c0e7df36cf8218f00434cb1bc466b18e921a5d9af68aa89c0d0a25998f3a052",
+      "cases": 14,
+      "checks": 709,
+      "stop_cases": 52,
+      "log": "targeted_count_core_attempt2.log"
+    },
+    {
+      "phase": "targeted",
+      "name": "count_core",
+      "n": 27,
+      "scenario": "complete_dag",
+      "status": "PASS",
+      "reason": "",
+      "exit_code": 0,
+      "wall_s": 0.6606,
+      "peak_rss_mib": 65.023,
+      "peak_group_rss_mib": 64.98,
+      "log_raw_sha256": "86fd1b4d73b78ce7ce47f1fc2d654aa5750726335e8c90483dc4bb9bdca340d5",
+      "log_normalized_sha256": "7ecf87ad22b1e9ea008754bf530cce3aaced4dda6a3d36f961fd73353d814c39",
+      "cases": 15,
+      "checks": 739,
+      "stop_cases": 53,
+      "log": "targeted_count_core_attempt3.log"
+    }
+  ],
+  "not_run": [
+    "previous_regression_campaigns",
+    "1000_cells",
+    "10000_cells",
+    "real_rasters",
+    "CSC"
+  ],
+  "deadline_epoch": 1792564760.979173,
+  "source_snapshots": [
+    {
+      "diagnostics/02g_complete_local_dag_core/count_core.R": "ee91550a6400b72046d712623375a449fcca9f05f8e0eebc79fa529792e76b0e",
+      "diagnostics/02g_complete_local_dag_core/tests/fixtures_oracle.R": "6869311039fa7bdccf382a9091e33962cb915f4ec8fb9456b18b5e8e9688d306",
+      "diagnostics/02g_complete_local_dag_core/tests/run_tests.py": "a1272bc1d240aa43873d8d1bf1b7557e9e6612220ac237799ff5741662dc7475",
+      "diagnostics/02g_complete_local_dag_core/tests/test_count_core.R": "de56ffade087df646fe4f1dca36cae28efe035f9c32783ca0c9756c29cdaaed4"
+    },
+    {
+      "diagnostics/02g_complete_local_dag_core/count_core.R": "25a6399f93704e8539138dd7d3670f418d281cc48b37f0bbdbcbf8bf5e05fe47",
+      "diagnostics/02g_complete_local_dag_core/tests/fixtures_oracle.R": "6869311039fa7bdccf382a9091e33962cb915f4ec8fb9456b18b5e8e9688d306",
+      "diagnostics/02g_complete_local_dag_core/tests/run_tests.py": "a1272bc1d240aa43873d8d1bf1b7557e9e6612220ac237799ff5741662dc7475",
+      "diagnostics/02g_complete_local_dag_core/tests/test_count_core.R": "1d6b11ed1d55eed190a06d078bbe9d611b5074e737e6ce9b6861ebe3c822d315"
+    },
+    {
+      "diagnostics/02g_complete_local_dag_core/count_core.R": "3d430c8193e82602fefd2d7df603f5c5a28fab6cb1bd429ae90fcdd4fdfe96a4",
+      "diagnostics/02g_complete_local_dag_core/tests/fixtures_oracle.R": "6869311039fa7bdccf382a9091e33962cb915f4ec8fb9456b18b5e8e9688d306",
+      "diagnostics/02g_complete_local_dag_core/tests/run_tests.py": "a1272bc1d240aa43873d8d1bf1b7557e9e6612220ac237799ff5741662dc7475",
+      "diagnostics/02g_complete_local_dag_core/tests/test_count_core.R": "9452facace4b5b5e5c0c9a5d03f18e57799e5d56f1807a4cc0d666a2ae51b89c"
+    }
+  ],
+  "last_completed_utc": "2026-10-21T06:37:23.220571+00:00"
+}

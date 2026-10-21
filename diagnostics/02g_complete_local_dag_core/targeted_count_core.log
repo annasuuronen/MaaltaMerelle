@@ -1,0 +1,16 @@
+PASS: chain counts include each land unit once, water contributes zero
+PASS: C1 two tributaries merge without double counting
+PASS: 27-position 11-source three-tributary complete local graph
+PASS: several first waters retain classes and partition sources
+PASS: all eight Whitebox directions are checked on global cell identities
+PASS: node, edge, core, census and inventory row order do not affect results
+PASS: water outgoing zero, missing or invalid code is never followed
+PASS: zero-source known-water domain has typed zero counts
+PASS: a cell DAG may cross A-B-A without a cell cycle
+PASS: C2 censored unions and a bare complete flag cannot enter this result mode
+PASS: C3 cycle and inconsistent DAG structure stop before numeric output
+PASS: C4 missing neighbour, halo or owned observation cannot be replaced
+PASS: invalid observations, duplicate rows and source inventory are rejected
+PASS: size, identity, numerical precision and external-import contracts are bounded
+R_VERSION=4.5.0
+RESULT n=27 scenario=complete_dag cases=14 checks=689 stop_cases=48 status=PASS

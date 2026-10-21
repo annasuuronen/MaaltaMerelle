@@ -1,0 +1,4 @@
+phase,name,n,scenario,cap,status,reason,wall_s,build_s,inventory_s,oracle_s,peak_rss_mib,peak_group_rss_mib,network_mib,inventory_mib,land,edges,confluences,exits,checks
+targeted,count_core,27,complete_dag,,PASS,,0.7642,,,,65.074,65.047,,,,,,,689
+targeted,count_core,27,complete_dag,,PASS,,0.8153,,,,65.074,65.047,,,,,,,709
+targeted,count_core,27,complete_dag,,PASS,,0.6606,,,,65.023,64.98,,,,,,,739
