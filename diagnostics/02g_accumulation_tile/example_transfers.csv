@@ -1,0 +1,3 @@
+"transfer_id","sending_tile","receiving_tile","source_cell_uid","receiver_cell_uid","d8_code","d8_verified_by_core","known_local_accumulation_cells","n_transferred_sources","external_import","transfer_status"
+"SYNTHETIC-02G:102:203>SYNTHETIC-02G:102:204","A","B","SYNTHETIC-02G:102:203","SYNTHETIC-02G:102:204",2,TRUE,4,4,"UNKNOWN","OBSERVED_INTERNAL_TRANSFER"
+"SYNTHETIC-02G:102:206>SYNTHETIC-02G:102:207","B","C","SYNTHETIC-02G:102:206","SYNTHETIC-02G:102:207",2,TRUE,8,8,"UNKNOWN","OBSERVED_INTERNAL_TRANSFER"

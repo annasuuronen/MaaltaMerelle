@@ -1,0 +1,5 @@
+PASS: 2 tiles cap=2 equal monolith
+PASS: 2 tiles cap=32 equal monolith
+PASS: 3 tiles cap=2 equal monolith
+PASS: 3 tiles cap=32 equal monolith
+RESULT n=27 scenario=tiles cap=32 comparisons=4 checks=230 status=PASS
