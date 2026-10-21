@@ -151,7 +151,7 @@ class Supervisor(unittest.TestCase):
         r=self.root/'fake_Rscript'
         r.write_text('#!'+sys.executable+'\nimport sys\n'
           'if "-e" in sys.argv: print("R_VERSION=FAKE TERRA_VERSION=FAKE")\n'
-          'elif "test_count_core.R" in sys.argv[-1]: print("RESULT n=27 scenario=complete_dag cases=15 checks=739 stop_cases=53 status=PASS")\n'
+          'elif "test_count_core.R" in sys.argv[-1]: print("RESULT n=27 scenario=complete_dag cases=15 checks='+('738' if mode=='pr32_bad_summary' else '739')+' stop_cases=53 status=PASS")\n'
           'else: print("SUITE_RESULT cases=1 pass=1 fail=0 not_run=0")\n')
         r.chmod(0o700)
         separate=self.root/'pr32';separate.mkdir()
@@ -229,6 +229,10 @@ class Supervisor(unittest.TestCase):
     def test_report_write_failure_still_emits_failed_summary(self):
         rc,s,_=self.simulated_run('report_failure')
         self.assertEqual(rc,1);self.assertIn('REPORT_WRITE_FAILED',s['stop_reason'])
+
+    def test_pr32_summary_mismatch_is_failure(self):
+        rc,s,_=self.simulated_run('pr32_bad_summary')
+        self.assertEqual(rc,1);self.assertEqual(s['suites']['pr32_separate_dag']['status'],'FAIL')
 
 
 if __name__=='__main__':

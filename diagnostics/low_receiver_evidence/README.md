@@ -71,7 +71,7 @@ kieltäydytään käyttämästä tai ylikirjoittamasta.
    säilyttävät väärennetyt lähdemäärät, kaikki kahdeksan Whitebox-suuntaa
    riippumattomasti numeroidulla ei-neliöruudukolla, rajan yli kiertyminen,
    NoData/NaN/Inf, väärät kelvolliset pointerit, rivijärjestys ja provenienssi.
-2. **31 ajurin turvatestiä.** Väärä commit/origin/haara, dirty/ignored,
+2. **32 ajurin turvatestiä.** Väärä commit/origin/haara, dirty/ignored,
    sisältömuutos, nollatestit, osittainen NOT_RUN, toistettu yhteenveto,
    puuttuva R/ohjelma, väärä R-versio, aikakatkaisu, muistiraja, lokiraja,
    erillisen prosessiryhmän lapsen muisti, jälkeläisten pysäytys,
@@ -152,7 +152,7 @@ Certificate Helper -käytäntö; tätä toteutusta varten ei vaihdeta avaimia.
 
 ## Todellinen testinäyttö ja avoimet portit
 
-Kehitysvaiheen paikalliset testit: 34 havainto-, 31 valvoja- ja 6 terra-ryhmää
+Kehitysvaiheen paikalliset testit: 34 havainto-, 32 valvoja- ja 6 terra-ryhmää
 läpäisty R 4.5.0 / terra 1.8.29 -ympäristössä. Ensimmäinen uusi terra-koe
 oli 5 PASS / 1 FAIL: fixture odotti NA_real_-esitystä ja GeoTIFF palautti
 NaN:n. Molempien puuttuvuusmaski ja jokainen ei-puuttuva arvo tarkistetaan

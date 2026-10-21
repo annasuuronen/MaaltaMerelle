@@ -188,7 +188,12 @@ def prepare_pr32(repo, destination):
             p = Path(member.name)
             if p.is_absolute() or ".." in p.parts or not (member.isdir() or member.isfile()):
                 raise Stop("UNSAFE_PR32_ARCHIVE")
-        tar.extractall(root)
+        if hasattr(tarfile, "data_filter"):
+            tar.extractall(root, filter="data")
+        else:
+            # Python 3.8: all entries were already checked as relative regular
+            # files/directories from the pinned Git archive into a fresh root.
+            tar.extractall(root)
     return root / PR32_DIR
 
 
@@ -264,7 +269,8 @@ def main(argv=None):
             text = log.read_text(errors="replace")
             if parse and record["status"] == "PASS":
                 try:
-                    record.update(require_summary(text))
+                    check = require_summary if parse is True else parse
+                    record.update(check(text))
                 except Stop as exc:
                     record.update(status="FAIL", reason=str(exc))
             records[name] = record
@@ -298,14 +304,8 @@ def main(argv=None):
                 records["terra_compatibility"] = {"status": "NOT_RUN", "reason": "TERRA_DEPENDENCY_FAILED"}
             if args.pr32_repo:
                 unit = prepare_pr32(pr32_repo, output)
-                run("pr32_separate_dag", [rscript, "--vanilla", str(unit/"tests/test_count_core.R")], 30, parse=False)
-                rec = records["pr32_separate_dag"]
-                if rec["status"] == "PASS":
-                    text = (output/"pr32_separate_dag.log").read_text()
-                    try:
-                        rec.update(require_pr32_summary(text))
-                    except Stop as exc:
-                        rec.update(status="FAIL", reason=str(exc))
+                run("pr32_separate_dag", [rscript, "--vanilla", str(unit/"tests/test_count_core.R")],
+                    30, parse=require_pr32_summary)
             else:
                 records["pr32_separate_dag"] = {"status": "NOT_RUN", "reason": "SEPARATE_PINNED_CHECKOUT_NOT_SUPPLIED"}
     except (Stop, OSError, ValueError, subprocess.SubprocessError) as exc:
