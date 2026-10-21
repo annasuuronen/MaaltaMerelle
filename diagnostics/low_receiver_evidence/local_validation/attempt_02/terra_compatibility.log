@@ -1,0 +1,8 @@
+R_VERSION=4.5.0 TERRA_VERSION=1.8.29
+PASS: numeric-ID extraction preserves exact request order and NoData 
+PASS: malformed IDs are rejected before extraction 
+PASS: four-raster adapter returns only fourteen values per requested raster 
+PASS: compatible four-raster geometry is accepted without a sample read 
+PASS: shifted CRS resolution layer and full-grid conflicts stop at headers 
+PASS: a single shifted raster is rejected independently of common-grid checks 
+SUITE_RESULT cases=6 pass=6 fail=0 not_run=0

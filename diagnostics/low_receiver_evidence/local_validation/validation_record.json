@@ -1,0 +1,44 @@
+{
+  "recorded_at_utc": "2026-10-21T08:42:50.857557+00:00",
+  "local_final_status": "PASS",
+  "local_final_cases": 87,
+  "local_final_suite_counts": {
+    "PASS": 4,
+    "FAIL": 0,
+    "NOT_RUN": 0
+  },
+  "tested_implementation_commit": "fb91328073b7322dd6784eeb745f20708f0f0826",
+  "pr32_commit": "fb5c673b5fb08652e846191074095627b364d7db",
+  "csc_one_shot_status": "NOT_RUN",
+  "real_raster_reads": 0,
+  "slurm_jobs": 0,
+  "historical_campaigns": "NOT_RUN",
+  "development_failure": {
+    "suite": "tiny terra compatibility",
+    "cases": 6,
+    "PASS": 5,
+    "FAIL": 1,
+    "NOT_RUN": 0,
+    "cause": "Test expected NA_real_; tiny synthetic GeoTIFF NoData returned NaN.",
+    "correction": "Exact missingness mask plus exact values at every nonmissing requested cell.",
+    "evidence": "Observed tool output during development; no standalone raw log was saved."
+  },
+  "attempt_02_reason": "Recheck supervisor after requiring PR32 exact summary before printing PASS; one additional negative case and explicit safe tar filter.",
+  "current_code_hashes_match_tested_commit": true,
+  "artifacts_sha256": {
+    "attempt_01/observations.log": "fc6e825d3d1e88e216fe9662d9b08198c5e70f2d7fc05c5d1529a815d28adb2b",
+    "attempt_01/pr32_separate_dag.log": "86fd1b4d73b78ce7ce47f1fc2d654aa5750726335e8c90483dc4bb9bdca340d5",
+    "attempt_01/r_dependencies.log": "1475fd0289e60c7dec22c5d3c0d34d5f6a4331982f0256c4544b74ebb8e94c2a",
+    "attempt_01/summary.json": "44b7c5fd669d4d417329e159509ceff35e82b7b81c33bf37c9fe2f9037e43af4",
+    "attempt_01/supervisor.log": "3e191a67dc8ad9178dfbc4cc722bbe3147ae4eb8f980b7eb5d0822e5a32277c6",
+    "attempt_01/terra_compatibility.log": "e8c5f061543802a08d4270a22aee4b17f4d21260176843b44489b20163b7f5b0",
+    "attempt_01/transcript.log": "3d5a772e9d1f59b0fed9b76a74a9dda6d93f8b4ddc20c07299bb7e84efb1d6c0",
+    "attempt_02/observations.log": "f72f0245e6ad4839f61438f3a7eae8335cb7ee54dbb369e9656cfa1f90e72ccc",
+    "attempt_02/pr32_separate_dag.log": "86fd1b4d73b78ce7ce47f1fc2d654aa5750726335e8c90483dc4bb9bdca340d5",
+    "attempt_02/r_dependencies.log": "1475fd0289e60c7dec22c5d3c0d34d5f6a4331982f0256c4544b74ebb8e94c2a",
+    "attempt_02/summary.json": "8e21b10cfe2da6de72e37ca7732fdc7600e863a10a1f3620ca9fb7d7112edc2b",
+    "attempt_02/supervisor.log": "fee50e343bb7050e61b2b14980faea0b9c8cd5b039a26b9297266699198b1c65",
+    "attempt_02/terra_compatibility.log": "e8c5f061543802a08d4270a22aee4b17f4d21260176843b44489b20163b7f5b0",
+    "attempt_02/transcript.log": "48c1bc53aa01b5ffbc1ed65fa495fd983a4645a99e2d02e5fc824b0bcd04ffb9"
+  }
+}

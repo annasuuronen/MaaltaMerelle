@@ -159,8 +159,39 @@ NaN:n. Molempien puuttuvuusmaski ja jokainen ei-puuttuva arvo tarkistetaan
 nyt erikseen; korjattu sarja on 6 PASS / 0 FAIL / 0 NOT_RUN. Tuotantokoodia
 muuttamalla tai puuttuvaa solua hyväksymällä tätä ei korjattu.
 
-Puhtaasta lukitusta Git-versiosta tehtävän koko paketin todelliset paikalliset
-lokit ja resurssit lisätään tämän katselmoinnin loppuraporttiin.
+Koko Bash → host-Python → R -ketju on nyt suoritettu paikallisesti puhtaista,
+lukituista Git-versioista. Molempien lähdecheckoutien loppuvarmistus läpäisi.
+Kaikki uudet ajot säilyvät [local_validation](local_validation/)-hakemistossa;
+[validation_record.json](local_validation/validation_record.json) sitoo lokien
+tiivisteet ja kertoo myös kehitysvaiheen FAIL-havainnosta. Aiempiin tuloksiin
+tai muiden PR:ien raportteihin ei kirjoitettu.
+
+| Paikallinen one-shot | Testattu toteutuscommit | Havainto / valvoja / terra / erillinen DAG | Tila | Koko aika |
+| --- | --- | --- | --- | --- |
+| 1 | `6d64d3ad32ea8803e7835d4c9b55778c70c8e9dd` | 34 / 31 / 6 / 15 | 4 PASS, 0 FAIL, 0 NOT_RUN | 9,0338 s |
+| 2, lopullinen ajurikoodi | `fb91328073b7322dd6784eeb745f20708f0f0826` | 34 / 32 / 6 / 15 | 4 PASS, 0 FAIL, 0 NOT_RUN | 9,4443 s |
+
+Toinen paikallinen tarkistus oli perusteltu ajurin lähdekoodimuutoksella:
+PR #32:n täsmällinen yhteenveto tarkistetaan ennen vaiheen PASS-tulostusta,
+sille lisättiin hylkäystesti ja tar-purkusuodatin määriteltiin eksplisiittisesti.
+Ensimmäisen ajon Python-deprekaatiovaroitus säilyy alkuperäisessä lokissa;
+se ei ollut testivirhe. Molemmat ajot käyttivät R 4.5.0 / terra 1.8.29 / Python
+3.12.14 -ympäristöä ja erillistä lukittua PR #32 -checkoutia. Raportointicommit
+lisää vain tämän näyttöaineiston ja dokumentaation; testatun koodin SHA256:t
+varmistetaan samoiksi kuin toisessa ajossa.
+
+| Lopullinen paikallinen vaihe | Tapauksia | Aika | Näytteistetty lapsipuun RSS-huippu |
+| --- | --- | --- | --- |
+| Havaintosopimus | 34 PASS | 0,2069 s | 16,00 MiB |
+| Valvojan turvatestit | 32 PASS | 2,0549 s | 58,29 MiB |
+| Pieni terra-yhteensopivuus | 6 PASS | 3,3997 s | 187,91 MiB |
+| PR #32 erillisestä versiosta | 15 PASS, 739 tarkistusta, 53 odotettua STOP:ia | 0,6736 s | 64,92 MiB |
+
+Yhteensä lopullisessa paketissa **87 onnistunutta ohjelmistotapausta**;
+odotetut hylkäykset ovat turvatestien onnistumisia. Lisäksi bounded R/terra
+riippuvuustarkistus läpäisi. Mittaukset sisältävät testien työtä, eivät ole
+pelkän ydinalgoritmin benchmark tai CSC:n resurssiennuste. Laajoja aiempia
+regressiokampanjoita, Whiteboxia, todellisia rastereita ja CSC:tä ei ajettu.
 **Roihun uuden one-shotin suoritus on NOT_RUN**. Paikallinen terra 1.8.29
 PASS ei todista CSC:n terra 1.9.34 -yhteensopivuutta.
 
