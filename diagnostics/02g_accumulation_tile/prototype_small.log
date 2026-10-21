@@ -1,0 +1,9 @@
+PASS: two branches share downstream edges without duplicated sources
+PASS: three serial tributaries preserve exact source sets
+PASS: first contact class 1 keeps every sub-threshold source
+PASS: first contact class 2 keeps every sub-threshold source
+PASS: first contact class 3 keeps every sub-threshold source
+Error in data.frame(cell_uid = names(water_sets), local_source_cells = vapply(water_sets,  :
+  arguments imply differing number of rows: 0, 1
+Calls: case ... force -> run_fixture -> g02_accumulate -> data.frame
+Execution halted

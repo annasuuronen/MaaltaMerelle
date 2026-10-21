@@ -1,0 +1,15 @@
+PASS: two branches share downstream edges without duplicated sources
+PASS: three serial tributaries preserve exact source sets
+PASS: first contact class 1 keeps every sub-threshold source
+PASS: first contact class 2 keeps every sub-threshold source
+PASS: first contact class 3 keeps every sub-threshold source
+PASS: unresolved zero
+PASS: unresolved nodata
+PASS: unresolved cycle
+PASS: unresolved step
+PASS: unresolved boundary
+PASS: unresolved pointer_na
+PASS: unresolved invalid
+PASS: existing bounded network adapter never extends censored traces
+PASS: invalid grids observations and non-synthetic inputs rejected
+RESULT n=15 scenario=small cap=32 cases=14 checks=305 status=PASS

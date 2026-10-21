@@ -1,0 +1,15 @@
+test_address_space_limit_is_enforced (__main__.SupervisorTests.test_address_space_limit_is_enforced) ... ok
+test_expired_budget_cannot_launch_child (__main__.SupervisorTests.test_expired_budget_cannot_launch_child) ... ok
+test_nonzero_exit_preserved (__main__.SupervisorTests.test_nonzero_exit_preserved) ... ok
+test_output_normalization_preserves_raw_digest (__main__.SupervisorTests.test_output_normalization_preserves_raw_digest) ... ok
+test_repeated_names_do_not_overwrite_prior_logs (__main__.SupervisorTests.test_repeated_names_do_not_overwrite_prior_logs) ... ok
+test_rss_tripwire_without_giant_allocation (__main__.SupervisorTests.test_rss_tripwire_without_giant_allocation) ... ok
+test_scale_child_without_measurements_cannot_pass (__main__.SupervisorTests.test_scale_child_without_measurements_cannot_pass) ... ok
+test_success_and_machine_readable_report (__main__.SupervisorTests.test_success_and_machine_readable_report) ... ok
+test_timeout_is_not_pass_even_if_child_handles_term_with_zero (__main__.SupervisorTests.test_timeout_is_not_pass_even_if_child_handles_term_with_zero) ... ok
+test_timeout_terminates_child (__main__.SupervisorTests.test_timeout_terminates_child) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 0.846s
+
+OK

@@ -1,0 +1,1 @@
+RESULT n=1000 scenario=performance cap=32 compute_s=3.786000 oracle_s=0.430000 object_mib=3.163429 checks=3007 status=PASS

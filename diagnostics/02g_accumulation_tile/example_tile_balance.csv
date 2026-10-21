@@ -1,0 +1,4 @@
+"tile_id","owned_sources","first_water_sources","unresolved_sources","received_memberships","sent_memberships"
+"A",4,4,0,0,4
+"B",4,4,0,4,8
+"C",3,3,0,8,0
