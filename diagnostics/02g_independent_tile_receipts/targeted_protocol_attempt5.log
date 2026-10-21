@@ -1,0 +1,14 @@
+PASS: two/three tiles match explicit oracle under independent message orders and replays
+PASS: receiver executes in a fresh R process with only its own state and one message
+PASS: conflicting payloads, runs, directions and unknown fields fail before mutation
+PASS: conflicting replay path with the same logical ID is rejected
+PASS: missing neighbour never fabricates receipts, imports or missing source units
+PASS: lost deliveries and lost acknowledgements remain distinct and restartable
+PASS: a missing neighbour can join without reseeding the existing owners
+PASS: cross-tile cycle stays unresolved and has no finite cyclic accumulation
+PASS: zero, NA, invalid pointer, NoData, invalid class and raster boundary remain unresolved
+PASS: first contact ignores water outgoing pointer and never implies an outlet
+PASS: empty domains and bad metadata are safe
+PASS: independent sender and receiver audit products retain matching source identities
+R_VERSION=4.5.0
+RESULT n=27 scenario=receipts cases=12 checks=2293 status=PASS
