@@ -57,8 +57,10 @@ def fixture():
 def save_fixture(data, folder):
     for role,name in FILES.items():
         rows=data[role]
+        header = list(rows[0]) if rows else sorted(
+            FIELDS["candidate_edges"] if role == "routes" else FIELDS[role])
         with (folder/name).open("w",newline="",encoding="utf-8") as f:
-            w=csv.DictWriter(f,fieldnames=list(rows[0]))
+            w=csv.DictWriter(f,fieldnames=header)
             w.writeheader();w.writerows(rows)
 
 class EvidenceInventoryTests(unittest.TestCase):
@@ -224,6 +226,58 @@ class EvidenceInventoryTests(unittest.TestCase):
             self.assertEqual(json.loads((out/"summary.json").read_text())["n_candidate_edges"],2)
             with self.assertRaisesRegex(EvidenceError,"OUTPUT_EXISTS"):
                 execute(inp,out,"CSC_PROVENANCE_UNVERIFIED")
+    def no_eligible_groups(self):
+        for i in (0, 3):
+            self.data["groups"][i]["has_external_evidence"]="FALSE"
+            self.data["groups"][i]["evidence_status"]="NO_EXTERNAL_EVIDENCE"
+            self.data["candidates"][i]["evidence_status"]="NO_EXTERNAL_EVIDENCE"
+            self.data["candidates"][i]["candidate_included"]="FALSE"
+            self.data["candidates"][i]["water_connected_candidate_status"]="NO_EXTERNAL_EVIDENCE"
+        self.data["candidate_edges"]=[]
+        self.data["routes"]=[]
+
+    def test_legitimate_zero_candidates_preserves_all_groups(self):
+        self.no_eligible_groups()
+        groups,lakes,r=evaluate(self.data)
+        self.assertEqual(len(groups),4)
+        self.assertEqual(len(lakes),2)
+        self.assertEqual(r["n_candidate_edges"],0)
+        self.assertEqual(r["n_02f_edge_routes"],0)
+        self.assertEqual(r["n_first_water_contact_edge_routes"],0)
+        self.assertEqual(r["verified_outlet_count"],"NOT_ASSESSED")
+        self.assertTrue(all(g["inventory_case"] != "FIRST_WATER_CONTACT_ONLY"
+                            for g in groups))
+
+    def test_zero_02f_rows_with_original_four_column_header(self):
+        self.no_eligible_groups()
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);inp=root/"inputs";inp.mkdir()
+            save_fixture(self.data,inp)
+            with (inp/FILES["routes"]).open() as f:
+                header=f.readline().strip().split(",")
+            self.assertEqual(set(header), FIELDS["candidate_edges"])
+            out=root/"results"
+            r=execute(inp,out,"CSV_ONLY_EMPTY_02F")
+            self.assertEqual(r["n_02f_edge_routes"],0)
+            self.assertEqual(r["n_spill_groups"],4)
+
+    def test_nonempty_02f_missing_trace_columns_rejected(self):
+        self.data["routes"][0].pop("route_status")
+        self.check_stop("NONEMPTY_02F_MISSING_TRACE_COLUMNS")
+
+    def test_nonempty_02f_incomplete_csv_header_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);inp=root/"inputs";inp.mkdir()
+            save_fixture(self.data,inp)
+            p=inp/FILES["routes"]
+            with p.open(newline="") as f: lines=list(csv.DictReader(f))
+            with p.open("w",newline="") as f:
+                w=csv.DictWriter(f,fieldnames=list(FIELDS["candidate_edges"]))
+                w.writeheader()
+                w.writerows({k:row[k] for k in FIELDS["candidate_edges"]} for row in lines)
+            with self.assertRaisesRegex(EvidenceError,"NONEMPTY_02F_MISSING_TRACE_COLUMNS"):
+                execute(inp,root/"out","INVALID_02F")
+
     def test_no_empty_evidence(self):
         self.data["groups"]=[]
         self.check_stop("EMPTY_GROUP_EVIDENCE")
