@@ -2,6 +2,8 @@ import contextlib
 import io
 from pathlib import Path
 import sqlite3
+import struct
+import low_geos_backend as b
 import tempfile
 import unittest
 from unittest import mock
@@ -72,17 +74,48 @@ class LowGeoBatchTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'MISSING_OR_SYMLINK_FILE'):
                 a.expect_files(g,p)
 
-    def test_refuse_gdal_error_even_if_exit_zero(self):
-        bad=mock.Mock(returncode=0,stdout='Layer name: SELECT\n',stderr='ERROR 1: bad spatial function')
-        with mock.patch.object(a.subprocess,'run',return_value=bad):
-            with self.assertRaisesRegex(ValueError, 'OGR_ERROR'):
-                a.ogr(Path('fixture.gpkg'),'SELECT 1',0,'example')
+    def test_geometry_backend_uses_geos_not_spatial_sql(self):
+        with mock.patch.object(b, "query", return_value=[{"lake_id": "1892"}]) as q:
+            rows = a.ogr(Path("fixture.gpkg"), "SELECT INVALID_SPATIAL_SQL()", 1, "LAKE_INFO")
+        self.assertEqual(rows, [{"lake_id": "1892"}])
+        q.assert_called_once_with(Path("fixture.gpkg"), "LAKE_INFO")
 
-    def test_refuse_missing_ogr_rows(self):
-        ok=mock.Mock(returncode=0,stdout='Layer name: SELECT\n',stderr='')
-        with mock.patch.object(a.subprocess,'run',return_value=ok):
-            with self.assertRaisesRegex(ValueError,'OGR_ROW_COUNT'):
-                a.ogr(Path('fixture.gpkg'),'SELECT 1',1,'example')
+    def test_geometry_backend_row_count_fail_closed(self):
+        with mock.patch.object(b, "query", return_value=[]):
+            with self.assertRaisesRegex(ValueError, "GEOS_ROW_COUNT"):
+                a.ogr(Path("fixture.gpkg"), "SELECT 1", 1, "LAKE_INFO")
+
+    def test_decode_gpkg_wkb_and_srs_guard(self):
+        point = b.point_wkb(100.0, 200.0)
+        header = b"GP" + bytes([0,1]) + struct.pack("<i", 3067)
+        self.assertEqual(b.decode_gpkg_wkb(header + point), point)
+        with self.assertRaisesRegex(ValueError, "NOT_3067"):
+            b.decode_gpkg_wkb(header[:4] + struct.pack("<i", 4326) + point)
+        with self.assertRaisesRegex(ValueError, "GPKG_MAGIC_VERSION"):
+            b.decode_gpkg_wkb(b"GX" + header[2:] + point)
+
+    def test_geos_native_metric_and_topology(self):
+        g = b.Geos()
+        try:
+            # 10x10 m square, point at center, point 5m outside right edge
+            xy = [(0.,0.),(10.,0.),(10.,10.),(0.,10.),(0.,0.)]
+            wkb = b"\\x01" + struct.pack("<III", 3, 1, len(xy))
+            wkb += b"".join(struct.pack("<dd", *p) for p in xy)
+            poly = g.geom(wkb)
+            inside = g.geom(b.point_wkb(5,5))
+            outside = g.geom(b.point_wkb(15,5))
+            self.assertEqual(g.measure("valid", poly), 1)
+            self.assertAlmostEqual(g.measure("area", poly), 100)
+            self.assertEqual(g.measure("intersects", poly, inside), 1)
+            self.assertEqual(g.measure("intersects", poly, outside), 0)
+            self.assertAlmostEqual(g.measure("distance", poly, outside), 5)
+        finally:
+            g.close()
+
+    def test_missing_geos_native_fails_closed(self):
+        with mock.patch.object(b, "find_library", return_value=None), mock.patch.object(b.C, "CDLL", side_effect=OSError("unavailable")):
+            with self.assertRaisesRegex(ValueError, "GEOS_C_NOT_AVAILABLE"):
+                b.Geos()
 
     def test_neighbor_and_component_classes(self):
         with tempfile.TemporaryDirectory() as t:
