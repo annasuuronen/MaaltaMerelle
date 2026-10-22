@@ -37,7 +37,7 @@ Oman suunnitteluvaiheen ehdokaspreflight palauttaa **vain** `REVIEW_REQUIRED` sy
 
 ## 5. Kertymäsopimus
 
-- Jokainen 2 m rasterisolu saa **yhden alueomistajan**: maa, järvi, jokijakso tai muu erikseen hyväksytty solmuluokka. Yksi solun pinta-ala on 4 m². Omistajuuden täydellisyys suhteessa todelliseen maskiin on erillinen QA, ei tämän synteettisen testin tulos.
+- Jokainen 2 m rasterisolu saa **yhden alueomistajan**: maa, järvi, jokijakso tai muu erikseen hyväksytty solmuluokka. Yksi solun **rasterialuepaino** on 4 m² (2 × 2 m). Tämä ei ole tarkka vektoripolygonin vesipinta-ala: `touches=TRUE` voi sisällyttää osittain veden peittämiä soluja. Aluelaskenta ja vesistön fyysinen pinta-ala on raportoitava erillisinä suureina. Omistajuuden täydellisyys suhteessa todelliseen maskiin on erillinen QA, ei tämän synteettisen testin tulos.
 - Maan D8-solmulla on yksi lähtökaari. Järven rinnakkaiset **vaihtoehtoiset** spill-ryhmät eivät ole moninkertainen virtaus.
 - Jos järvellä on tutkitusti **useita yhtäaikaisia ulosmenoja**, haarautumisen painot täytyy määrätä erikseen ja summan olla 1. D8 tai ehdokkaiden lukumäärä ei kerro jakoa. Jos painoja ei tunneta, ei lasketa yhtä oletettua lopullista kertymää.
 - DAG:n topologinen eteneminen: `acc(v) = area_owned(v) + sum[frac(u,v) * acc(u)]`. Tämä on reititettyä pinta-alaa, **ei vesimäärää tai virtaamaa**. Sama ylärinnealue ei saa tulla lasketuksi kahdesti, vaikka reitit yhtyvät uudelleen.
