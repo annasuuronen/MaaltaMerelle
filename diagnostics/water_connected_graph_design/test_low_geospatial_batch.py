@@ -99,7 +99,7 @@ class LowGeoBatchTest(unittest.TestCase):
         try:
             # 10x10 m square, point at center, point 5m outside right edge
             xy = [(0.,0.),(10.,0.),(10.,10.),(0.,10.),(0.,0.)]
-            wkb = b"\\x01" + struct.pack("<III", 3, 1, len(xy))
+            wkb = b"\x01" + struct.pack("<III", 3, 1, len(xy))
             wkb += b"".join(struct.pack("<dd", *p) for p in xy)
             poly = g.geom(wkb)
             inside = g.geom(b.point_wkb(5,5))
