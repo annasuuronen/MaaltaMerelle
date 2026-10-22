@@ -1,0 +1,38 @@
+name: LOW 02D02F CSV Evidence Inventory Offline QA
+
+on:
+  push:
+    branches:
+      - codex/water-connected-existing-csv-evidence-inventory-v1
+    paths:
+      - ".github/workflows/low-02d02f-evidence-inventory.yml"
+      - "diagnostics/water_connected_graph_design/inventory_existing_evidence.py"
+      - "diagnostics/water_connected_graph_design/test_existing_evidence_inventory.py"
+      - "diagnostics/water_connected_graph_design/run_existing_evidence_offline.sh"
+  pull_request:
+    branches:
+      - codex/water-connected-graph-design-contract-v1
+    paths:
+      - ".github/workflows/low-02d02f-evidence-inventory.yml"
+      - "diagnostics/water_connected_graph_design/inventory_existing_evidence.py"
+      - "diagnostics/water_connected_graph_design/test_existing_evidence_inventory.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-evidence:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 3
+    steps:
+      - name: Check out commit
+        uses: actions/checkout@v4
+      - name: Python 3 syntax, CSV-only tests and shell parse
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -euo pipefail
+          python3 -m py_compile diagnostics/water_connected_graph_design/inventory_existing_evidence.py diagnostics/water_connected_graph_design/test_existing_evidence_inventory.py
+          bash -n diagnostics/water_connected_graph_design/run_existing_evidence_offline.sh
+          python3 -B -m unittest discover -s diagnostics/water_connected_graph_design -p test_existing_evidence_inventory.py -v
