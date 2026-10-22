@@ -36,3 +36,4 @@ jobs:
           python3 -m py_compile diagnostics/water_connected_graph_design/inventory_existing_evidence.py diagnostics/water_connected_graph_design/test_existing_evidence_inventory.py
           bash -n diagnostics/water_connected_graph_design/run_existing_evidence_offline.sh
           python3 -B -m unittest discover -s diagnostics/water_connected_graph_design -p test_existing_evidence_inventory.py -v
+          python3 -B -m unittest discover -s diagnostics/water_connected_graph_design -p test_graph_oracle.py -v
