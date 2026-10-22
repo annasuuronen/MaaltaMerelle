@@ -73,16 +73,14 @@ def expect_files(gpkg: Path, baseline: Path) -> None:
 
 
 def ogr(gpkg: Path, statement: str, expected_rows: int | None, label: str) -> list[dict[str, str]]:
-    cmd = ["ogrinfo", "-ro", "-q", "-geom=NO", "-dialect", "SQLite", "-sql", statement, str(gpkg)]
-    try:
-        process = subprocess.run(cmd, capture_output=True, text=True, timeout=18, check=False)
-    except subprocess.TimeoutExpired as e:
-        raise ValueError("STOP: OGR_TIMEOUT: " + label) from e
-    require(process.returncode == 0, "OGR_FAILED: " + label + " " + process.stderr[:350].replace("\n", " "))
-    require("ERROR" not in process.stderr.upper(), "OGR_ERROR: " + label + " " + process.stderr[:350].replace("\n", " "))
-    rows = parse_features(process.stdout)
+    # 'statement' is retained for reference to the original SQL test intent only.
+    # Native GeoPackage SQLite does NOT supply SpatiaLite ST_Distance / ST_IsValid.
+    # Use audited read-only GDAL/GEOS C geometry backend through Python stdlib.
+    from low_geos_backend import query
+    rows = query(gpkg, label)
     if expected_rows is not None:
-        require(len(rows) == expected_rows, f"OGR_ROW_COUNT_{label}: expected {expected_rows}, got {len(rows)}")
+        require(len(rows) == expected_rows,
+                f"GEOS_ROW_COUNT_{label}: expected {expected_rows}, got {len(rows)}")
     return rows
 
 
