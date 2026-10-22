@@ -29,3 +29,44 @@ Pin the branch to one exact SHA in a new temporary checkout, not the original PR
 RANTA10 height attributes are not validated hydraulic sill elevations. A line that touches two lakes or a graph path connecting lines within 10m is **not** a D8 route or a validated channel. Six 02F summaries may merge; they must not be treated as six independent pathways. A point inside a water polygon is not a shoreline outlet. The RANTA10 lake polygon can be clipped at the LOW boundary.
 
 Science locks: NATIONAL=LOCKED; MODERATE=REVIEW_REQUIRED; hydrological_validation=NOT_ASSESSED; channel_interpretation=NOT_ASSESSED. No flow accumulation, no accepted outlets and no raster modifications.
+
+## Roihu G3 actual evidence, 2026-10-22
+
+The user ran the existing-source G3 grouped batch. **5/5 G3 stages PASS, 0 STOP**; this is a computational read-only evidence status and does NOT establish a functioning routed lake outlet. Source signature still 24 RANTA10 lakes, 5 river areas, 30 river lines in EPSG:3067.
+
+### 1894 / 1892 original RANTA10 line geometry
+
+- Closest original RANTA10 river line: fid 29, objectid 129081.0, GEOS distance to lake1894 0.00m and to lake1892 22.78m. Endpoints: (205632.7,6903219.0) and (205615.1,6903264.7). The mapped line reaches/touches lake1894, but remains >22m from lake1892.
+- Reference vector lake-to-lake polygon gap: 38.12m (G2). Next closest lines are >877m from lake1894.
+- Single river-line near both lakes: NONE at exploratory threshold 0/1/2/5/10m; undirected feature-chain geometry link: NONE at those same thresholds. This only describes the 30 available mapped RANTA10 river lines and exploratory thresholds; it does NOT exclude unmapped channels or establish a valid D8 crossing.
+- All three comp274,276,277 have the same nearest original line fid29 / objectid129081, with distances 21.94m, 5.46m, 11.52m respectively.
+
+### Lake3181 local classification and SYKE point
+
+- Comp235 and comp236 have the same nearest original river line fid8 / objectid57590, distances 3.11m and 3.41m. Comp108/109 nearest fid1 / objectid57622 at 614.02m / 616.60m.
+- All **18** adjacent 02C water-cell footprints (2m squares) intersect their expected RANTA10 water type: 17 class1 LAKE; 1 class3 RIVER_LINE_ONLY. Of class1, exactly 6 cell centers intersect the expected lake polygon; 11 do not, although their cell squares do. The one class3 center is 0.96m from the source vector line and its 2m square intersects it. None of these 18 tested squares intersected an other-type water feature in the restricted G3 comparison. This is consistent with boundary-pixel rasterization and DOES NOT prove terra raster precedence or reveal a hydrological outlet.
+- Water neighbor cell 15395415 is shared by components235 and236, so they do not represent independent lake-neighbor contacts.
+- SYKE catchment outlet point 7025519 (source XY rounded 0.1m) intersects RANTA10 lake3181 polygon; its computed shortest distance to vector polygon boundary is **0.04m**: shoreline-coincident at reported coordinate precision, NOT confirmed lake-specific outlet.
+
+### Six preexisting 02F summaries: lake1894 to component274
+
+All six are distinct route summary entries of origin lake1894, terminal cell23211319, status D8_ZERO_INTERIOR, with terminal_lake_id NA, not actual REACHES_OTHER_LAKE statuses.
+
+| route_id | start_receiver_cell | route_steps | distance start to lake1894 m | distance start to lake1892 m |
+|---|---|---|---|---|
+| 11 | 23337318 | 21 | 3.01 | 35.33 |
+| 14 | 23343318 | 22 | 1.52 | 37.15 |
+| 15 | 23343319 | 22 | 2.86 | 36.39 |
+| 16 | 23343320 | 23 | 4.19 | 35.74 |
+| 18 | 23349320 | 23 | 2.70 | 37.65 |
+| 20 | 23355321 | 24 | 2.55 | 39.06 |
+
+These are six unique start/route records, NOT six independent channels. The stored 02F CSV does not contain each intermediate path cell; do not infer uninterrupted flow through the whole gap or a receiving lake from terminal-cell vicinity.
+
+### Scientific status after real G3
+
+- Geometric evidence shows a mapped river-line from lake1894 toward the vicinity of lake1892 but no mapped feature/feature chain reaching both shorelines within 10m of each. A possible lake1894->lake1892 downstream relationship remains open and unapproved.
+- Comp235 MIXED arises from **four lake3181 raster neighbors and one distinct river-line-only neighbor**, not a demonstrated vector/raster error. Do not recode or treat it as functioning outlet.
+- SYKE point7025519 may align with lake3181 shore and catchment hierarchy, but is not proven to be a true lake discharge point.
+- Next optional G4 is a **bounded read-only audit of existing D8-pointer cells for these six route summaries** (ideally small source window or sparse sample in a compute allocation), comparing all traversed cells to original 02F starts, steps and D8_ZERO terminal. No DEM, D8, STORAGE, lake masks, point edits or flow accumulation.
+- NATIONAL=LOCKED, MODERATE=REVIEW_REQUIRED, hydrological_validation=NOT_ASSESSED, channel_interpretation=NOT_ASSESSED. All PRs remain draft.
