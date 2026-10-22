@@ -1,0 +1,27 @@
+name: LOW flat increment offline synthetic QA
+
+on:
+  push:
+    branches:
+      - codex/low-flat-increment-offline-audit-v1
+    paths:
+      - ".github/workflows/low-flat-increment-offline.yml"
+      - "diagnostics/low_d8_accumulation_repair_screen/audit_flat_increment.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-flat-audit:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 3
+    steps:
+      - name: Checkout pinned branch under test
+        uses: actions/checkout@v4
+      - name: Synthetic unit tests only (no CSC data)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -euo pipefail
+          python3 -B diagnostics/low_d8_accumulation_repair_screen/audit_flat_increment.py --selftest
