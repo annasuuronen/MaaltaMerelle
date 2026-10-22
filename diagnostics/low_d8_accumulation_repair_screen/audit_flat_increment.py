@@ -25,6 +25,8 @@ CANDIDATE_INCREMENT_M = 3e-7
 MATCH_TOLERANCE_M = 1e-9
 # Predeclare alternative tolerances; do not tune them after seeing the CSC result.
 SENSITIVITY_TOLERANCES_M = (1e-10, 1e-9, 5e-8)
+# Under the published Whitebox algorithm and 2m pixels, assuming positive source maximum.
+QUANTUM_BY_INTEGER_MAX_DIGITS_M = {"1": 3e-8, "2": 3e-7, "3": 3e-6}
 NEAR_FLAT_TOLERANCE_M = 1e-6
 
 
@@ -124,6 +126,14 @@ def analyze(centers, raw, expected_center_ids, expected_raw_ids):
         )
         for tol in SENSITIVITY_TOLERANCES_M
     }
+    competing_counts = {
+        digits: sum(
+            round(abs(d)/quantum) >= 1 and
+            abs(abs(d)-round(abs(d)/quantum)*quantum) <= MATCH_TOLERANCE_M
+            for d in nearly_flat
+        )
+        for digits, quantum in QUANTUM_BY_INTEGER_MAX_DIGITS_M.items()
+    }
     return {
         "scope": "PREVIOUSLY_EXPORTED_CSV_ONLY_NO_RASTER_READ",
         "land_centres": n_land,
@@ -140,6 +150,9 @@ def analyze(centers, raw, expected_center_ids, expected_raw_ids):
         "near_flat_not_compatible_count": len(nearly_flat)-matches,
         "quantization_match_tolerance_m": MATCH_TOLERANCE_M,
         "tolerance_sensitivity_compatible_counts": sensitivity,
+        "competing_max_digit_quantum_m": QUANTUM_BY_INTEGER_MAX_DIGITS_M,
+        "competing_max_digit_compatible_counts": competing_counts,
+        "matching_quantum_not_unique_evidence": True,
         "max_abs_step_residual_m": max(residuals),
         "candidate_not_proven": True,
         "whitebox_binary_and_input_dem_max": "UNKNOWN",
@@ -238,6 +251,8 @@ class SyntheticCases(unittest.TestCase):
         self.assertEqual(result["candidate_step_multiples"],{"1":119})
         self.assertEqual(result["tolerance_sensitivity_compatible_counts"],
                          {"1e-10":119, "1e-09":119, "5e-08":119})
+        self.assertEqual(result["competing_max_digit_compatible_counts"],
+                         {"1":119, "2":119, "3":0})
 
     def test_negative_integration_rejects_bad_receiver_or_order(self):
         centers, raw, ids = self.synthetic_fixture()
