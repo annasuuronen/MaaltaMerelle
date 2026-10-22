@@ -22,7 +22,7 @@ command -v timeout >/dev/null || { echo 'STOP: TIMEOUT_REQUIRED' >&2; exit 1; }
 export PYTHONDONTWRITEBYTECODE=1
 OUT="$(mktemp -d /scratch/project_2004707/pienvedet/mm_02d02f_inventory.XXXXXXXX)"
 echo "INVENTORY_WORK=$OUT"
-timeout 20s python3 -B -m unittest discover -s "$HERE" -p test_existing_evidence_inventory.py \
+timeout 20s python3 -B -m unittest discover -s "$HERE" -p 'test_*.py' \
   > "$OUT/synthetic_tests.log" 2>&1 || {
     cat "$OUT/synthetic_tests.log" >&2; echo 'STOP: SYNTHETIC_TESTS_FAILED' >&2; exit 1; }
 echo "SYNTHETIC_TESTS=PASS"
