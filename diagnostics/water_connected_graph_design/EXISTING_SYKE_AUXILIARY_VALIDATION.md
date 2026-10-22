@@ -58,7 +58,7 @@ Tee pienellä, etukäteen lukitulla joukolla **read-only** vastaavuustaulukko:
 
 Tarkista koordinaattijärjestelmät ja lähdejärven/vastaanottajavesistön identiteetit ennen etäisyysvertailua; sallitut puskurit, pisteiden yksikäsitteisyys ja 4-/8-naapuruus on päätettävä ennakolta. Lähellä oleva piste on **todisteen osa**, ei yksin hyväksymispäätös. Jos usea ehdokas osuu samaan purkupisteeseen tai ehdokas kulkee toisen järven kautta, säilytä kaikki vaihtoehdot ja ristiriidat. Älä korjaa alkuperäistä purkupisteaineistoa.
 
-Ensimmäiset neljä tieteellistä katselmoitavaa tapausta: komponentti 274 (1894/1892), komponentti 235 (3181), järven 1940 palautuvat reitit ja järven 1847 erillinen NW/STORAGE-tapaus, joka ei kuulu nykyisiin 02E:n kahdeksaan hyväksyttyyn ehdokasryhmään.
+Ensimmäiset neljä tieteellistä katselmoitavaa tapausta: komponentti 274 (1894/1892), komponentti 235 (3181), järven 1940 palautuvat reitit ja järven 1847 erillinen NW/STORAGE-tapaus, jolle ei ole nykyisessä 02E:ssä yhtään jatkoon otettua purkautumisehdokasryhmää.
 
 ## 6. Koko Suomen menettelyn testaus (G3–G5)
 
