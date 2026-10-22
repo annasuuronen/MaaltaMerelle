@@ -22,3 +22,20 @@ This is designed to avoid multiple single-question Roihu command rounds. No sour
 Locks: NATIONAL=LOCKED, MODERATE=REVIEW_REQUIRED, hydrological_validation=NOT_ASSESSED, channel_interpretation=NOT_ASSESSED. No merge, source changes or acceptance of production routing.
 
 Reference documentation: EXISTING_SYKE_AUXILIARY_VALIDATION.md and stacked draft PR #40. This batch is a new isolated diagnostic draft stacked on #40.
+
+## Real operator evidence from the first CSC run (before GEOS remediation)
+
+The CSV-only first stage **PASS** is trustworthy and must not be repeated as a model recomputation. Reported 02C values:
+
+| Component | 02C class | Target lake | Water neighbors | terminal_minus_water_m |
+|---|---|---|---|---|
+| 108 | SAFE_LAKE_CONNECTOR | 3181 | 1 lake cell / lake3181 | -0.0380 |
+| 109 | SAFE_LAKE_CONNECTOR | 3181 | 2 lake cells / lake3181 | -0.0170 |
+| 235 | INTERIOR_REVIEW / MIXED | NA | **4 lake cells / 3181 + 1 class-3 river-line-only cell / no lake ID** | -0.0380 |
+| 236 | SAFE_LAKE_CONNECTOR | 3181 | 1 lake cell / 3181 | -0.0710 |
+| 274 | SAFE_LAKE_CONNECTOR | 1892 | 3 lake cells / 1892 | -0.0330 |
+| 276 | SAFE_LAKE_CONNECTOR | 1894 | 3 lake cells / 1894 | -0.0930 |
+| 277 | SAFE_LAKE_CONNECTOR | 1894 | 3 lake cells / 1894 | -0.0451 |
+
+Water class semantics explicitly defined by existing R/02_build_baseline_hydrology.R: 1 LAKE, 2 RIVER_AREA, 3 RIVER_LINE_ONLY. For component235, the four lake neighbors plus river-line-only neighbor **explain the MIXED signature**. They do not determine outlet status or receiver precedence. Distinct receiver ends of lake1894→lake1892 use component274, which is classified for lake1892 and cannot be treated as an already accepted flow direction. All six prior GPKG geometry-query errors were missing SQLite spatial functions, **not** data FAILs.
+
