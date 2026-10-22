@@ -29,14 +29,31 @@ Repo vahvistaa 2 m `DEM_FILE`-syötteen ja RANTA10:n lukutavan `R/00_pipeline_co
 - Valuma-aluejaon tasot: `Valumaaluejako_taso1.shp` … `Valumaaluejako_taso5.shp` (+ vastaavat sivutiedostot).
 - Hakemistossa on myös `valumaalueet_latest.zip`; älä pura ZIPiä tai muodosta uudelleen näitä jo valmiita aineistoja.
 
-**G0: sijainti ja tiedostoperheet löytyivät; G0-metadatan tarkastus yhä NOT_RUN.** Shapefilejen sisäisiä kenttiä, koordinaatistoa, feature-lukumääriä, voimassaolo-/julkaisupäivää tai LOW:n todellista pistepeittoa **ei** ole tässä vielä tarkistettu. Hakemiston `LATEST`-nimi ei yksin vahvista aineistoversion ajankohtaisuutta. Älä oleta rakennekenttiä tai hae korvaavia aineistoja.
+**G0: rajattu metatietotarkistus ON SUORITETTU 22.10.2026 (käyttäjän alkuperäinen Roihun konsolituloste).** Pelkät Shapefile- ja DBF-otsakkeet sekä .prj:n alku on luettu, ei valtakunnallisia geometrioita tai attribuuttirivejä. Tulos:
+
+| Tiedoston stem | DBF-otsakkeen tietuemäärä | SHP-koodin geometria | Havaitut kentät |
+| --- | ---: | --- | --- |
+| `Valumaaluejako_purkupiste` | 40 216 | 1 = Point | `purkupiste,korkeus_m,etaisyysme,etaisyysve,purkutaso,taso5_id,taso4_id,taso3_id,taso2_id,muutospvm` |
+| `Valumaaluejako_taso1` | 13 | 5 = Polygon | `taso1_osai,taso1_osat,taso1_id,osavalu_pa,valtio,muutospvm,Shape_STAr,Shape_STLe` |
+| `Valumaaluejako_taso2` | 109 | 5 = Polygon | `objectid,taso2_osai,taso2_osat,taso2_id,paavesisto,nimi,osavalu_pa,ylavalu_pa,taso1_osat,valtio,muutospvm,area_m2,perimeter_` |
+| `Valumaaluejako_taso3` | 208 | 5 = Polygon | `taso3_osai,taso3_osat,taso3_id,osavalu_pa,ylavalu_pa,taso2_osat,taso1_osat,valtio,muutospvm,Shape_STAr,Shape_STLe` |
+| `Valumaaluejako_taso4` | 22 274 | 5 = Polygon | `taso4_osai,taso4_osat,taso4_id,osavalu_pa,ylavalu_pa,taso3_osat,taso2_osat,taso1_osat,valtio,muutospvm,Shape_STAr,Shape_STLe` |
+| `Valumaaluejako_taso5` | 41 349 | 5 = Polygon | `taso5_osai,taso5_osat,taso5_id,osavalu_pa,ylavalu_pa,taso4_osat,taso3_osat,taso2_osat,taso1_osat,valtio,muutospvm,Shape_STAr,Shape_STLe` |
+
+Kaikkien kuuden .prj-tiedoston alku `PROJCS["EUREF_FIN_TM35FIN"...` vastaa odotettua ETRS-TM35FIN-geometriaa (mallin CRS EPSG:3067); täydellistä .prj- tai geometria-analyysiä ei ole vielä tehty. Purkupisteiden SHP-otsakkeen bbox `(91357.3,6639377.7,861781.3,7822120.8)` ja alueiden bbox `(61690.0,6541070.0,862680.0,7818690.0)` ovat *koko lähdetiedoston* rajat, eivät LOW:n tai minkään valuma-alueen sisällön analyysi.
+
+**Rajat:** DBF-otsakkeen tietuemäärä ei ole vielä yksilöityjen arvojen eikä maastossa vahvistettujen purkupisteiden lukumäärä. `40 216` piste- ja `41 349` taso5-tietuetta eivät itsessään todista 1:1-liitosta. Kentän `purkupiste` identiteetti, `purkutaso` arvokoodit ja alue-ID:iden semantiikka, `muutospvm` ja version todellinen päivämäärä sekä LOW:n pistetiheys ovat edelleen tuntemattomia. Hakemiston `LATEST` ei ole aineistoversion varmennus.
+
+**Tärkeä LOW-rajausportti ennen GIS-leikkausta:** GitHubin `R/00_pipeline_config.R`:n *oletus*`TEST_EXTENT = (407030,419030,7070072,7082072)` koskee oletusregressiota `TEST_SULKU_11`, **EI** automaattisesti LOW-ruutua `E200000_N6900000`. Käytä LOW:n todella tuotettua `runs/E200000_N6900000/01_inputs/01_input_QA.csv`-tiedostoa (kentät `xmin,xmax,ymin,ymax,dem_cols,dem_rows,dem_res_x,dem_res_y`) todellisten rajojen määrittämiseen. Jos QA puuttuu, STOP, älä arvaa bboxia tilen nimestä tai testikonfiguraation oletuksista. Tämän jälkeen voidaan muodostaa rajattu, read-only LOW-purkupisteote samoista jo olemassa olevista Shapefile-tiedostoista ilman rasterilukuja. Vertaile EPSG:3067-geometrioita ja alkuperäisiä SYKE-tunnisteita, eikä koskaan oleteta pisteen olevan automaattisesti tietyn RANTA10-järven purkupiste.
+
+**G0-osat:** tiedostonimet/polut PASS; lähdeotsakkeiden geometria, kenttänimet ja DBF-tietuemäärät PASS; todellinen `purkupiste`-attribuuttiskeema/rooli, julkaisuversio ja paikallinen LOW-kattavuus NOT_ASSESSED. **G2–G5 NOT_RUN.**
 
 Seuraava Codex/GitHub-valmistelu:
 - Tarkista ensin nykyiset projektimanifestit/konfiguraatiot ja mahdolliset tiedostolistaukset **read-only**; älä käynnistä tiedostojärjestelmän rajoittamatonta rekursiivista hakua.
 - Kun jo olemassa olevien alkuperäisten tiedostojen tarkat polut löytyvät, laadi **vain metatiedot** raportoiva, rajattu ja auditoitava CSV/GPKG/SHP-inventaario (nimi, koko, CRS, layer, geom-tyyppi, kentät, identiteetti ja alkuperäisen aineiston versio jos saatavilla). Älä kirjoita, siirrä, täydentäviä rasterointeja tee tai laske massiivisten aineistojen SHA256-tiivisteitä. Älä paljasta suojattua sisältöä.
 - Luo kuuden kentän provenienssisopimus per piste-/alueaineisto: `source_path_or_id`, `source_version`, `used_in_build_or_candidate_review`, `reference_role`, `shared_lineage` ja `verification_state`. Jokainen puuttuva arvo on `UNKNOWN`, ei hyväksyntä.
 
-**G0-osa 1 (tiedostonimet ja sijainti) on käyttäjän Roihu-tulosteen perusteella suoritettu; G0-osa 2 (alkuperäisten lähdemetatietojen tarkastus) on NOT_RUN.**
+**G0-osa 1 (polut) ja G0-osa 2 (Shapefile/DBF/.prj-otsakkeet) ovat käyttäjän Roihu-tulosteina suoritettu; G0-osa 3 (LOW-alueen pisteiden ja attribuuttien rajattu otanta) on NOT_RUN.**
 
 ## 4. LOW:n olemassa oleva 02C/02D/02E/02F-evidenssi (G1)
 
