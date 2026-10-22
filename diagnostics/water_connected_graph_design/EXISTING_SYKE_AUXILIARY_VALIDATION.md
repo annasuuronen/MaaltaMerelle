@@ -46,14 +46,18 @@ Kaikkien kuuden .prj-tiedoston alku `PROJCS["EUREF_FIN_TM35FIN"...` vastaa odote
 
 **Tärkeä LOW-rajausportti ennen GIS-leikkausta:** GitHubin `R/00_pipeline_config.R`:n *oletus*`TEST_EXTENT = (407030,419030,7070072,7082072)` koskee oletusregressiota `TEST_SULKU_11`, **EI** automaattisesti LOW-ruutua `E200000_N6900000`. Käytä LOW:n todella tuotettua `runs/E200000_N6900000/01_inputs/01_input_QA.csv`-tiedostoa (kentät `xmin,xmax,ymin,ymax,dem_cols,dem_rows,dem_res_x,dem_res_y`) todellisten rajojen määrittämiseen. Jos QA puuttuu, STOP, älä arvaa bboxia tilen nimestä tai testikonfiguraation oletuksista. Tämän jälkeen voidaan muodostaa rajattu, read-only LOW-purkupisteote samoista jo olemassa olevista Shapefile-tiedostoista ilman rasterilukuja. Vertaile EPSG:3067-geometrioita ja alkuperäisiä SYKE-tunnisteita, eikä koskaan oleteta pisteen olevan automaattisesti tietyn RANTA10-järven purkupiste.
 
-**G0-osat:** tiedostonimet/polut PASS; lähdeotsakkeiden geometria, kenttänimet ja DBF-tietuemäärät PASS; todellinen `purkupiste`-attribuuttiskeema/rooli, julkaisuversio ja paikallinen LOW-kattavuus NOT_ASSESSED. **G2–G5 NOT_RUN.**
+**22.10.2026 vahvistettu LOW-ruutu:** Käyttäjän varsinaisesta `01_input_QA.csv`-tiedostosta: `dem_cols=6000`, `dem_rows=6000`, `dem_res_x=2 m`, `dem_res_y=2 m`, `xmin=199000`, `xmax=211000`, `ymin=6899000`, `ymax=6911000`. `LOW_GEOMETRY_QA=PASS`: 12 km × 12 km (144 km²). 10 km ydinaluetta (`E200000_N6900000`, oletuksen mukaan `x=200000..210000; y=6900000..6910000`) ympäröi 1 km halo. **Käytä varsinaisessa paikkatietorajauksessa ensin varmennettua 12 km rasteribboxia** ja erottele ydinalue ja halovyöhyke vasta luokittelussa. EPSG:3067 on mallin varmistettu CRS; lähde-Shapefilejen PRJ-alku oli EUREF_FIN_TM35FIN.
+
+Seuraava **read-only G0.3**: poimi vain 40 216 pisteen olemassa olevasta point-Shapefilestä paikalliset pistetietueet `xmin..xmax/ymin..ymax` ja tarvittaessa ennalta rajatulta 1 km ulkovyöhykkeeltä. Säilytä pisteen todelliset `purkupiste`, `purkutaso`, `taso2_id..taso5_id`, `korkeus_m`, `muutospvm`, sekä `x/y`. Ei valtakunnallista polygonigeometriaa, ei RANTA10:n uudelleenrasterointia, ei muutoksia. Pisteiden määrät ja ominaisuuksien semantiikka ovat vielä `NOT_RUN/NOT_ASSESSED`. Mahdollinen `purkupiste`-kentän arvo voi olla tunniste tai muu koodi; älä väitä sen yksilöllisyyttä ennen tarkastusta.
+
+**G0-osat:** polut PASS; 6 SHP/DBF/PRJ-otsakkeet PASS; LOW:n todellinen 01_input_QA-bbox PASS; LOW-purkupisteiden paikallinen otesisältö NOT_RUN; riippumaton hydrologinen validointi NOT_ASSESSED. **G2–G5 NOT_RUN.**
 
 Seuraava Codex/GitHub-valmistelu:
 - Tarkista ensin nykyiset projektimanifestit/konfiguraatiot ja mahdolliset tiedostolistaukset **read-only**; älä käynnistä tiedostojärjestelmän rajoittamatonta rekursiivista hakua.
 - Kun jo olemassa olevien alkuperäisten tiedostojen tarkat polut löytyvät, laadi **vain metatiedot** raportoiva, rajattu ja auditoitava CSV/GPKG/SHP-inventaario (nimi, koko, CRS, layer, geom-tyyppi, kentät, identiteetti ja alkuperäisen aineiston versio jos saatavilla). Älä kirjoita, siirrä, täydentäviä rasterointeja tee tai laske massiivisten aineistojen SHA256-tiivisteitä. Älä paljasta suojattua sisältöä.
 - Luo kuuden kentän provenienssisopimus per piste-/alueaineisto: `source_path_or_id`, `source_version`, `used_in_build_or_candidate_review`, `reference_role`, `shared_lineage` ja `verification_state`. Jokainen puuttuva arvo on `UNKNOWN`, ei hyväksyntä.
 
-**G0-osa 1 (polut) ja G0-osa 2 (Shapefile/DBF/.prj-otsakkeet) ovat käyttäjän Roihu-tulosteina suoritettu; G0-osa 3 (LOW-alueen pisteiden ja attribuuttien rajattu otanta) on NOT_RUN.**
+**G0-osa 1 (polut), G0-osa 2 (Shapefile/DBF/.prj-otsakkeet) ja LOW-ruudun 01_input_QA:n maantieteelliset rajat ovat käyttäjän Roihu-tulosteina suoritettu; G0-osa 3 (LOW-alueen pisteiden ja attribuuttien rajattu otanta) on NOT_RUN.**
 
 ## 4. LOW:n olemassa oleva 02C/02D/02E/02F-evidenssi (G1)
 
@@ -96,4 +100,4 @@ Raportin vähimmäistilat: `PASS`, `FAIL`, `REVIEW_REQUIRED`, `NOT_RUN`, `NOT_AS
 
 Tämän dokumentin tarkoitus on korjata viiteaineistojen roolit **jo toteutetun työn pohjalta**. Seuraava turvallinen Codex-työ on G0:n repo-/manifestitarkastus ja sen jälkeen erikseen, vasta todella löytyville olemassa oleville SYKE-aineistotiedostoille rajattu metadata-audit. Ei GitHubiin aineistoja, ei vektorien/rasterien uudelleenmuodostusta, ei uutta DEM:iä, D8:aa, accumulationia, hyväksyttyjä purkupisteitä eikä CSC-ajoja.
 
-**G0:** suunniteltu, ei suoritettu. **G1:** käyttäjän olemassa olevista CSV:istä toimittama inventaario valmis, hydrologisesti NOT_ASSESSED. **G2–G5:** NOT_RUN.
+**G0:** lähdepolut, 6 shapefileotsaketta ja LOW-bbox vahvistettu (PASS); LOW:n paikallinen pisteote NOT_RUN. **G1:** käyttäjän olemassa olevista CSV:istä toimittama inventaario valmis, hydrologisesti NOT_ASSESSED. **G2–G5:** NOT_RUN.
