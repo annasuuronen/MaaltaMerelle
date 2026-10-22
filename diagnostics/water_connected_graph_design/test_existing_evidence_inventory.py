@@ -190,9 +190,14 @@ class EvidenceInventoryTests(unittest.TestCase):
                 read_csv(p,FIELDS["groups"])
     def test_extra_csv_field_allowed(self):
         with tempfile.TemporaryDirectory() as tmp:
-            p=Path(tmp)/"groups.csv";save_fixture(self.data,Path(tmp))
-            with p.open("a") as f: f.write("")
-            self.assertEqual(len(read_csv(p,FIELDS["groups"])[0]),4)
+            self.data["groups"][0]["future_extra"]="optional"
+            for row in self.data["groups"][1:]:
+                row["future_extra"]="NA"
+            root=Path(tmp)
+            save_fixture(self.data,root)
+            rows,_=read_csv(root/FILES["groups"],FIELDS["groups"])
+            self.assertEqual(len(rows),4)
+            self.assertEqual(rows[0]["future_extra"],"optional")
     def test_symlink_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);p=root/"a.csv";p.write_text("x")
