@@ -22,7 +22,9 @@ GRID = 6000
 D8 = {1: (-1, 1), 2: (0, 1), 4: (1, 1), 8: (1, 0),
       16: (1, -1), 32: (0, -1), 64: (-1, -1), 128: (-1, 0)}
 CANDIDATE_INCREMENT_M = 3e-7
-MATCH_TOLERANCE_M = 5e-8
+MATCH_TOLERANCE_M = 1e-9
+# Predeclare alternative tolerances; do not tune them after seeing the CSC result.
+SENSITIVITY_TOLERANCES_M = (1e-10, 1e-9, 5e-8)
 NEAR_FLAT_TOLERANCE_M = 1e-6
 
 
@@ -32,7 +34,12 @@ def require(condition, reason):
 
 
 def sha(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    # Stream the digest instead of materializing CSVs in RAM.
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for part in iter(lambda: handle.read(65536), b""):
+            digest.update(part)
+    return digest.hexdigest()
 
 
 def read_csv(path, fields, max_rows):
@@ -109,6 +116,14 @@ def analyze(centers, raw, expected_center_ids, expected_raw_ids):
             matches += 1
         else:
             histogram["not_close_to_integer_multiple"] += 1
+    sensitivity = {
+        f"{tol:.0e}": sum(
+            round(abs(d)/CANDIDATE_INCREMENT_M) >= 1 and
+            abs(abs(d)-round(abs(d)/CANDIDATE_INCREMENT_M)*CANDIDATE_INCREMENT_M) <= tol
+            for d in nearly_flat
+        )
+        for tol in SENSITIVITY_TOLERANCES_M
+    }
     return {
         "scope": "PREVIOUSLY_EXPORTED_CSV_ONLY_NO_RASTER_READ",
         "land_centres": n_land,
@@ -123,6 +138,8 @@ def analyze(centers, raw, expected_center_ids, expected_raw_ids):
         "candidate_step_multiples": dict(sorted(histogram.items())),
         "near_flat_compatible_with_candidate_count": matches,
         "near_flat_not_compatible_count": len(nearly_flat)-matches,
+        "quantization_match_tolerance_m": MATCH_TOLERANCE_M,
+        "tolerance_sensitivity_compatible_counts": sensitivity,
         "max_abs_step_residual_m": max(residuals),
         "candidate_not_proven": True,
         "whitebox_binary_and_input_dem_max": "UNKNOWN",
@@ -138,8 +155,10 @@ def analyze(centers, raw, expected_center_ids, expected_raw_ids):
 
 def analyze_files(folder):
     raw_path, centers_path = (folder / name for name in ("raw.csv", "centers.csv"))
-    for p in (raw_path, centers_path):
-        require(p.is_file() and sha(p) == EXPECTED_SHA256[p.name],
+    for p, max_rows in ((raw_path, 2304), (centers_path, 256)):
+        require(p.is_file() and p.stat().st_size <= max_rows * 160 + 200,
+                "MISSING_OR_OVERSIZED_" + p.name)
+        require(sha(p) == EXPECTED_SHA256[p.name],
                 "REPORTED_SHA256_MISMATCH_" + p.name)
     import audit as original
     expected_centers, expected_ids = original.cells_design()
@@ -217,6 +236,8 @@ class SyntheticCases(unittest.TestCase):
         self.assertEqual(result["source_water"],7)
         self.assertEqual(result["near_flat_compatible_with_candidate_count"],119)
         self.assertEqual(result["candidate_step_multiples"],{"1":119})
+        self.assertEqual(result["tolerance_sensitivity_compatible_counts"],
+                         {"1e-10":119, "1e-09":119, "5e-08":119})
 
     def test_negative_integration_rejects_bad_receiver_or_order(self):
         centers, raw, ids = self.synthetic_fixture()
@@ -239,6 +260,24 @@ class SyntheticCases(unittest.TestCase):
             with self.assertRaises(ValueError):
                 analyze_files(Path(temp))
 
+    def test_changed_csv_hash_fails_closed(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            directory = Path(temp)
+            (directory / "raw.csv").write_text("cell_id,pointer,z,water_class\\n", encoding="utf-8")
+            (directory / "centers.csv").write_text("row,col,cell_id\\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "REPORTED_SHA256_MISMATCH"):
+                analyze_files(directory)
+
+    def test_oversized_csv_rejected_before_hashing(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as temp:
+            directory = Path(temp)
+            (directory / "raw.csv").write_bytes(b"0" * (2304*160+201))
+            (directory / "centers.csv").write_text("row,col,cell_id\\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "MISSING_OR_OVERSIZED_raw.csv"):
+                analyze_files(directory)
+
 
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
@@ -251,7 +290,7 @@ def main():
         print(f"OFFLINE_TESTS={result.testsRun} "
               f"PASS={result.testsRun-len(result.failures)-len(result.errors)} "
               f"FAIL={len(result.failures)+len(result.errors)}")
-        return 0 if result.wasSuccessful() and result.testsRun==9 else 1
+        return 0 if result.wasSuccessful() and result.testsRun==11 else 1
     require(args.work_dir is not None, "WORK_DIR_REQUIRED")
     report=analyze_files(args.work_dir)
     print("=== TULOKSET ALKAVAT ===")
