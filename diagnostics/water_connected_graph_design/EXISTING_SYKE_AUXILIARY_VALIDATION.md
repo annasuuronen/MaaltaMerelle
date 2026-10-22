@@ -22,14 +22,21 @@ Jos yksittäisen SYKE-pisteen käyttöhistoriaa ei tiedetä, sille annetaan `REF
 
 ## 3. Oikean aineiston löytyminen ennen uutta liittymätarkistusta (G0)
 
-Repo vahvistaa 2 m `DEM_FILE`-syötteen ja RANTA10:n lukutavan `R/00_pipeline_config.R`- ja `R/01_prepare_hydrology_inputs.R`-tiedostoista. Tästä GitHub-tilasta **ei ole vielä vahvistettu SYKEn purkupiste- ja valuma-alueaineiston täysiä CSC-polkuja, formaattia, tasoja, saraketunnisteita eikä CRS-metatietoja**. Älä korvaa näitä oletuksilla tai lataa rinnakkaisia aineistoja.
+Repo vahvistaa 2 m `DEM_FILE`-syötteen ja RANTA10:n lukutavan `R/00_pipeline_config.R`- ja `R/01_prepare_hydrology_inputs.R`-tiedostoista. **Käyttäjän Roihun terminaalista 22.10.2026 toimittama rajoitettu tiedostonimilista vahvistaa olemassa olevien SYKE-Shapefilejen sijainnin**. Alla ovat todetut tiedostopolut; muita alueita ei haettu eikä tiedostoja avattu:
+
+- Hakemisto: `/scratch/project_2004707/pienvedet/open_data/SYKE_VALUMAALUEJAKO_LATEST/`.
+- Purkupisteet: `Valumaaluejako_purkupiste.shp` (+ `.shx`, `.dbf`, `.prj`, `.cpg` ja sivutiedostot).
+- Valuma-aluejaon tasot: `Valumaaluejako_taso1.shp` … `Valumaaluejako_taso5.shp` (+ vastaavat sivutiedostot).
+- Hakemistossa on myös `valumaalueet_latest.zip`; älä pura ZIPiä tai muodosta uudelleen näitä jo valmiita aineistoja.
+
+**G0: sijainti ja tiedostoperheet löytyivät; G0-metadatan tarkastus yhä NOT_RUN.** Shapefilejen sisäisiä kenttiä, koordinaatistoa, feature-lukumääriä, voimassaolo-/julkaisupäivää tai LOW:n todellista pistepeittoa **ei** ole tässä vielä tarkistettu. Hakemiston `LATEST`-nimi ei yksin vahvista aineistoversion ajankohtaisuutta. Älä oleta rakennekenttiä tai hae korvaavia aineistoja.
 
 Seuraava Codex/GitHub-valmistelu:
 - Tarkista ensin nykyiset projektimanifestit/konfiguraatiot ja mahdolliset tiedostolistaukset **read-only**; älä käynnistä tiedostojärjestelmän rajoittamatonta rekursiivista hakua.
 - Kun jo olemassa olevien alkuperäisten tiedostojen tarkat polut löytyvät, laadi **vain metatiedot** raportoiva, rajattu ja auditoitava CSV/GPKG/SHP-inventaario (nimi, koko, CRS, layer, geom-tyyppi, kentät, identiteetti ja alkuperäisen aineiston versio jos saatavilla). Älä kirjoita, siirrä, täydentäviä rasterointeja tee tai laske massiivisten aineistojen SHA256-tiivisteitä. Älä paljasta suojattua sisältöä.
 - Luo kuuden kentän provenienssisopimus per piste-/alueaineisto: `source_path_or_id`, `source_version`, `used_in_build_or_candidate_review`, `reference_role`, `shared_lineage` ja `verification_state`. Jokainen puuttuva arvo on `UNKNOWN`, ei hyväksyntä.
 
-**G0 on valmis vasta, kun aineistot on todella löydetty ja alkuperäisistä metatiedoista tarkastettu; tämän dokumentin kirjoittaminen ei toteuta G0:aa.**
+**G0-osa 1 (tiedostonimet ja sijainti) on käyttäjän Roihu-tulosteen perusteella suoritettu; G0-osa 2 (alkuperäisten lähdemetatietojen tarkastus) on NOT_RUN.**
 
 ## 4. LOW:n olemassa oleva 02C/02D/02E/02F-evidenssi (G1)
 
