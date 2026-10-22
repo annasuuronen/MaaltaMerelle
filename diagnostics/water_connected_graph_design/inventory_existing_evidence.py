@@ -176,7 +176,11 @@ def evaluate(data):
     require(set(eligible) == expected_keys, "CANDIDATE_EDGE_COVERAGE_MISMATCH")
 
     routes = {}
+    # Real 02F deliberately returns edge_routes=candidate_edges when no
+    # eligible 02E edges exist: it has no route_id/status/terminal columns.
+    # Accept that EMPTY shape only, never silently tolerate partial 02F rows.
     for row in data["routes"]:
+        require(FIELDS["routes"] <= set(row), "NONEMPTY_02F_MISSING_TRACE_COLUMNS")
         key = edge_key(row)
         require(key in eligible and key not in routes, "ROUTE_EDGE_COVERAGE_OR_DUPLICATE")
         route_id = number(row["route_id"])
@@ -291,7 +295,8 @@ def execute(input_dir, output_dir, evidence_label):
     require(evidence_label and len(evidence_label) <= 180, "EVIDENCE_LABEL_REQUIRED")
     values, hashes = {}, {}
     for role, name in FILES.items():
-        values[role], hashes[name] = read_csv(input_dir / name, FIELDS[role])
+        required = FIELDS["candidate_edges"] if role == "routes" else FIELDS[role]
+        values[role], hashes[name] = read_csv(input_dir / name, required)
     groups,lakes,summary = evaluate(values)
     summary["evidence_label_operator_supplied_unverified"] = evidence_label
     summary["sha256_input_csv"] = hashes
