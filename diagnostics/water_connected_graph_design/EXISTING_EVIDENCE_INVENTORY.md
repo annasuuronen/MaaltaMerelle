@@ -14,7 +14,7 @@ Five required files, each max **15 MB**, max **200,000 CSV data rows**, no symli
 - `02E_water_connected_candidate_spill_edges.csv` — exactly the eligible group edges;
 - `02F_water_connected_candidate_route_edges.csv` — exactly the eligible edges enriched by 02F's **first-water/terminal** diagnostic.
 
-If a file is missing, oversized, truncated or inconsistent, **STOP**; this does not trigger any baseline recomputation. The Python program validates exact group identities, spill levels, 8-neighbour geometry, original and derived group statuses, exact candidate-edge coverage and one-to-one 02E-to-02F edge linkage, deduplicated 02F receiver+origin traces and water-terminal class consistency.
+If a file is missing, oversized, truncated or inconsistent, **STOP**; this does not trigger any baseline recomputation. **Documented empty case:** if no spill group is eligible in 02E, the 02F edge-route CSV has zero data rows and can legitimately retain only the original 02E edge columns (no `route_status`, `route_id`, or `route_terminal_cell`). The inventory accepts this shape **only when the 02E eligible-edge count is also zero**; nonempty 02F data must have all trace columns. The Python program validates exact group identities, spill levels, 8-neighbour geometry, original and derived group statuses, exact candidate-edge coverage and one-to-one 02E-to-02F edge linkage, deduplicated 02F receiver+origin traces and water-terminal class consistency.
 
 A source-label is mandatory but **operator-supplied and not independently verified**. Input SHA256 checksums and rows are included in the JSON output for future reproducibility. Neither the historical scientific source commit nor the correct RANTA10 raster provenance can be derived from these five CSVs alone.
 
@@ -46,7 +46,7 @@ Pinned Roihu shell runner:
 `diagnostics/water_connected_graph_design/run_existing_evidence_offline.sh`.
 Run in a **separate clean clone** of the implementation draft branch with `MM_EXPECTED_COMMIT` set to its reviewed exact SHA; pass the absolute existing baseline folder as the only argument. The script uses `timeout 20s` synthetic tests and `timeout 90s` the inventory program, writes only to a new private scratch directory. No module/terra/R/Whitebox required. **Do not run until independently reviewed** against actual generated CSV headers and login-node policy.
 
-The 33 synthetic methods and the new CI workflow are **software tests only**, never substitute for validating historical 02D/02E/02F values. At authoring, **actual CSC CSV inventory NOT_RUN**; CI status must be confirmed separately.
+**37 new synthetic inventory methods** and the existing **26 graph oracle tests** are **63 PASS, 0 FAIL/ERROR** in GitHub Actions run [39743899249](https://github.com/annasuuronen/MaaltaMerelle/actions/runs/39743899249), including the documented zero-candidate 02F schema and rejection of missing nonempty trace columns. These remain **software tests only**, never substitute for validating historical 02D/02E/02F values. **Actual CSC CSV inventory remains NOT_RUN**.
 
 Prior audits of LOW D8 microscopic increments remain distinct (PR #35/#37); their numeric match to Whitebox flat increments is not outlet evidence.
 
