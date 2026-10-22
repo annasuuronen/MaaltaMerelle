@@ -25,13 +25,13 @@ Viitteet:
 - https://whiteboxr.gishub.org/reference/wbt_fill_depressions.html
 - https://github.com/jblindsay/whitebox-tools/blob/master/whitebox-tools-app/src/tools/hydro_analysis/fill_depressions.rs
 
-**Rajoitus:** Tämä on *upstream*-lähdekoodin mahdollinen sormenjälki, **ei näyttö siitä**, että Roihun käytössä olleessa Whitebox-binäärissä on sama algoritmi tai että lähtö-DEM:n `maximum` on kaksinumeroinen. Aikaisemman LAND_FILL-ajon versio, `flat_increment`-arvo, DEM-provenienssi ja mahdollinen jälkikäsittely on selvitettävä erikseen. Älä muuta `fix_flats`-asetusta tämän tutkimuksen perusteella.
+**Rajoitus:** Tämä on *upstream*-lähdekoodin mahdollinen sormenjälki, **ei näyttö siitä**, että Roihun käytössä olleessa Whitebox-binäärissä on sama algoritmi tai että lähtö-DEM:n `maximum` on kaksinumeroinen. **0,3 mikrometrin erot eivät yksilöi askelta:** jos positiivisen lähtö-DEM:n maksimin kokonaisosa on yksinumeroinen, vastaava lähdekoodin askel olisi `3e-8 m` ja `3e-7 m` voi syntyä kymmenestä peräkkäisestä lisäyksestä. Jos maksimi on kolminumeroinen, vaihtoehto on `3e-6 m`. Uusi ohjelma raportoi vertailun kaikille kolmelle oletukselle; yksittäinen osuma ei todista käytettyä parametria. Aikaisemman LAND_FILL-ajon versio, `flat_increment`-arvo, DEM-provenienssi ja mahdollinen jälkikäsittely on selvitettävä erikseen. Älä muuta `fix_flats`-asetusta tämän tutkimuksen perusteella.
 
 ## `audit_flat_increment.py` – ei uusia rasterilukuja
 
-Ohjelma lukee **vain kaksi edellisessä CSC-kokeessa luotua CSV-tiedostoa** ja tarkistaa SHA256-summat, 256 pistettä, kaikki 2 304 näytesolua, Whitebox-D8-askeleet sekä alkuperäiset 236/117/119/7/13 -luvut. Sen jälkeen se luokittelee jokaisen 119 pienoiskaltevuuden sen mukaan, vastaako korkeuseron itseisarvo lukua `k × 3e-7 m` kokonaisluvulla `k>=1` enintään `5e-8 m` toleranssilla. Tulosteessa on `k`-histogrammi ja yhteensopimattomien määrät. **Yhteensopivuus ei todista syy-yhteyttä.**
+Ohjelma lukee **vain kaksi edellisessä CSC-kokeessa luotua CSV-tiedostoa** ja tarkistaa SHA256-summat, 256 pistettä, kaikki 2 304 näytesolua, Whitebox-D8-askeleet sekä alkuperäiset 236/117/119/7/13 -luvut. Sen jälkeen se luokittelee jokaisen 119 pienoiskaltevuuden sen mukaan, vastaako korkeuseron itseisarvo lukua `k × 3e-7 m` kokonaisluvulla `k>=1` ensisijaisesti `1e-9 m` toleranssilla sekä erikseen ennalta määritetyillä `1e-10`, `1e-9` ja `5e-8 m` herkkyysrajoilla. Tulosteessa on `k`-histogrammi ja yhteensopimattomien määrät. **Yhteensopivuus ei todista syy-yhteyttä.**
 
-Paikallisesti valmistelussa ajettiin **9/9 synteettistä Python-testiä PASS**; ei todellista CSC-dataa. Varsinainen CSV-sormenjälkianalyysi on **NOT_RUN**, koska tiedostot sijaitsevat Roihulla.
+Alkuperäisessä valmistelussa raportoitiin **9/9 synteettistä Python-testiä PASS**; myöhemmin lisättiin kaksi uutta hylkäystestiä, tiukempi toleranssi ja vaihtoehtoisten askelten vertailu. **Päivitetty 11 testin versio on NOT_RUN**, eikä todellista CSC-dataa ole käsitelty tässä vaiheessa. Varsinainen CSV-sormenjälkianalyysi on **NOT_RUN**, koska tiedostot sijaitsevat Roihulla.
 
 Kun ajankohtaista, analyysin voi tehdä **erillisen puhtaan tämän haaran checkoutin** jälkeen, eikä rastereita tarvitse avata:
 
