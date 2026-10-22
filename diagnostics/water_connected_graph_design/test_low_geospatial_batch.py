@@ -117,6 +117,53 @@ class LowGeoBatchTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "GEOS_C_NOT_AVAILABLE"):
                 b.Geos()
 
+    def test_geos_backend_works_on_real_sqlite_gpkg_fixture(self):
+        def ring(points):
+            wkb = b"\x01" + struct.pack("<III", 3, 1, len(points))
+            return wkb + b"".join(struct.pack("<dd", *p) for p in points)
+        def rectangle(x,y):
+            return ring([(x,y),(x+20,y),(x+20,y+20),(x,y+20),(x,y)])
+        def line(x,y):
+            return b"\x01" + struct.pack("<II", 2, 2) + struct.pack("<dddd", x,y,x+1,y+1)
+        def blob(wkb):
+            return b"GP\x00\x01" + struct.pack("<i",3067) + wkb
+        with tempfile.TemporaryDirectory() as tmp:
+            p=Path(tmp)/"input.gpkg"
+            con=sqlite3.connect(p)
+            con.execute("CREATE TABLE gpkg_geometry_columns(table_name TEXT,srs_id INTEGER,geometry_type_name TEXT)")
+            for name,count in b.SIZES.items():
+                con.execute("INSERT INTO gpkg_geometry_columns VALUES (?,3067,?)",
+                            (name,"LINESTRING" if name=="river_lines" else "POLYGON"))
+                if name=="lakes":
+                    con.execute("CREATE TABLE lakes(objectid REAL,korkeus_m REAL,geom BLOB)")
+                    coords={1892:(205630.,6903260.),1894:(205650.,6903260.),3181:(209250.,6907650.)}
+                    for ident,(x,y) in coords.items():
+                        con.execute("INSERT INTO lakes VALUES (?,?,?)",(ident,12.5,blob(rectangle(x,y))))
+                    for k in range(count-3):
+                        con.execute("INSERT INTO lakes VALUES (?,?,?)",(90000+k,None,blob(rectangle(202000.+50*k,6900000.))))
+                else:
+                    con.execute("CREATE TABLE "+name+"(geom BLOB)")
+                    for k in range(count):
+                        x=209260.+50*k
+                        wkb=line(x,6907600.) if name=="river_lines" else rectangle(x,6907600.)
+                        con.execute("INSERT INTO "+name+" VALUES (?)",(blob(wkb),))
+            con.commit()
+            con.close()
+            store=b.Store(p)
+            try:
+                self.assertEqual(len(store.query("LAKE_INFO")),3)
+                pair=store.query("LAKE_PAIR")[0]
+                self.assertEqual(pair["distance_m"],"0.0")
+                self.assertEqual(pair["touches"],"1")
+                cell_map={(int(r["cell"]),int(r["lake_id"])):r for r in store.query("CELL_LAKE")}
+                self.assertEqual(cell_map[(23211319,1892)]["inside"],"1")
+                self.assertEqual(cell_map[(10007129,3181)]["inside"],"1")
+                self.assertEqual(len(store.query("river_areas")),7)
+                self.assertEqual(len(store.query("river_lines")),7)
+                self.assertEqual(len(store.query("SYKE_POINT_LAKE")),3)
+            finally:
+                store.close()
+
     def test_neighbor_and_component_classes(self):
         with tempfile.TemporaryDirectory() as t:
             p=Path(t)
