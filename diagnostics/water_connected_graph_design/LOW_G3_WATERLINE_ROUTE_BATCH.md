@@ -70,3 +70,20 @@ These are six unique start/route records, NOT six independent channels. The stor
 - SYKE point7025519 may align with lake3181 shore and catchment hierarchy, but is not proven to be a true lake discharge point.
 - Next optional G4 is a **bounded read-only audit of existing D8-pointer cells for these six route summaries** (ideally small source window or sparse sample in a compute allocation), comparing all traversed cells to original 02F starts, steps and D8_ZERO terminal. No DEM, D8, STORAGE, lake masks, point edits or flow accumulation.
 - NATIONAL=LOCKED, MODERATE=REVIEW_REQUIRED, hydrological_validation=NOT_ASSESSED, channel_interpretation=NOT_ASSESSED. All PRs remain draft.
+
+### New constrained D8 geometry deduction from original 02F summaries (no new raster read)
+
+With the validated 6000-column LOW grid and original route start/end cell IDs, all six routes end exactly 21–24 raster **rows north** of their starts and only 0–2 columns east/west. Critically, the existing 02F route_steps values match the number of rows advanced north for every one of these routes:
+
+| 02F route | northward row difference | eastward column difference | reported pointer steps |
+|---|---:|---:|---:|
+| 11 | 21 | +1 | 21 |
+| 14 | 22 | +1 | 22 |
+| 15 | 22 | 0 | 22 |
+| 16 | 22 | -1 | 23 |
+| 18 | 23 | -1 | 23 |
+| 20 | 24 | -2 | 24 |
+
+**Correction to the previous statement:** route16 moves 22 rows north but uses 23 D8 steps; one move could be sideways without moving north. For the other five routes whose northward row count equals the reported step count, every D8 step must be one of N/NW/NE according to the documented Whitebox direction convention; there can still be east-west zigzags. For route16, the path must include exactly one non-northward-row step if no opposite-row moves; it could also include a southward step if permitted by step constraint, which would require at least one compensating northward step exceeding the total available and thus is impossible when 22/23 (max possible row displacement 23); therefore exactly one step with zero row displacement. Confirm directly from pointer samples rather than claiming an actual continuous stream.
+
+This is a combinatorial consequence of the **already recorded** 02F starts, terminals and 02F route-step semantics. It does not prove hydraulic connection, monotone elevation, culvert continuity or waterbody reception. Planned small-window G4 D8 read is still NOT_RUN.
