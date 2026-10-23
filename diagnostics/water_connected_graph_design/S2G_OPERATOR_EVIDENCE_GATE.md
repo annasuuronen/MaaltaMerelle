@@ -13,29 +13,29 @@ Molemmat ohjelmat on jo toteutettu, eikä niitä muokata tässä. Portit ovat ri
 
 ## 2. Suoritusympäristö ja erilliset checkoutit
 
-Käytä **kahta eri, etukäteen olemassa olevaa, paikallisesti katselmoitua ja puhdasta Git-checkoutia**. Alla olevat viitteelliset polut \`$HOME/MaaltaMerelle_S2F_PINNED\` ja \`$HOME/MaaltaMerelle_S2C_PINNED\` ovat oletusarvoja komenteille, eivät väite olemassa olevista hakemistoista. Jos hakemistoa ei ole, pysähdy: älä anna komennon kloonata, hakea, päivittää, vaihtaa haaraa tai luoda uutta checkoutia. Käyttäjä hyväksyy checkoutin valmistelun erikseen tarvittaessa. Työhakemistojen tulee olla toisistaan ja CSC:n lähdekansioista erilliset.
+Käytä **kahta eri, etukäteen olemassa olevaa, paikallisesti katselmoitua ja puhdasta Git-checkoutia**. Alla olevat viitteelliset polut `$HOME/MaaltaMerelle_S2F_PINNED` ja `$HOME/MaaltaMerelle_S2C_PINNED` ovat oletusarvoja komenteille, eivät väite olemassa olevista hakemistoista. Jos hakemistoa ei ole, pysähdy: älä anna komennon kloonata, hakea, päivittää, vaihtaa haaraa tai luoda uutta checkoutia. Käyttäjä hyväksyy checkoutin valmistelun erikseen tarvittaessa. Työhakemistojen tulee olla toisistaan ja CSC:n lähdekansioista erilliset.
 
-\`git rev-parse HEAD\` on **täsmällinen lukitus**. \`GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=all\` varmistaa, että checkout on puhdas. Molemmat käskyt käyttävät vain lähtötilan tarkistusta ja jo olemassa olevia skriptejä. Kummassakaan ei käytetä \`R/00_pipeline_config.R\`-tiedoston \`source()\`-kutsua, koko hydrologisen putken ajuria tai aktiivista \`02_build_baseline_hydrology.R\`-koodia.
+`git rev-parse HEAD` on **täsmällinen lukitus**. `GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=all` varmistaa, että checkout on puhdas. Molemmat käskyt käyttävät vain lähtötilan tarkistusta ja jo olemassa olevia skriptejä. Kummassakaan ei käytetä `R/00_pipeline_config.R`-tiedoston `source()`-kutsua, koko hydrologisen putken ajuria tai aktiivista `02_build_baseline_hydrology.R`-koodia.
 
 ### Gate A: vain synteettiset R 4.6.1 -testit
 
-Suoritetaan erikseen vain käyttäjän hyväksynnän jälkeen. Skripti lataa \`R/02F_water_connected_route_diagnostics.R\`-tiedoston ja S2F:n syntettisen havainnoijan, mutta ei CSC:n alkuperäisiä TIFF/CSV-arvoja.
+Suoritetaan erikseen vain käyttäjän hyväksynnän jälkeen. Skripti lataa `R/02F_water_connected_route_diagnostics.R`-tiedoston ja S2F:n syntettisen havainnoijan, mutta ei CSC:n alkuperäisiä TIFF/CSV-arvoja.
 
-\`\`\`bash
+```bash
 ( set -euo pipefail; C="$HOME/MaaltaMerelle_S2F_PINNED"; PIN=477c5b13d5714d618c9c9de88f5f80290b53d994; trap 'echo "=== TULOKSET LOPPUVAT ==="' EXIT; echo "=== TULOKSET ALKAVAT ==="; test -d "$C/.git" || { echo "STOP: S2F_CHECKOUT_MISSING"; exit 1; }; test "$(git -C "$C" rev-parse --verify HEAD)" = "$PIN" || { echo "STOP: S2F_HEAD_MISMATCH"; exit 1; }; test -z "$(GIT_OPTIONAL_LOCKS=0 git -C "$C" status --porcelain --untracked-files=all)" || { echo "STOP: S2F_WORKTREE_CHANGED"; exit 1; }; module load r-env/461; cd "$C"; timeout --signal=TERM --kill-after=2s 10s Rscript --vanilla -e 'stopifnot(identical(as.character(getRversion()),"4.6.1"))'; echo "S2F_PIN=$PIN"; timeout --signal=TERM --kill-after=2s 45s Rscript --vanilla diagnostics/water_connected_graph_design/test_s2f_synthetic_02f_observer.R )
-\`\`\`
+```
 
-Tuloksen arviointi: tarkista \`SUMMARY PASS=75 FAIL=0 NOT_RUN=0 NAMED_TESTS=75 R=4.6.1\` sekä exit=0; jos lopputulos eroaa, merkitse GATE_A=STOP. Pelkkä viimeinen yhteenvetolause ilman ehjää outputia tai oikeaa commitia ei riitä. \`Rscript\`- ja \`timeout\`-poikkeamat ovat STOP eivätkä synteettisen algoritmin tieteellisiä FAIL-tuloksia.
+Tuloksen arviointi: tarkista `SUMMARY PASS=75 FAIL=0 NOT_RUN=0 NAMED_TESTS=75 R=4.6.1` sekä exit=0; jos lopputulos eroaa, merkitse GATE_A=STOP. Pelkkä viimeinen yhteenvetolause ilman ehjää outputia tai oikeaa commitia ei riitä. `Rscript`- ja `timeout`-poikkeamat ovat STOP eivätkä synteettisen algoritmin tieteellisiä FAIL-tuloksia.
 
 ### Gate B: vain alkuperäisen LOW:n metadata ja pieni CSV
 
-Tämä **on erillinen checkout ja erillinen käyttäjän päätös**. S2C:n CLI tulostaa jo itse yhden \`=== TULOKSET ALKAVAT ===\` / \`=== TULOKSET LOPPUVAT ===\` -parin; älä lisää komennossa toista merkintäparia. S2C sisältää rajatut JSON-gdalinfo-kutsut ilman rasterin arvolukua; se lukee vain ennalta määrätyt viisi pientä CSV-tiedostoa \`01_inputs\`- ja \`02_baseline\`-hakemistoista.
+Tämä **on erillinen checkout ja erillinen käyttäjän päätös**. S2C:n CLI tulostaa jo itse yhden `=== TULOKSET ALKAVAT ===` / `=== TULOKSET LOPPUVAT ===` -parin; älä lisää komennossa toista merkintäparia. S2C sisältää rajatut JSON-gdalinfo-kutsut ilman rasterin arvolukua; se lukee vain ennalta määrätyt viisi pientä CSV-tiedostoa `01_inputs`- ja `02_baseline`-hakemistoista.
 
-\`\`\`bash
+```bash
 ( set -euo pipefail; C="$HOME/MaaltaMerelle_S2C_PINNED"; PIN=7324f2c22b3151fffe7b172617bde4d0ef6ee821; test -d "$C/.git" || { echo "STOP: S2C_CHECKOUT_MISSING"; exit 1; }; test "$(git -C "$C" rev-parse --verify HEAD)" = "$PIN" || { echo "STOP: S2C_HEAD_MISMATCH"; exit 1; }; test -z "$(GIT_OPTIONAL_LOCKS=0 git -C "$C" status --porcelain --untracked-files=all)" || { echo "STOP: S2C_WORKTREE_CHANGED"; exit 1; }; module load gdal/3.12.2; cd "$C"; echo "S2C_PIN=$PIN"; set +e; PYTHONDONTWRITEBYTECODE=1 timeout --signal=TERM --kill-after=2s 90s python3 -B diagnostics/water_connected_graph_design/s2c_original_source_preflight.py; RC=$?; set -e; echo "S2C_PROCESS_EXIT=$RC"; if test "$RC" -eq 2; then echo "S2C_EXPECTED_STOP_EXIT=CONFIRMED"; else echo "STOP: UNEXPECTED_S2C_EXIT"; exit 1; fi )
-\`\`\`
+```
 
-**Exit=2 tarkoittaa tarkoituksellista ei-hyväksyntää** riippumatta siitä, saatiinko tarkistettua kaikki metadata. Tutki erikseen JSON:n \`metadata_status\`, vaihekohtaiset PASS/STOP/NOT_RUN-arvot ja \`stop_reason\`. Vain silloin, kun rasteri- ja CSV-metadata täsmäävät, voidaan raportoida \`metadata_status=PASS\`; sekään ei muuta \`RUNTIME_INPUT_LINEAGE=NOT_ASSESSED\` eikä \`SOURCE_AUTHENTICATION=NOT_ASSESSED\`. Jos skripti palauttaa muuta kuin 2, se ei ole odotettu tulos. Tästä ei saa jatkaa automaattisesti S2B:n alkuperäistä dataa lukevaksi toteutukseksi.
+**Exit=2 tarkoittaa tarkoituksellista ei-hyväksyntää** riippumatta siitä, saatiinko tarkistettua kaikki metadata. Tutki erikseen JSON:n `metadata_status`, vaihekohtaiset PASS/STOP/NOT_RUN-arvot ja `stop_reason`. Vain silloin, kun rasteri- ja CSV-metadata täsmäävät, voidaan raportoida `metadata_status=PASS`; sekään ei muuta `RUNTIME_INPUT_LINEAGE=NOT_ASSESSED` eikä `SOURCE_AUTHENTICATION=NOT_ASSESSED`. Jos skripti palauttaa muuta kuin 2, se ei ole odotettu tulos. Tästä ei saa jatkaa automaattisesti S2B:n alkuperäistä dataa lukevaksi toteutukseksi.
 
 ## 3. Ei-automaattinen päätöstaulukko
 
@@ -48,7 +48,7 @@ Tämä **on erillinen checkout ja erillinen käyttäjän päätös**. S2C:n CLI 
 | STOP | mikä tahansa | Älä nosta R-observeria valmiiksi Roihuun tai väitä jatkoajon pariteettia |
 | mikä tahansa | muu exit | Odottamaton metatietotyökalun suoritus / preflight-keskeytys, STOP; ei piilokorjausta |
 
-Historian keskeinen puute: 01_input_manifest.csv ei yksilöi luotettavasti nimenomaista 02F:n käyttämää \`ptr_land_water\`-objektia tai versionvaihtoa. \`OVERWRITE=FALSE\`, WBT:n väliaikaisesta rasterista pysyvään muunnos ja mahdollinen \`terra\`-olion laiska tiedostoluku estävät takautuvan hyväksynnän pelkän nykyisen tiedoston SHA:n perusteella.
+Historian keskeinen puute: 01_input_manifest.csv ei yksilöi luotettavasti nimenomaista 02F:n käyttämää `ptr_land_water`-objektia tai versionvaihtoa. `OVERWRITE=FALSE`, WBT:n väliaikaisesta rasterista pysyvään muunnos ja mahdollinen `terra`-olion laiska tiedostoluku estävät takautuvan hyväksynnän pelkän nykyisen tiedoston SHA:n perusteella.
 
 ## 4. Evidenssiraja ja tavoiteltu myöhempi toistettavuus
 
