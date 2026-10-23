@@ -67,10 +67,25 @@ def find_rscript():
     return os.environ.get('MM_S2IB_RSCRIPT') or None
 
 
+def find_r_fixture_file():
+    return os.environ.get('MM_S2IB_R_FIXTURE_FILE') or None
+
+
 def actual_r_lines():
     script = find_rscript()
+    fixture = find_r_fixture_file()
+    if script and fixture:
+        raise AssertionError('S2IB_STOP: choose either Rscript or an R fixture file')
+    if fixture:
+        # CSC r-env and python-geo use separate, non-nestable containers.
+        # Read only explicit opt-in R stdout; no Python-to-R subprocess.
+        with open(fixture, 'rb') as stream:
+            raw = stream.read(65537)
+        if len(raw) > 65536:
+            raise AssertionError('S2IB_STOP: R fixture output exceeds 64 KiB')
+        return raw.decode('ascii').splitlines()
     if script is None:
-        raise unittest.SkipTest('NOT_RUN: set MM_S2IB_RSCRIPT to test actual R interoperability')
+        raise unittest.SkipTest('NOT_RUN: set MM_S2IB_RSCRIPT or MM_S2IB_R_FIXTURE_FILE')
     # Named binary directly, never shell; no setup/install/network and 15s hard bound.
     proc = subprocess.run([script,'--vanilla',str(R_EMITTER)],
                           cwd=str(ROOT), text=True, stdout=subprocess.PIPE,
@@ -119,11 +134,14 @@ class ProtocolStaticContractTests(unittest.TestCase):
                      ('osgeo','rasterio','terra') for n in ast.walk(tree)))
 
 
-@unittest.skipUnless(find_rscript(), 'NOT_RUN: MM_S2IB_RSCRIPT not set')
+@unittest.skipUnless(find_rscript() or find_r_fixture_file(),
+                     'NOT_RUN: MM_S2IB_RSCRIPT or MM_S2IB_R_FIXTURE_FILE not set')
 class ActualRInteroperabilityTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.lines=actual_r_lines()
+        if cls.lines.count('R_SYNTHETIC_NEGATIVE_PASS=4') != 1:
+            raise AssertionError('S2IB_STOP: expected exactly one R negative PASS marker')
         cls.expected=expected()
         cls.received={}
         for line in cls.lines:
