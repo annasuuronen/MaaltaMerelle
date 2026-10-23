@@ -8,9 +8,15 @@ run <- '123e4567-e89b-42d3-a456-426614174000'
 attempt <- '123e4567-e89b-42d3-a456-426614174001'
 hex <- function(r) paste(sprintf('%02x',as.integer(r)), collapse='')
 emit <- function(scenario, role, sequence, cells, values) {
-  out <- s2ib_encode_batch(run, attempt, 'tiny', 3L, 3L, 199000L, 6911000L,
-                           sequence, role, cells, values)
-  cat(sprintf('CASE=%s|ROLE=%s|SEQ=%d|WIRE=%s\n',scenario,role,sequence,hex(out)))
+  tryCatch({
+    out <- s2ib_encode_batch(run, attempt, 'tiny', 3L, 3L, 199000L, 6911000L,
+                             sequence, role, cells, values)
+    cat(sprintf('CASE=%s|ROLE=%s|SEQ=%d|WIRE=%s\n',scenario,role,sequence,hex(out)))
+  }, error=function(e) {
+    cat(sprintf('R_FIXTURE_STAGE_STOP=%s:%s:%s\n',
+                scenario,role,conditionMessage(e)),file=stderr())
+    stop(e)
+  })
 }
 # Actual 02F callback asks for WATER_CLASS -> LAKE_ID -> POINTER for same cells.
 # Duplicate cell IDs are intentional; no hydrological model is executed.
