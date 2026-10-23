@@ -40,8 +40,8 @@ following interpretations follow the pinned design without changing it:
 | --- | --- |
 | `s2i_b2b_native_value_v2.R` | Independent pure Base-R encoder, native-vector/raw-vector constructors and bounded validation |
 | `s2i_b2b_native_value_v2.py` | Independently written pure Python encoder/decoder and synthetic reference-byte comparison |
-| `test_s2i_b2b_native_value_v2.R` |57 new named tests and seven bounded synthetic wire fixtures |
-| `test_s2i_b2b_native_value_v2.py` |123 new unittest cases, independent byte expectations and separate-stage R comparison |
+| `test_s2i_b2b_native_value_v2.R` |58 new named tests and seven bounded synthetic wire fixtures |
+| `test_s2i_b2b_native_value_v2.py` |125 new unittest cases, independent byte expectations and separate-stage R comparison |
 | `S2I_B2B_NATIVE_VALUE_V2_QA.md` | This audit, interface, results and limitations |
 
 The frozen v1 codec/writer, S2F, native02F, prior reports/designs/evidence, R
@@ -92,6 +92,8 @@ checked exactly; double IDs are matched to exact binary64 encodings for1…81,
 never rounded into a grid. Generated validation-table integers are not coercions
 of observed inputs. Scalar values are validated through integer bit fields;
 Python does not decode responses into Python floats for equality.
+Native-type and validity labels are length-bounded before lookup, so malformed
+structured API strings cannot make validation scan arbitrarily long labels.
 
 The Python synthetic content SHA256 identifies supplied bytes only. Raw tags,
 declared grid/CRS/runtime/dtypes, UUID labels and a matching caller-supplied
@@ -107,20 +109,22 @@ No enforcement fallback or budget increase was needed.
 
 | Final distinct new cases | PASS | FAIL | NOT_RUN |
 | --- | ---: | ---: | ---: |
-| Base-R codec tests |57 |0 |0 |
-| Python unittest cases, including five R-equivalence methods |123 |0 |0 |
-| **Total named cases** | **180** | **0** | **0** |
+| Base-R codec tests |58 |0 |0 |
+| Python unittest cases, including five R-equivalence methods |125 |0 |0 |
+| **Total named cases** | **183** | **0** | **0** |
 
 No case was skipped. Counts are named test executions in the final versions,
 not sums of development reruns, scalar assertions or per-fixture subtests.
 The initial Python119-case set passed; four additional511/512 framing,
-permutation and deduplication checks passed in the final123-case set. Adding the
+permutation and deduplication checks passed in the expanded123-case set. Adding the
 native-runtime guard and its two new R cases exposed one Python static-test
 false positive: the substring `file(` occurred inside `native_profile()`.
 That intermediate run was **122 PASS,1 FAIL,0 NOT_RUN**. The test now matches
 function-call tokens, with positive checks that actual file/source/system calls
 are still rejected; the codec's I/O prohibition was not relaxed. All123 passed
-after that test correction. No failure was hidden or waived.
+after that test correction. A final length-before-lookup guard added two Python
+and one R negative case; the final125/58-case suites passed. No failure was
+hidden or waived.
 
 The seven R-emitted fixtures match both the Python encoder and a separate
 field-by-field test oracle. The minimal fixture also matches a hand-laid-out
@@ -151,10 +155,10 @@ The tests require their rejection against the original synthetic reference.
 No digest is treated as authenticity, and no parser is claimed able to detect
 all self-consistent forgeries without a reference.
 
-Final observed process wall time: R0.6663s; Python0.1643s (including startup).
-Largest child RSS across the final stages:64.24 MiB, Linux RUSAGE_CHILDREN; not
+Final observed process wall time: R0.6660s; Python0.1655s (including startup).
+Largest child RSS across the final stages:64.91 MiB, Linux RUSAGE_CHILDREN; not
 an individual module memory profile or national scalability estimate. R stdout
-was23521 bytes, below the64 KiB test transport bound.
+was23571 bytes, below the64 KiB test transport bound.
 
 Not executed in this task:
 
@@ -192,7 +196,7 @@ MM_S2CV_R_OUTPUT="$MM_V2_OUT" PYTHONDONTWRITEBYTECODE=1 \
 ```
 
 `set -e` stops before Python if R fails. The explicit R-output file is bounded
-at65536 bytes, must contain seven unique fixture cases,57 unique R PASS lines
+at65536 bytes, must contain seven unique fixture cases,58 unique R PASS lines
 and exactly one complete zero-failure summary. In a future approved Roihu test,
 load R for the first stage, unload it and load python-geo for the second; no
 Python-to-R subprocess exists. The transport remains self-reported test evidence,

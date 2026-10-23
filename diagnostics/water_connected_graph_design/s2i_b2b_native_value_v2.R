@@ -84,6 +84,7 @@ s2cv_header <- function(run_id,attempt_id,grid_id,rows,cols,x_origin,y_origin,
   width <- .s2cv_width(v$storage_type)
   .s2cv_need(is.character(v$validity) && is.null(attributes(v$validity)) &&
     length(v$validity)>=1L && length(v$validity)<=32L && !anyNA(v$validity) &&
+    all(nchar(v$validity,type="bytes")>=1L & nchar(v$validity,type="bytes")<=10L) &&
     all(v$validity %in% c("FINITE","NA_INTEGER","NA_REAL","NAN","POS_INF","NEG_INF")),
     "VALIDITY_TAG")
   .s2cv_raw(v$raw_le,256L,"VALUE_WIDTH")

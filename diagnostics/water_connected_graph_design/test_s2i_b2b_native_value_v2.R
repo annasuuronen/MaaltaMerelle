@@ -141,6 +141,8 @@ test("reject_empty_native_vector",expect_stop(s2cv_values(numeric()),"NATIVE_VEC
 test("reject_33_native_values",expect_stop(s2cv_values(rep(1L,33L)),"NATIVE_VECTOR"))
 test("reject_unknown_storage_type",expect_stop(s2cv_values_raw("Byte","FINITE",as.raw(1L)),"NATIVE_TYPE"))
 test("reject_unknown_validity_tag",expect_stop(s2cv_values_raw("INTEGER","NODATA",raw(4L)),"VALIDITY_TAG"))
+test("reject_oversize_validity_label_before_lookup",expect_stop(
+  s2cv_values_raw("INTEGER",paste(rep("F",100000L),collapse=""),raw(4L)),"VALIDITY_TAG"))
 test("reject_integer_NA_with_finite_tag",expect_stop(s2cv_values_raw("INTEGER","FINITE",raw_hex("00000080")),"TAG_BITS"))
 test("reject_finite_double_with_NA_tag",expect_stop(doubles("NA_REAL",pzero),"TAG_BITS"))
 test("reject_nan_with_finite_tag",expect_stop(doubles("FINITE",qnan),"TAG_BITS"))

@@ -149,7 +149,7 @@ def _header(h):
 
 
 def _width(storage):
-    _need(type(storage) is str and storage in _TYPES, "NATIVE_TYPE")
+    _need(type(storage) is str and 1 <= len(storage) <= 7 and storage in _TYPES, "NATIVE_TYPE")
     return _TYPES[storage][1]
 
 
@@ -159,7 +159,7 @@ def _response(v):
     _need(type(v.validity) is tuple and 1 <= len(v.validity) <= 32, "VALUE_COUNT")
     _need(type(v.raw_le) is bytes and len(v.raw_le) == width * len(v.validity), "VALUE_WIDTH")
     for i, tag in enumerate(v.validity):
-        _need(type(tag) is str and tag in _TAGS, "VALIDITY_TAG")
+        _need(type(tag) is str and 1 <= len(tag) <= 10 and tag in _TAGS, "VALIDITY_TAG")
         bits = int.from_bytes(v.raw_le[i * width:(i + 1) * width], "little")
         if width == 4:
             _need(tag == ("NA_INTEGER" if bits == 0x80000000 else "FINITE"), "TAG_BITS")

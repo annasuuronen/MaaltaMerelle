@@ -449,6 +449,10 @@ def encoder_negative_cases():
         ("33", ints((1,)*33), "VALUE_COUNT"),
         ("bad_tag", replace(v,validity=("NODATA",)), "VALIDITY_TAG")):
         cases.append(("response_"+label, replace(t,batches=(replace(t.batches[0],response=val),)+t.batches[1:]),reason))
+    for label,val,reason in (
+        ("oversize_tag",replace(v,validity=("F"*100000,)),"VALIDITY_TAG"),
+        ("oversize_type",replace(v,storage_type="D"*100000),"NATIVE_TYPE")):
+        cases.append(("response_"+label,replace(t,batches=(replace(t.batches[0],response=val),)+t.batches[1:]),reason))
     for label, req, reason in (
         ("short", Request("INTEGER", b"\x01"), "REQUEST_WIDTH"),
         ("mutable", Request("INTEGER", bytearray(b"\x01\0\0\0")), "REQUEST_WIDTH"),
@@ -514,10 +518,10 @@ class REquivalenceTests(unittest.TestCase):
                 if name in cls.wires:raise AssertionError("DUPLICATE_R_CASE")
                 cls.wires[name]=bytes.fromhex(wire)
                 continue
-            if re.fullmatch(r"R_V2_SUMMARY PASS=57 FAIL=0 NOT_RUN=0 R=[0-9.]+",line):
+            if re.fullmatch(r"R_V2_SUMMARY PASS=58 FAIL=0 NOT_RUN=0 R=[0-9.]+",line):
                 summaries.append(line);continue
             raise AssertionError("INVALID_R_STAGE_OUTPUT:"+line[:100])
-        if len(summaries)!=1 or len(passed)!=57 or len(set(passed))!=57 or set(cls.wires)!=set(fixtures()):
+        if len(summaries)!=1 or len(passed)!=58 or len(set(passed))!=58 or set(cls.wires)!=set(fixtures()):
             raise AssertionError("INCOMPLETE_R_STAGE_OUTPUT")
 
     def test_all_R_wires_match_separate_Python_layout_expectations(self):
