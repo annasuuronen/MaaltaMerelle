@@ -6,7 +6,7 @@
 
 - `s2i_b_synthetic_wire_writer.R` — Base R -muistissa toimivat `s2ib_byte`, `s2ib_int32`, `s2ib_float64`, `s2ib_float64_raw` ja `s2ib_encode_batch` tuottavat **raw-vektorin**. Koodi ei käytä terraa, rastersyötteitä, R:n `serialize()`-protokollaa tai verkkoyhteyttä. Jokaisen erän natiivi tagi ja bittikuviot tarkistetaan. Raaka Float64 sallii eksplisiittisen NaN-payloadin.
 - `test_s2i_b_synthetic_emit.R` — käyttää pelkkiä 3×3-fixturejä ja 02F:n kyselyjärjestystä WATER_CLASS→LAKE_ID→POINTER. Tulostaa vain yhdeksän rivin heksamuotoiset synteettiset erät sekä neljän odotetun STOP-poikkeuksen yhteenvedon. Ei kutsu varsinaista 02F-funktiota.
-- `test_s2i_b_cross_language.py` — muodostaa vertailutavut **erillisellä S2I-A:n Python-koodauksella**, ajaa R-fixturen joko opt-in-asetuksella `MM_S2IB_RSCRIPT=/absoluuttinen/polku/Rscript` tai erillisen CSC-kontin jo tuottamasta tulostiedostosta (`MM_S2IB_R_FIXTURE_FILE=/absoluuttinen/polku/tiedosto`), vertailee yhdeksän erän jokaisen tavun, purkaa R-tavut ja tarkistaa häviöttömän paluukoodauksen, täsmälliset bittitagit ja R:n STOP-testit. Ilman Rscript-asetusta neljä R-integraatiotestiä merkitään `skipped/NOT_RUN`, eivät PASS. Pythonin omat kolme vertailu- ja rakennekoetta suoritetaan silloinkin.
+- `test_s2i_b_cross_language.py` — muodostaa vertailutavut **erillisellä S2I-A:n Python-koodauksella**, ajaa R-fixturen joko opt-in-asetuksella `MM_S2IB_RSCRIPT=/absoluuttinen/polku/Rscript` tai erillisen CSC-kontin jo tuottamasta tulostiedostosta (`MM_S2IB_R_FIXTURE_FILE=/absoluuttinen/polku/tiedosto`), vertailee yhdeksän erän jokaisen tavun, purkaa R-tavut ja tarkistaa häviöttömän paluukoodauksen, täsmälliset bittitagit ja R:n STOP-testit. Ilman kumpaakaan asetusta neljä R-integraatiotestiä merkitään `skipped/NOT_RUN`, eivät PASS. Pythonin omat kolme vertailu- ja rakennekoetta suoritetaan silloinkin.
 
 S2I-A:n jo olemassa olevaa `s2i_a_synthetic_value_protocol.py`-tiedostoa ei muuteta eikä lisätä PR:n muutoksiin. Se on tämän S2I-B-haaran **pinottu lähderiippuvuus**.
 
@@ -32,8 +32,12 @@ CSC:n moduulien `r-env/461` ja `python-geo/3.14.5` kontti-wrapperit eivät salli
 Sama R-fixture ja Python-vertailu voidaan suorittaa kahdessa **peräkkäisessä** kontissa niin, ettei testissä tarvita R:n ja Pythonin yhtäaikaista lataamista. Käytä repositorion juuressa esimerkiksi seuraavaa rajattua offline-menetelmää:
 
 ```sh
+(
+set -eu
 ROOT="$PWD/diagnostics/water_connected_graph_design"
 OUT="$(mktemp /tmp/mm-s2ib-r-output.XXXXXX)"
+trap 'rm -f "$OUT"' EXIT
+unset MM_S2IB_RSCRIPT
 module purge
 module load r-env/461
 Rscript --vanilla "$ROOT/test_s2i_b_synthetic_emit.R" > "$OUT"
@@ -41,7 +45,7 @@ module purge
 module load python-geo/3.14.5
 MM_S2IB_R_FIXTURE_FILE="$OUT" PYTHONDONTWRITEBYTECODE=1 \
   python3 -B -m unittest discover -s "$ROOT" -p test_s2i_b_cross_language.py -v
-rm -f "$OUT"
+)
 ```
 
 Suorita vaihe vain, jos edellisen komennon paluukoodi on 0; epäonnistunut R-ajo ei saa muuttua Pythonin PASS-tulokseksi. `MM_S2IB_R_FIXTURE_FILE` luetaan vain, kun se on eksplisiittisesti asetettu. Python vaatii yhden negatiivisten STOP-testien PASS-merkin, yhdeksän yksikäsitteistä erää sekä niiden täsmällisen binäärisen vastaavuuden. Tulostiedoston lukeminen on rajattu 64 KiB:iin, ja samanaikaiset `MM_S2IB_RSCRIPT`- ja `MM_S2IB_R_FIXTURE_FILE`-valinnat hylätään. Poista väliaikainen tiedosto myös epäonnistumisessa.
