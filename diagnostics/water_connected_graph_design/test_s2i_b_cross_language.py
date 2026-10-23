@@ -77,7 +77,10 @@ def actual_r_lines():
                           stderr=subprocess.PIPE, timeout=15, check=False,
                           env={**os.environ, 'LC_ALL':'C', 'TZ':'UTC'})
     if proc.returncode:
-        raise AssertionError(f'R fixture failed rc={proc.returncode}: {proc.stderr[:1500]}')
+        raise AssertionError(
+            f'R fixture failed rc={proc.returncode}; '
+            f'stdout={proc.stdout[-2000:]!r}; stderr={proc.stderr[-2000:]!r}'
+        )
     return proc.stdout.splitlines()
 
 
