@@ -46,6 +46,28 @@ Tämä **on erillinen checkout ja erillinen käyttäjän päätös**. S2C:n CLI 
 
 **Exit=2 tarkoittaa tarkoituksellista ei-hyväksyntää** riippumatta siitä, saatiinko tarkistettua kaikki metadata. Tutki erikseen JSON:n `metadata_status`, vaihekohtaiset PASS/STOP/NOT_RUN-arvot ja `stop_reason`. Vain silloin, kun rasteri- ja CSV-metadata täsmäävät, voidaan raportoida `metadata_status=PASS`; sekään ei muuta `RUNTIME_INPUT_LINEAGE=NOT_ASSESSED` eikä `SOURCE_AUTHENTICATION=NOT_ASSESSED`. Jos skripti palauttaa muuta kuin 2, se ei ole odotettu tulos. Tästä ei saa jatkaa automaattisesti S2B:n alkuperäistä dataa lukevaksi toteutukseksi.
 
+### Gate B: Roihun Python-versio ja korjaus
+
+Roihun operaattorin ensimmäinen B-suoritus 2026-10-23 palautti `S2C_EXIT=1`,
+`S2C_UNEXPECTED_EXIT=STOP`, koska ohjelman tietoluokan `Raster` tyyppimerkintä
+`nodata: int | float | str` aiheutti `TypeError: unsupported operand type(s) for |: 'type' and 'type'`.
+Tämä on Python 3.9 -yhteensopivuusvirhe **ohjelmaa tuotaessa**, ei metadata-analyysin tulos
+eikä suunniteltu `STOP/2`. CSC dokumentoi järjestelmän Python 3.9:n Roihussa.
+S2C-skriptin lähdekoodia ei pidä muuttaa vain kiertääkseen tämän; valitse olemassa
+oleva `python-geo`-moduuli, josta CSC:n 2026-dokumentaation mukaan löytyvät Python 3.14.5
+ja `gdalinfo` 3.12.2. Tarkista versiot paikallisesta todellisesta ympäristöstä ennen
+metadatan lukemista. Moduulilataukset tehdään vain subshellissa.
+
+```bash
+( set -euo pipefail; module purge; module load python-geo; echo '=== TULOKSET ALKAVAT ==='; python3 --version; gdalinfo --version; python3 -c 'import sys; assert sys.version_info >= (3,10)'; echo '=== TULOKSET LOPPUVAT ===' )
+```
+
+Jos Python ei ole >= 3.10 tai GDAL ei ole 3.12.2, merkitse GATE_B=STOP eikä jatka.
+Mahdollinen uusintasuoritus voidaan tehdä alkuperäiseen commit-versioon poimitulla
+S2C:n yhdellä skriptillä, `GIT_NO_LAZY_FETCH=1` ja ilman lähdetietojen kirjoittamista.
+Tarkista ennen kutsua komennon `gdalinfo --version` todellinen merkkijono ja säilytä
+erikseen `metadata_status` ja ohjelman exit=2. Alkuperäisen historiallisen 02F:n
+lähdeketju pysyy NOT_ASSESSED, vaikka kaikki nykyiset metatiedot täsmäisivät.
 ## 3. Ei-automaattinen päätöstaulukko
 
 | Gate A | Gate B | Sallittu seuraava päätelmä |
