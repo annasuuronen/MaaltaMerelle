@@ -315,12 +315,35 @@ def metadata(raw, role):
     return dtype, nd, sha256(crs["wkt"].encode()).hexdigest()
 
 
+def find_proj_data(executable):
+    """Locate only an existing local proj.db for the isolated metadata subprocess.
+
+    Retain an explicitly configured path if valid; otherwise try the active
+    Python/GDAL installation. Never set network search or override GeoTIFF CRS.
+    An unavailable database is not silently treated as verified metadata.
+    """
+    candidates = (os.environ.get("PROJ_DATA"), os.environ.get("PROJ_LIB"),
+                  str(Path(sys.prefix) / "share" / "proj"),
+                  str(Path(executable).resolve().parent.parent / "share" / "proj"))
+    for value in candidates:
+        if type(value) is not str or not value or len(value) > 1024:
+            continue
+        try:
+            directory = Path(value)
+            if directory.is_absolute() and (directory / "proj.db").is_file():
+                return str(directory.resolve(strict=True))
+        except (OSError, RuntimeError):
+            continue
+    return None
+
+
 class InfoOnly:
     """Hard command whitelist; capped pipes while subprocess.run waits."""
     def __init__(self, executable, sources):
         p = safe_path(executable)
         need(p.name == "gdalinfo", "GDALINFO_ONLY")
         self.executable = str(p)
+        self.proj_data = find_proj_data(self.executable)
         self.sources = tuple(sources)
         need(len(self.sources) == 3 and len(set(self.sources)) == 3, "THREE_EXACT_METADATA_SOURCES")
         self.calls, self.stdout_bytes = 0, 0
@@ -351,13 +374,16 @@ class InfoOnly:
             thread = threading.Thread(target=collect,daemon=True)
             thread.start()
             streams.append((writefd,state,thread))
+        child_env = {"PATH":os.defpath,"LC_ALL":"C","GDAL_PAM_ENABLED":"NO",
+                     "GDAL_DISABLE_READDIR_ON_OPEN":"EMPTY_DIR","GDAL_DRIVER_PATH":"disable",
+                     "GDAL_CACHEMAX":"32","GDAL_NUM_THREADS":"1","PROJ_NETWORK":"OFF"}
+        if self.proj_data is not None:
+            child_env["PROJ_DATA"] = self.proj_data
         failure = None
         try:
             result = subprocess.run(args,shell=False,stdin=subprocess.DEVNULL,stdout=streams[0][0],stderr=streams[1][0],
                                     timeout=max(0.001,min(10,self.deadline-time.monotonic())),check=False,close_fds=True,cwd="/",
-                                    env={"PATH":os.defpath,"LC_ALL":"C","GDAL_PAM_ENABLED":"NO",
-                                         "GDAL_DISABLE_READDIR_ON_OPEN":"EMPTY_DIR","GDAL_DRIVER_PATH":"disable",
-                                         "GDAL_CACHEMAX":"32","GDAL_NUM_THREADS":"1","PROJ_NETWORK":"OFF"})
+                                    env=child_env)
         except subprocess.TimeoutExpired:failure = "GDALINFO_TIMEOUT"
         except (OSError,ValueError):failure = "GDALINFO_EXECUTION_FAILURE"
         finally:
