@@ -460,6 +460,54 @@ class MetadataTests(Case):
 class CommandTests(unittest.TestCase):
     def runner(self):return a.InfoOnly('/usr/bin/gdalinfo',('/tmp/a.tif','/tmp/b.tif','/tmp/c.tif'))
 
+    def test_explicit_present_proj_database_is_selected(self):
+        with tempfile.TemporaryDirectory() as root:
+            db = Path(root) / 'data'
+            db.mkdir()
+            (db / 'proj.db').write_bytes(b'SYNTHETIC_DB_ONLY')
+            with patch.dict(a.os.environ, {'PROJ_DATA': str(db), 'PROJ_LIB': ''}):
+                self.assertEqual(a.find_proj_data('/unused/bin/gdalinfo'), str(db.resolve()))
+
+    def test_invalid_primary_path_falls_back_to_valid_proj_lib(self):
+        with tempfile.TemporaryDirectory() as root:
+            good = Path(root) / 'valid'
+            good.mkdir()
+            (good / 'proj.db').write_bytes(b'SYNTHETIC_DB_ONLY')
+            with patch.dict(a.os.environ, {'PROJ_DATA': str(Path(root) / 'missing'),
+                                            'PROJ_LIB': str(good)}):
+                self.assertEqual(a.find_proj_data('/unused/bin/gdalinfo'), str(good.resolve()))
+
+    def test_missing_database_does_not_forward_unverified_path(self):
+        with tempfile.TemporaryDirectory() as root:
+            exe = str(Path(root) / 'fake' / 'bin' / 'gdalinfo')
+            with patch.dict(a.os.environ, {'PROJ_DATA': str(Path(root) / 'bad'),
+                                            'PROJ_LIB': ''}), patch.object(a.sys, 'prefix', str(Path(root) / 'python')):
+                self.assertIsNone(a.find_proj_data(exe))
+
+    def test_isolated_process_receives_only_verified_proj_data(self):
+        with patch.object(a, 'find_proj_data', return_value='/opt/test-proj') as locate:
+            runner = self.runner()
+        self.assertEqual(runner.proj_data, '/opt/test-proj')
+        locate.assert_called_once_with('/usr/bin/gdalinfo')
+        def observed(args, **kw):
+            env = kw['env']
+            self.assertEqual(env['PROJ_DATA'], '/opt/test-proj')
+            self.assertEqual(env['PROJ_NETWORK'], 'OFF')
+            self.assertEqual(env['GDAL_PAM_ENABLED'], 'NO')
+            self.assertEqual(env['GDAL_DRIVER_PATH'], 'disable')
+            self.assertNotIn('GTIFF_SRS_SOURCE', env)
+            self.assertNotIn('HOME', env)
+            return self.fake()(args, **kw)
+        with patch.object(a.subprocess, 'run', side_effect=observed):
+            self.assertEqual(runner.command((runner.executable, '--version')), b'GDAL 3.12.2')
+
+    def test_warnings_still_stop_with_proj_data_selected(self):
+        with patch.object(a, 'find_proj_data', return_value='/opt/test-proj'):
+            runner = self.runner()
+        with patch.object(a.subprocess, 'run', side_effect=self.fake(err=b'Warning 1: test')):
+            with self.assertRaisesRegex(a.Stop, 'GDALINFO_EXIT_OR_WARNING'):
+                runner.command((runner.executable, '--version'))
+
     def fake(self,out=b'GDAL 3.12.2',err=b'',code=0):
         def run(args,**kw):
             self.assertIs(kw['shell'],False);self.assertLessEqual(kw['timeout'],10)
@@ -537,7 +585,11 @@ class ReportTests(Case):
         self.assertEqual((r.NATIONAL,r.MODERATE,r.hydrological_validation,r.channel_interpretation),
                          ('LOCKED','REVIEW_REQUIRED','NOT_ASSESSED','NOT_ASSESSED'))
         with self.assertRaises(FrozenInstanceError):r.routing_authorized=True
-        with self.assertRaises(ValueError):replace(r,SOURCE_AUTHENTICATION='PASS')
+        # dataclasses.replace(init=False=...) raises ValueError on older Python,
+        # TypeError on Python 3.14; both must reject spoofed authentication.
+        with self.assertRaises((TypeError, ValueError)):
+            replace(r, SOURCE_AUTHENTICATION='PASS')
+        self.assertEqual(r.SOURCE_AUTHENTICATION, 'NOT_ASSESSED')
         self.assertFalse(r.routing_authorized);self.assertEqual(r.outlet_selection,'UNASSIGNED')
 
     def test_cli_is_framed_exit_two_and_never_executes_original_in_tests(self):
