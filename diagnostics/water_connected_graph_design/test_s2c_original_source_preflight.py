@@ -585,7 +585,11 @@ class ReportTests(Case):
         self.assertEqual((r.NATIONAL,r.MODERATE,r.hydrological_validation,r.channel_interpretation),
                          ('LOCKED','REVIEW_REQUIRED','NOT_ASSESSED','NOT_ASSESSED'))
         with self.assertRaises(FrozenInstanceError):r.routing_authorized=True
-        with self.assertRaises(ValueError):replace(r,SOURCE_AUTHENTICATION='PASS')
+        # dataclasses.replace(init=False=...) raises ValueError on older Python,
+        # TypeError on Python 3.14; both must reject spoofed authentication.
+        with self.assertRaises((TypeError, ValueError)):
+            replace(r, SOURCE_AUTHENTICATION='PASS')
+        self.assertEqual(r.SOURCE_AUTHENTICATION, 'NOT_ASSESSED')
         self.assertFalse(r.routing_authorized);self.assertEqual(r.outlet_selection,'UNASSIGNED')
 
     def test_cli_is_framed_exit_two_and_never_executes_original_in_tests(self):
