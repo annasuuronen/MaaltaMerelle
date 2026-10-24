@@ -1,0 +1,147 @@
+{
+  "format": "mm.low-d8-evidence-crosswalk.v1",
+  "scope": "EXISTING_GITHUB_RECORDS_ONLY",
+  "review_date": "2026-10-24",
+  "base_commit": "d9397df73cd0fdbe1ccddf1cfeaac161a7ee1b6c",
+  "scientific_locks": {
+    "NATIONAL": "LOCKED",
+    "MODERATE": "REVIEW_REQUIRED",
+    "hydrological_validation": "NOT_ASSESSED",
+    "channel_interpretation": "NOT_ASSESSED",
+    "routing_authorized": false,
+    "outlet_selection": "UNASSIGNED",
+    "HISTORIC_02F_EFFECTIVE_D8": "NOT_ASSESSED"
+  },
+  "source_authentication": "NOT_ASSESSED",
+  "historical_02f_status": "STOP",
+  "independent_csc_file_access": false,
+  "evidence": [
+    {
+      "id": "PILOT_CENTER_COMPOSITION",
+      "origin": "OPERATOR_REPORTED",
+      "source": "https://github.com/annasuuronen/MaaltaMerelle/issues/36#issuecomment-6333999489",
+      "unit": "stratified_pilot_center",
+      "total": 256,
+      "partition": {"eligible_land": 236, "water": 7, "source_nodata": 13},
+      "mechanical_flags": {"numerator": 0, "denominator": 236, "denominator_unit": "eligible_land_center"},
+      "not_established": ["population_fault_rate", "national_correction_rate", "physical_outlet_validity"]
+    },
+    {
+      "id": "ACCEPTED_MICROGRADIENT_FINGERPRINT",
+      "origin": "OPERATOR_REPORTED",
+      "source": "https://github.com/annasuuronen/MaaltaMerelle/issues/36#issuecomment-6334875647",
+      "unit": "near_flat_land_to_land_step",
+      "near_flat": 119,
+      "eligible_land_denominator": 236,
+      "other_steeper_downhill": 117,
+      "candidate_3e_7_matches": 119,
+      "candidate_3e_7_multiples": {"1": 104, "2": 11, "3": 4},
+      "alternative_3e_8_matches": 119,
+      "alternative_3e_6_matches": 0,
+      "historical_runtime_increment": "UNKNOWN",
+      "reexecution_required": false
+    },
+    {
+      "id": "EDGE_WEIGHTED_02F_STATUSES",
+      "origin": "OPERATOR_REPORTED",
+      "source": "https://github.com/annasuuronen/MaaltaMerelle/issues/36#issuecomment-6336363601",
+      "unit": "candidate_edge_row",
+      "total": 229,
+      "partition": {"D8_ZERO_INTERIOR": 93, "RETURNS_TO_ORIGIN_LAKE": 51, "REACHES_RIVER_AREA": 75, "REACHES_RIVER_LINE": 10},
+      "not_equivalent_to": ["unique_route", "unique_fault_cell", "accumulated_source_area"]
+    },
+    {
+      "id": "UNIQUE_02F_STATUSES",
+      "origin": "OPERATOR_REPORTED",
+      "source": "https://github.com/annasuuronen/MaaltaMerelle/issues/10",
+      "unit": "unique_receiver_origin_start",
+      "total": 101,
+      "partition": {"D8_ZERO_INTERIOR": 41, "RETURNS_TO_ORIGIN_LAKE": 21, "REACHES_RIVER_AREA": 34, "REACHES_RIVER_LINE": 5},
+      "not_equivalent_to": ["unique_fault_cell", "approved_outlet", "accumulated_source_area"]
+    },
+    {
+      "id": "ZERO_START_TARGET_RELATIONS",
+      "origin": "OPERATOR_REPORTED",
+      "source": "https://github.com/annasuuronen/MaaltaMerelle/issues/36#issuecomment-6336637109",
+      "unit": "zero_ending_unique_start",
+      "total": 41,
+      "partition": {"SAFE_self_target": 33, "SAFE_other_lake_candidate": 6, "INTERIOR_REVIEW_target_missing": 2},
+      "distinct_terminal_cells": 7,
+      "distinct_components": 7,
+      "component_class_partition": {"SAFE_LAKE_CONNECTOR": 6, "INTERIOR_REVIEW": 1},
+      "shared_terminal": {"cell": 23211319, "component_id": 274, "target_lake_objectid": 1892, "source_lake_route_counts": {"1892": 8, "1894": 6}},
+      "mixed_terminal": {"cell": 15389414, "component_id": 235, "source_lake_objectid": 3181, "route_count": 2, "target_lake_objectid": null},
+      "origin_return_separate_scope": {"source_lake_objectid": 1940, "unique_starts": 21, "distinct_terminal_water_cells": 11},
+      "accepted_external_outlets": "NOT_ASSESSED"
+    },
+    {
+      "id": "SELECTED_SEVEN_MASKED_SHORE_TERMINALS",
+      "origin": "OPERATOR_REPORTED",
+      "source": "https://github.com/annasuuronen/MaaltaMerelle/issues/10#issuecomment-6210057401",
+      "unit": "selected_zero_terminal_cell",
+      "total": 7,
+      "cells_with_incoming_lake_d8": 7,
+      "incoming_lake_d8_edges": 10,
+      "adjacent_lake_cells_raw_fill_masked": 17,
+      "unchanged_raw_fill_centers": 7,
+      "distinct_flat_continuation_cases": 1,
+      "root_cause": "UNKNOWN"
+    },
+    {
+      "id": "BOUNDED_02C_SHORELINE_ZERO_DOMAIN",
+      "origin": "OPERATOR_REPORTED",
+      "source": "https://github.com/annasuuronen/MaaltaMerelle/issues/10#issuecomment-6211466156",
+      "unit": "shoreline_domain_zero_land_cell",
+      "component_count_source": "https://github.com/annasuuronen/MaaltaMerelle/issues/10#issuecomment-6211026218",
+      "source_lake_count_source": "https://github.com/annasuuronen/MaaltaMerelle/issues/10#issuecomment-6211709387",
+      "total": 643,
+      "components": 340,
+      "cells_receiving_lake_d8": 535,
+      "lake_d8_edges": 1273,
+      "source_lakes": 22,
+      "SAFE_zero_cells": 640,
+      "SAFE_cells_receiving_lake_d8": 534,
+      "all_low_cells_denominator": "NOT_THIS_SCOPE"
+    },
+    {
+      "id": "CELL_SPECIFIC_WATER_HEIGHT_COMPARISON",
+      "origin": "OPERATOR_REPORTED",
+      "source": "https://github.com/annasuuronen/MaaltaMerelle/issues/10#issuecomment-6211363048",
+      "unit": "shoreline_domain_zero_land_cell",
+      "total": 643,
+      "partition": {"BELOW": 635, "SAME": 8, "ABOVE": 0, "MISSING": 0},
+      "SAFE_total": 640,
+      "SAFE_partition": {"BELOW": 632, "SAME": 8, "ABOVE": 0, "MISSING": 0},
+      "implies_incoming_lake_pointer": false
+    },
+    {
+      "id": "LOCAL_1847_SURFACE_DIFFERENCE",
+      "origin": "OPERATOR_REPORTED",
+      "source": "https://github.com/annasuuronen/MaaltaMerelle/issues/10#issuecomment-6215342302",
+      "unit": "accepted_local_3_by_3_window",
+      "total": 1,
+      "land_water_d8_direction": "S",
+      "storage_lower_escape_direction": "NW",
+      "neighbor_surfaces_equal": false,
+      "printed_numbers_are_raw_bits": false,
+      "proves_d8_algorithm_error": false,
+      "approved_outlet": false
+    }
+  ],
+  "remaining_scientific_status": {
+    "historical_source_lineage": "UNVERIFIED",
+    "whitebox_nodata_boundary_causation": "UNKNOWN",
+    "physical_shoreline_and_outlet": "NOT_ASSESSED",
+    "final_water_connected_d8": "NOT_ESTABLISHED",
+    "final_flow_accumulation": "NOT_COMPUTED",
+    "hydrological_corrections_needed": "NOT_ESTIMABLE"
+  },
+  "new_execution_scope": {
+    "documentation_only": true,
+    "software_test_counts": {"PASS": 0, "FAIL": 0, "SKIPPED": 0, "NOT_RUN": 0},
+    "roihu_suites_requested": [],
+    "scientific_checks_run": false,
+    "batch_disposition": "EXCLUDE_NO_NEW_EXECUTABLE_CHECKS",
+    "next_gate": "REVIEW_EXISTING_METADATA_AND_EXTERNAL_EVIDENCE_SEPARATELY_NO_EXECUTION_AUTHORIZATION"
+  }
+}
