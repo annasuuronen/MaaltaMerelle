@@ -12,6 +12,7 @@ import shutil
 import stat
 import struct
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -170,8 +171,21 @@ class LoaderTests(unittest.TestCase):
                 loader.write_new_private(alias/"bad.R",b"fixed")
 
     def fake_git(self,path,body):
-        path.write_text("#!"+shutil.which("python3")+"\n"+body)
+        path.write_text("#!"+sys.executable+"\n"+body)
         path.chmod(0o700);return str(path)
+
+    def test_fake_git_reuses_running_interpreter_not_path_wrapper(self):
+        with tempfile.TemporaryDirectory(prefix="mm-s2c-python-wrapper-") as d:
+            wrapper=Path(d)/"python3"
+            wrapper.write_text("#!/bin/sh\nexit 93\n")
+            wrapper.chmod(0o700)
+            with mock.patch.dict(os.environ,{"PATH":d+os.pathsep+os.environ.get("PATH","")}):
+                self.assertEqual(shutil.which("python3"),str(wrapper))
+                binary=self.fake_git(Path(d)/"git","print('CURRENT_INTERPRETER_ONLY')\n")
+                result=subprocess.run([binary],capture_output=True,text=True,timeout=2,check=False)
+            self.assertEqual(result.returncode,0)
+            self.assertEqual(result.stdout,"CURRENT_INTERPRETER_ONLY\n")
+            self.assertEqual(result.stderr,"")
 
     def test_git_stdout_is_bounded(self):
         with tempfile.TemporaryDirectory(prefix="mm-s2c-budget-") as d:

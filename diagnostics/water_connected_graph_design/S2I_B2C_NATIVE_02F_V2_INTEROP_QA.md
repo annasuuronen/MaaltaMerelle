@@ -123,7 +123,10 @@ Loader tests cover each altered blob, missing scope/objects, wrong origin,
 native divergence, private-output rules, output overflow, timeout and no-fetch
 behavior. These test adversarial data, not replacement of the private callback.
 
-| Executed group | PASS | FAIL | NOT_RUN |
+The following complete campaign belongs to the original implementation commit
+`9ce493af72c8cddefd02ea84ced7659cbc0ca356`; it is preserved as prior evidence.
+
+| Executed group at that commit | PASS | FAIL | NOT_RUN |
 | --- | ---: | ---: | ---: |
 | New Base-R checks, local R4.5.0 (`x86_64-pc-linux-gnu`) | 42 | 0 | 0 |
 | New Python tests, Python3.12.14 / Git2.52.0, including all five R streams | 27 | 0 | 0 |
@@ -145,6 +148,29 @@ B/2 five-probe campaigns were **not repeated**. Their accepted evidence remains
 unchanged. New R4.6.1/Python-geo3.14.5 interoperability: **NOT_RUN**. There is no
 CSC, original LOW, production 02F, hydrological or historical-authentication
 test result in this delivery.
+
+### Focused parallel-stream PATH-wrapper hardening
+
+The independent stream-A review identified an avoidable ambiguity in the new
+Python test helper, not the adapter or frozen codec. Its fake-Git shebang used
+`shutil.which("python3")`; inside Python-geo that PATH entry can still be the
+module's container wrapper. Starting such a helper can re-enter the wrapper
+instead of using the already running interpreter. The helper now uses
+`sys.executable`. No R invocation or new production behavior is introduced.
+
+One new adversarial test places an executable, fail-fast `python3` wrapper first
+in PATH and verifies that the helper bypasses it through the current interpreter.
+Before the fix, that test actually failed with child exit93. After the fix, only
+that new test and the two existing helper-dependent output-budget/timeout tests
+ran: **3 PASS, 0 FAIL, 0 SKIPPED/NOT_RUN**, local Python3.12.14, exit0,
+unittest elapsed0.179s. They used a30s TERM/2s KILL watchdog and256MiB
+address-space limit. The original42-R/27-Python campaign was not repeated.
+
+The updated full suite has **42 R +28 Python expected checks**, but that entire
+updated campaign is **NOT_RUN**, not70 PASS. The old69-PASS result and the
+focused three-check result have distinct scopes and must not be summed as a
+new complete campaign. The deferred target Roihu manifest must pin the updated
+commit and expect42 R /28 Python, including the PATH-wrapper regression.
 
 ## Resource receipt and reproduction
 
