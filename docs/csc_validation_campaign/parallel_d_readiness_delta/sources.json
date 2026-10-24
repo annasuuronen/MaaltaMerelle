@@ -1,0 +1,139 @@
+{
+  "schema_version": "parallel-d.readiness-delta.v1",
+  "repository": "annasuuronen/MaaltaMerelle",
+  "pinned_base": "cad5e0b8471c3ad7f0ac6e525a226b29268d2d2f",
+  "scope": "DOCUMENTATION_ONLY_DELTA_NO_EXECUTION",
+  "sources": [
+    {
+      "source_id": "S0",
+      "evidence_kind": "PINNED_PLAN",
+      "url": "https://github.com/annasuuronen/MaaltaMerelle/tree/cad5e0b8471c3ad7f0ac6e525a226b29268d2d2f/docs/csc_validation_campaign/",
+      "code_or_document_pin": "cad5e0b8471c3ad7f0ac6e525a226b29268d2d2f",
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": null,
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "Frozen original nine-row plan; not changed or executed."
+    },
+    {
+      "source_id": "S1",
+      "evidence_kind": "PINNED_METADATA_CSV",
+      "url": "https://raw.githubusercontent.com/annasuuronen/MaaltaMerelle/4518285f0c74c01f12c96d6d831515846260d1a4/ci/VALIDATION_GRADIENT/validation_gradient_selection.csv",
+      "code_or_document_pin": "4518285f0c74c01f12c96d6d831515846260d1a4",
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": "aaf5687a2b3ced42864ae5b0e881b70bf246def68e5c67e6d04c07d31a8d6b8c",
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "Four area roles; LOW area_id/canonical_tile_id differ; inventory structure counts are not modelled hydraulic behavior."
+    },
+    {
+      "source_id": "S2",
+      "evidence_kind": "PINNED_METADATA_CSV",
+      "url": "https://raw.githubusercontent.com/annasuuronen/MaaltaMerelle/4518285f0c74c01f12c96d6d831515846260d1a4/ci/VALIDATION_GRADIENT/validation_gradient_manifest.csv",
+      "code_or_document_pin": "4518285f0c74c01f12c96d6d831515846260d1a4",
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": "db9e499f8d5e0f322185511d59fb040bd045440fef72353d83668151481e80e0",
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "HIGH dem and dem_qa blank; paths elsewhere are Windows declarations, not verified CSC identities."
+    },
+    {
+      "source_id": "S3",
+      "evidence_kind": "OPERATOR_REPORT_ON_GITHUB",
+      "url": "https://github.com/annasuuronen/MaaltaMerelle/pull/22",
+      "code_or_document_pin": "effab29aa4d44ecc897efc0c91c96f3bfc1b4db6",
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": "953b1c6ccfeb9da12a839ec5d7c7bbc63fc23a79e03f019c80e7143f4548ed56",
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "2026-10-21 comment: 14 observed LAND receivers, 56 returned values, zero downstream steps; printed precision only."
+    },
+    {
+      "source_id": "S4",
+      "evidence_kind": "OPERATOR_REPORT_ON_GITHUB",
+      "url": "https://github.com/annasuuronen/MaaltaMerelle/pull/7",
+      "code_or_document_pin": "a3c42be333468e25c731faa3fd63f9687ed83978",
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": "a9bc811ce3af3bb1559cb2d251f990481aaa9cb967c35ec41705b5a15b16f2d0",
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "Job 2369720: 49/49 OBSERVED, 45 local lower-pair witnesses and 4 visit-censored searches; provenance incomplete, not lake escape approval."
+    },
+    {
+      "source_id": "S5",
+      "evidence_kind": "OPERATOR_REPORT_AND_DESIGN_ON_GITHUB",
+      "url": "https://github.com/annasuuronen/MaaltaMerelle/issues/36",
+      "code_or_document_pin": "d9397df73cd0fdbe1ccddf1cfeaac161a7ee1b6c",
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": "22cfec228b8d4788d746c9f4b67ea83ebb21b159a0840d21d3dd340c3e07a43f",
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "Latest comments: 256 sample centers, 236 eligible LAND centers, 119 quantized near-flat steps; not a correction percentage, source causality or final routing."
+    },
+    {
+      "source_id": "S6",
+      "evidence_kind": "COORDINATION_ACCEPTANCE_SCOPE",
+      "url": "https://github.com/annasuuronen/MaaltaMerelle/issues/81",
+      "code_or_document_pin": null,
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": "9e1bb4ab3e00d6719a8350de01b62c740b79f2ce86c60923c2e06a1bf4a50050",
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "Accepted standalone v2 / S2F / v1 / G5A / PR34 / 02G campaigns must not repeat; no CSC execution approval."
+    },
+    {
+      "source_id": "S7",
+      "evidence_kind": "OPERATOR_REPORT_ON_GITHUB",
+      "url": "https://github.com/annasuuronen/MaaltaMerelle/pull/76",
+      "code_or_document_pin": "8d94ec33ce3aeeb20626b6665ae81594934087ce",
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": "83f74b22bf1f76774ecb4cc8adf185c060f93c4d05673e0fe0779672db7aeca7",
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "Job 2516979 accepted 58 R + 125 Python checks; earlier RLIMIT_AS 256 MiB wrapper failure had zero R output; success used Slurm physical memory allocation."
+    },
+    {
+      "source_id": "S8",
+      "evidence_kind": "PINNED_READINESS_DESIGN",
+      "url": "https://github.com/annasuuronen/MaaltaMerelle/pull/69",
+      "code_or_document_pin": "4ab77b99f88c70055073e4b3b09ba0f7658a6264",
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": "146dcf589306db5c195c2f9ca21cec7ac552d04163de24bdfb18cf4429910a72",
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "Missing external witness/trust enrollment, immutable actual inputs, allocation/quota/approval are independent STOP prerequisites."
+    },
+    {
+      "source_id": "S9",
+      "evidence_kind": "SYNTHETIC_SOFTWARE_CONTRACT",
+      "url": "https://github.com/annasuuronen/MaaltaMerelle/pull/32",
+      "code_or_document_pin": "fb5c673b5fb08652e846191074095627b364d7db",
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": "2ea7dbf304af30a085014ba062f66f819fb8fd52fe7564c322cab361bc185faf",
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "Complete local DAG contract; external_import=UNKNOWN, total upstream=NA, no censored route completion. Accepted 739 checks reused per S6."
+    },
+    {
+      "source_id": "S10",
+      "evidence_kind": "OPERATOR_REPORT_AND_SYNTHETIC_SOFTWARE",
+      "url": "https://github.com/annasuuronen/MaaltaMerelle/pull/34",
+      "code_or_document_pin": "9c1b515a346e11fd6d21d38403763df633be4297",
+      "retrieved_at_utc_date": "2026-10-24",
+      "retrieved_document_sha256": "c099af12201cd1c55808b8df5b9f458e3a41d3696c0e15eb08c16d737f9651da",
+      "source_authentication": "NOT_ASSESSED",
+      "historical_producer_authentication": "NOT_ASSESSED",
+      "note": "Receiver evidence/runner; 121 reported source-route counts are not accumulation. Latest 87 accepted checks reused per S6 rather than rerun."
+    }
+  ],
+  "local_document_hash_meaning": "Downloaded document byte identity only; not an independent signature, CSC log retrieval, source authenticity or producer lineage.",
+  "safety": {
+    "NATIONAL": "LOCKED",
+    "MODERATE": "REVIEW_REQUIRED",
+    "hydrological_validation": "NOT_ASSESSED",
+    "channel_interpretation": "NOT_ASSESSED",
+    "routing_authorized": false,
+    "outlet_selection": "UNASSIGNED",
+    "HISTORIC_02F_EFFECTIVE_D8": "NOT_ASSESSED"
+  }
+}
